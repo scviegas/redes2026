@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🎓 Tutorial Guia — Capstone: Jogo Multiplayer 2P em Rede</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --b900:#06203f;--b800:#0a2f6b;--b700:#0d47a1;--b600:#1565c0;--b400:#2196f3;--cyan:#00b0ff;
+  --ink:#10233f;--muted:#5b7396;--bg:#eef5ff;--card:#fff;--line:#d7e5f8;
+  --ok:#22c55e;--bad:#ef4444;--gold:#ffb300;--r:16px;--shadow:0 8px 24px rgba(13,71,161,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{font-family:'Poppins',system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);
+  background:radial-gradient(900px 500px at 110% -10%,rgba(0,176,255,.15),transparent 60%),
+             radial-gradient(700px 420px at -10% 110%,rgba(21,101,192,.14),transparent 60%),
+             linear-gradient(180deg,var(--bg),#f8fbff 50%,var(--bg));min-height:100vh}
+.topbar{position:sticky;top:0;z-index:40;background:linear-gradient(135deg,var(--b800),var(--b600));
+  color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;box-shadow:0 4px 18px rgba(6,32,63,.35)}
+.topbar .brand{font-weight:800;font-size:.95rem;line-height:1.25}
+.topbar .brand span{display:block;font-weight:400;font-size:.7rem;opacity:.85}
+.topbar .hud{margin-left:auto;display:flex;align-items:center;gap:8px}
+.progress-mini{background:rgba(255,255,255,.18);border-radius:99px;padding:4px 12px;font-size:.78rem;display:flex;gap:8px;align-items:center;min-width:150px}
+.progress-mini .track{flex:1;height:8px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+.progress-mini .track i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7dffb0,#00e5ff);transition:width .4s}
+.iconbtn{background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:10px;font-size:1rem;cursor:pointer;transition:.2s}
+.iconbtn:hover{background:rgba(255,255,255,.3)}
+#menuBtn{display:none}
+.layout{display:flex;max-width:1240px;margin:0 auto;gap:20px;padding:20px 16px 60px}
+aside{width:270px;flex-shrink:0;position:sticky;top:76px;align-self:flex-start;max-height:calc(100vh - 96px);overflow:auto}
+aside .search{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:.85rem;outline:none;margin-bottom:10px;background:var(--card)}
+aside .search:focus{border-color:var(--b400)}
+nav .navlink{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:11px;color:#2a4a78;font-size:.8rem;font-weight:600;text-decoration:none;margin-bottom:3px;transition:.15s;border:1px solid transparent}
+nav .navlink:hover{background:#e4f0ff;border-color:var(--line)}
+nav .navlink.active{background:linear-gradient(135deg,var(--b600),var(--b400));color:#fff;box-shadow:var(--shadow)}
+nav .navlink .done{margin-left:auto;font-size:.8rem;color:var(--ok);font-weight:800}
+nav .navlink.active .done{color:#c8ffe0}
+.side-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:12px;box-shadow:var(--shadow);font-size:.78rem;color:var(--muted)}
+.side-card b{color:var(--b700)}
+.side-card .track{height:10px;background:#e3edfb;border-radius:99px;overflow:hidden;margin:8px 0}
+.side-card .track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--b600),var(--cyan));transition:width .4s}
+main{flex:1;min-width:0}
+section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:26px 28px;margin-bottom:22px;animation:fade .4s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+h1{font-size:clamp(1.4rem,3.4vw,2rem);color:var(--b800);line-height:1.25}
+h2{font-size:1.28rem;color:var(--b800);display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+h2 .ph{background:linear-gradient(135deg,var(--b600),var(--b400));color:#fff;font-size:.8rem;font-weight:800;padding:4px 12px;border-radius:99px;letter-spacing:.5px}
+h3{font-size:1rem;color:var(--b700);margin:20px 0 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+h3 .n{background:#e3f0ff;border:1px solid var(--line);color:var(--b700);font-size:.72rem;font-weight:800;padding:3px 10px;border-radius:8px}
+p,li{font-size:.92rem;line-height:1.65;color:#2b4568}
+.sub{color:var(--muted);font-size:.88rem;margin:4px 0 14px}
+ul.plain,ol.plain{padding-left:20px;margin:8px 0}
+ul.plain li,ol.plain li{margin:6px 0}
+ul.plain li::marker{color:var(--b400)}
+hr.soft{border:none;border-top:1.5px dashed var(--line);margin:20px 0}
+.chklist{margin:10px 0 4px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border:1.5px solid var(--line);border-radius:11px;margin-bottom:7px;background:#f8fbff;cursor:pointer;font-size:.87rem;color:#2b4568;transition:.15s}
+.chk:hover{border-color:var(--b400);background:#eef6ff}
+.chk input{margin-top:3px;accent-color:var(--b600);width:16px;height:16px;flex-shrink:0;cursor:pointer}
+.chk input:checked + span{color:#6b7f9d;text-decoration:line-through}
+.chk:has(input:checked){background:#f0fdf4;border-color:#b7e4c0}
+.callout{border-radius:13px;padding:13px 16px;margin:12px 0;font-size:.87rem;line-height:1.6;border:1.5px solid}
+.callout b{display:block;margin-bottom:3px}
+.c-dica{background:#e8f4ff;border-color:#b5d8fb;color:#1c4a86}
+.c-reflex{background:#f3edff;border-color:#d4c4fb;color:#4c2e9e}
+.c-armadilha{background:#fff1ec;border-color:#ffc9b3;color:#9a3412}
+.c-atencao{background:#fff8e1;border-color:#ffe08a;color:#8a6100}
+.c-ondeest{background:#eafaf0;border-color:#b7e4c0;color:#166534}
+details{border:1.5px solid var(--line);border-radius:12px;margin:10px 0;background:#fbfdff;overflow:hidden}
+details summary{cursor:pointer;padding:11px 14px;font-weight:700;font-size:.87rem;color:var(--b700);list-style:none;display:flex;align-items:center;gap:8px}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"▸";transition:.2s;color:var(--b400)}
+details[open] summary::before{transform:rotate(90deg)}
+details .inner{padding:0 16px 14px}
+.tblwrap{overflow-x:auto;margin:12px 0;border-radius:12px;border:1px solid var(--line)}
+table.tbl{width:100%;border-collapse:collapse;font-size:.84rem;min-width:560px}
+table.tbl th{background:linear-gradient(135deg,var(--b700),var(--b600));color:#fff;text-align:left;padding:10px 12px;font-weight:700}
+table.tbl td{padding:9px 12px;border-top:1px solid var(--line);color:#2b4568;vertical-align:top}
+table.tbl tr:nth-child(even) td{background:#f5f9ff}
+pre.code{background:#0b1f3d;color:#dbeafe;border-radius:12px;padding:16px 18px;font-size:.78rem;line-height:1.55;overflow-x:auto;margin:12px 0;font-family:'Consolas','Courier New',monospace}
+pre.code .c{color:#7aa7d9}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.badge{font-size:.72rem;font-weight:700;padding:5px 12px;border-radius:99px;border:1px solid}
+.bg-blue{background:#e8f2ff;color:var(--b700);border-color:#c4ddfb}
+.bg-gold{background:#fff6df;color:#8a6100;border-color:#f3d47c}
+.bg-green{background:#eafaf0;color:#166534;border-color:#b7e4c0}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0;font-size:.8rem;font-weight:700;color:var(--b700)}
+.flow span{background:#e8f2ff;border:1px solid #c4ddfb;padding:6px 12px;border-radius:99px}
+.flow i{color:var(--b400);font-style:normal}
+.hero{text-align:center;background:linear-gradient(135deg,var(--b800),var(--b600));color:#fff;border:none}
+.hero h1{color:#fff}
+.hero p{color:#dbeafe}
+.hero .pts{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:99px;padding:6px 18px;font-weight:800;margin:8px 4px 0;font-size:.85rem}
+footer{max-width:1240px;margin:0 auto;padding:0 16px 34px;text-align:center;color:var(--muted);font-size:.75rem;line-height:1.7}
+footer b{color:var(--b700)}
+.fab{position:fixed;right:18px;bottom:18px;z-index:50;display:flex;flex-direction:column;gap:8px}
+.fab button{width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;font-size:1.1rem;box-shadow:0 6px 18px rgba(13,71,161,.3);transition:.2s}
+.fab .up{background:linear-gradient(135deg,var(--b600),var(--b400));color:#fff}
+.fab .pr{background:#fff;color:var(--b700);border:1px solid var(--line)}
+@media(max-width:900px){
+  #menuBtn{display:block}
+  aside{position:fixed;z-index:45;top:60px;left:0;bottom:0;width:280px;background:#fff;
+        padding:16px 14px;transform:translateX(-105%);transition:.25s;box-shadow:8px 0 30px rgba(6,32,63,.25);max-height:none}
+  aside.open{transform:translateX(0)}
+  .layout{padding-top:12px}
+  section.card{padding:20px 18px}
+}
+@media print{
+  .topbar,aside,.fab,footer .noprint{display:none!important}
+  body{background:#fff}
+  .layout{display:block;max-width:100%;padding:0}
+  section.card{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid;margin-bottom:14px}
+  details{page-break-inside:avoid}
+  details:not([open]) .inner{display:block}
+  .hero{background:#0d47a1!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="iconbtn" id="menuBtn" title="Menu">☰</button>
+  <div class="brand">🎓 Tutorial Guia — Capstone · Jogo Multiplayer 2P em Rede
+    <span>Tecnologia de Redes para Desenvolvedores · projeto final do curso</span></div>
+  <div class="hud">
+    <div class="progress-mini"><div class="track"><i id="miniBar"></i></div><span id="miniTxt">0%</span></div>
+    <button class="iconbtn" id="btnPrint" title="Imprimir / PDF">🖨️</button>
+    <button class="iconbtn" id="btnReset" title="Zerar progresso">🗑️</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside id="sidebar">
+  <input class="search" id="search" placeholder="🔎 Filtrar fases…">
+  <nav id="nav"></nav>
+  <div class="side-card">
+    <b>📊 Seu progresso</b>
+    <div class="track"><i id="sideBar"></i></div>
+    <span id="sideTxt">0 de 0 etapas concluídas</span>
+    <hr class="soft" style="margin:12px 0">
+    💾 O progresso é salvo <b>automaticamente</b> neste navegador.
+  </div>
+</aside>
+
+<main id="content">
+
+<!-- ============ HERO ============ -->
+<section class="card hero" id="p0">
+  <h1>🚀 Roteiro Metodológico<br>Capstone — Jogo Multiplayer 2P em Rede</h1>
+  <p>Missão: <b>desenhar, desenvolver e implementar</b> um jogo para <b>dois jogadores conectados simultaneamente por rede</b>,
+  com o estado do jogo <b>sincronizado</b> entre ambos.<br>
+  Este guia ensina <i>o que</i> fazer, <i>em que ordem</i> e <i>quais perguntas responder</i> — mas <b>não entrega respostas prontas</b>. O projeto é de vocês! 🛠️</p>
+  <span class="pts">🎮 1 jogo à sua escolha</span>
+  <span class="pts">🧪 Testes em rede + Wireshark</span>
+  <span class="pts">📖 Documentação + Apresentação</span>
+  <p style="margin-top:14px;font-size:.8rem">✅ Marque as caixas conforme avança — cada fase fica verde quando completa.</p>
+</section>
+
+<!-- ============ CRONOGRAMA ============ -->
+<section class="card" id="pCron">
+  <h2>🗓️ <span class="ph">VISÃO GERAL</span> Cronograma Sugerido</h2>
+  <p class="sub">Seis semanas de projeto, seguindo as quatro etapas oficiais: Design → Implementação → Testes → Documentação & Apresentação.</p>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th>Semana do projeto</th><th>Fase</th><th>Entregável parcial</th></tr>
+    <tr><td>Semana 1</td><td><b>Fase 0</b>: Escolha do jogo + <b>Fase 1</b>: Design</td><td>Jogo escolhido, requisitos, arquitetura e esboço do protocolo</td></tr>
+    <tr><td>Semana 2</td><td><b>Fase 2</b>: Ambiente + <b>Fase 3</b>: Servidor (parte 1)</td><td>Repositório configurado; servidor escuta conexões e autentica</td></tr>
+    <tr><td>Semana 3</td><td><b>Fase 3</b>: Servidor (parte 2) + <b>Fase 4</b>: Cliente</td><td>Usuários online, convites e entrada em partida funcionando</td></tr>
+    <tr><td>Semana 4</td><td><b>Fase 5</b>: Sincronização + <b>Fase 6</b>: Segurança</td><td>Partida completa jogável por 2 clientes em rede</td></tr>
+    <tr><td>Semana 5</td><td><b>Fase 7</b>: Testes + <b>Fase 8</b>: Monitoramento</td><td>Testes de todos os resultados + evidências no Wireshark</td></tr>
+    <tr><td>Semana 6</td><td><b>Fase 9–11</b>: Extras + Documentação + Apresentação</td><td>Projeto final documentado e ensaiado 🚀</td></tr>
+  </table></div>
+  <div class="callout c-atencao"><b>⚠️ Regra de ouro</b>Os requisitos <b>base</b> vêm antes de qualquer <b>nice-to-have</b>. Nunca comece o placar/bot/dashboard com o jogo ainda não sincronizando!</div>
+</section>
+
+<!-- ============ FASE 0 ============ -->
+<section class="card" id="f0">
+  <h2>🎮 <span class="ph">FASE 0</span> Escolha do Jogo e Escopo</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 1</span><span class="badge bg-gold">Entregável: jogo definido + regras escritas</span></div>
+
+  <h3><span class="n">0.1</span> Escolha UM jogo</h3>
+  <p>Sugestões do enunciado: <b>jogo da velha (tic-tac-toe)</b>, <b>4 em linha</b>, <b>hexapawn</b>. Se pensarem em outro jogo — <b>consultem o orientador primeiro</b>.</p>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th>Jogo</th><th>Referência para estudo de regras</th></tr>
+    <tr><td>Tic-tac-toe</td><td>crazygames.com/es/juego/tic-tac-toe</td></tr>
+    <tr><td>4 em linha</td><td>crazygames.com/es/juego/4-in-a-row-connected-multiplayer-online</td></tr>
+    <tr><td>Hexapawn</td><td>mrozilla.cz/lab/hexapawn/</td></tr>
+  </table></div>
+
+  <div class="callout c-reflex"><b>🤔 Critérios de reflexão (sem resposta pronta)</b>O jogo escolhido é baseado em <b>turnos</b> ou tempo real? O <b>estado</b> é pequeno e discreto (fácil de serializar)? As regras são <b>determinísticas</b>? Vocês conseguem listar <b>TODOS</b> os resultados possíveis (vitória/perda/empate)? Lembrem: a Fase de Testes vai exigir testar todos eles!</div>
+
+  <h3><span class="n">0.2</span> Escrevam as regras no papel</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Condições de vitória documentadas</span></label>
+    <label class="chk"><input type="checkbox"><span>Condição de empate documentada (existe no jogo escolhido?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Quem começa? Como é decidido o primeiro turno?</span></label>
+    <label class="chk"><input type="checkbox"><span>Quais são as jogadas <b>válidas</b> e as <b>inválidas</b>?</span></label>
+    <label class="chk"><input type="checkbox"><span>Justificativa da escolha anotada (será usada na documentação)</span></label>
+  </div>
+  <details><summary>📚 Onde estudar esta fase</summary><div class="inner">
+    <p>Joguem as versões de referência acima e observem: quando o servidor decide o vencedor? Como a interface reflete o turno? Anotem comportamentos observados.</p>
+  </div></details>
+</section>
+
+<!-- ============ FASE 1 ============ -->
+<section class="card" id="f1">
+  <h2>🗺️ <span class="ph">FASE 1</span> Design: Requisitos, Arquitetura e Protocolo</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 1</span><span class="badge bg-gold">Entregável: requisitos + arquitetura + protocolo</span></div>
+
+  <h3><span class="n">1.1</span> Definam requisitos funcionais e não funcionais</h3>
+  <p>Releiam os <b>requisitos base</b> do enunciado e transcrevam para uma tabela própria, adicionando as colunas que faltam:</p>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th>Requisito (do enunciado)</th><th>Funcional / Não funcional</th><th>Como testaremos?</th></tr>
+    <tr><td>Registro de vários usuários (username + password) persistido de forma segura</td><td>?</td><td>?</td></tr>
+    <tr><td>Autenticação sem expor dados de registro</td><td>?</td><td>?</td></tr>
+    <tr><td>Mostrar usuários atualmente online</td><td>?</td><td>?</td></tr>
+    <tr><td>Criar partida e convidar qualquer usuário online</td><td>?</td><td>?</td></tr>
+    <tr><td>Aceitar ou rejeitar convite</td><td>?</td><td>?</td></tr>
+    <tr><td>Atualizar o tabuleiro por turno, sincronizado para ambos</td><td>?</td><td>?</td></tr>
+    <tr><td>Mostrar resultado final (vencedor, perdedor, empate) para ambos</td><td>?</td><td>?</td></tr>
+    <tr><td>Abandonar jogo e conceder vitória ao adversário</td><td>?</td><td>?</td></tr>
+    <tr><td>Monitorar eventos do servidor (logins, partidas início/fim, erros)</td><td>?</td><td>?</td></tr>
+    <tr><td>Sem limite de usuários ou partidas simultâneas</td><td>?</td><td>?</td></tr>
+  </table></div>
+  <div class="callout c-reflex"><b>🤔 Pergunta-chave</b>Qual é a diferença entre requisito funcional e não funcional? "Sincronização em tempo real" é qual dos dois? E "não expor dados de registro"? Discutam e classifiquem vocês mesmos.</div>
+
+  <h3><span class="n">1.2</span> Desenhem a arquitetura cliente-servidor</h3>
+  <p>O enunciado apresenta esta topologia — recriem-na com as suas anotações de papel de cada bloco:</p>
+  <pre class="code"><span class="c">-- Topologia alvo (preencham o PAPEL de cada bloco):</span>
+
+[CLIENT 1] --SOCKET--\             /-- [APP SERVER]
+  · registrar          \  (rede)  /       · EVENT BUS
+  · autenticar          \        /        · Gestão de usuários
+  · criar partida       /        \        · Gestão de partidas
+  · unir-se a partidas /          \       · BBDD
+[CLIENT 2] --SOCKET--/             \-- Comunicação: sockets sobre TCP/IP
+                                       Opcional: MQTT (broker)</pre>
+  <div class="callout c-reflex"><b>🤔 Perguntas para o grupo</b>Por que o estado do jogo vive no servidor e não nos clientes? O que ganhamos com um <b>event bus</b> no servidor em vez de chamar funções diretamente? O que é IPC (Inter-process Communication) neste desenho e onde ela acontece?</div>
+
+  <h3><span class="n">1.3</span> Projeteiem o PROTOCOLO de comunicação</h3>
+  <p>Este é o coração do projeto. Antes de escrever código, listem <b>todos os tipos de mensagem</b> que circularão:</p>
+  <div class="flow">
+    <span>registro</span><i>·</i><span>login</span><i>·</i><span>listar online</span><i>·</i><span>convite</span><i>·</i><span>aceitar/recusar</span><i>·</i><span>jogada</span><i>·</i><span>estado do tabuleiro</span><i>·</i><span>fim de jogo</span><i>·</i><span>abandono</span><i>·</i><span>erro</span>
+  </div>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Cada tipo de mensagem definido com nome, emissor, receptor e propósito</span></label>
+    <label class="chk"><input type="checkbox"><span>Formato do payload decidido (texto estruturado? binário?) e <b>justificado</b></span></label>
+    <label class="chk"><input type="checkbox"><span>Estratégia de serialização/desserialização escolhida (conceito do marco teórico!)</span></label>
+    <label class="chk"><input type="checkbox"><span>Como o cliente sabe de quem é o turno? (campo no payload? evento dedicado?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Como uma mensagem é roteada <b>somente</b> para a partida correta quando há várias simultâneas?</span></label>
+  </div>
+  <div class="callout c-dica"><b>💡 Dica de desenho</b>Façam também um <b>diagrama de estado</b> da partida (ex.: aguardando jogadores → em convite → em jogo → encerrada) e um <b>diagrama de sequência</b> de uma jogada completa. Vocês vão precisar deles na documentação de qualquer forma — melhor fazê-los agora!</div>
+
+  <h3><span class="n">1.4</span> Planejem políticas de segurança e roteamento</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Política de armazenamento de credenciais definida (🤔 em texto puro? qual o risco?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Política de transporte escolhida (conexão em claro? TLS/SSL?) com justificativa</span></label>
+    <label class="chk"><input type="checkbox"><span>Regra de roteamento por partida especificada</span></label>
+  </div>
+  <details><summary>📚 Marco teórico a aplicar nesta fase</summary><div class="inner">
+    <p>Programação orientada a objetos e padrões de design · serialização/desserialização · protocolos TCP (sockets, MQTT) · persistência em BD · tratamento de exceções · arquitetura orientada a eventos · implementação de serviços · monitoramento de comunicação. Marquem <b>onde</b> cada conceito aparecerá no projeto.</p>
+  </div></details>
+</section>
+
+<!-- ============ FASE 2 ============ -->
+<section class="card" id="f2">
+  <h2>🧰 <span class="ph">FASE 2</span> Ambiente de Desenvolvimento</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 2</span><span class="badge bg-gold">Entregável: tudo instalado e "Hello Socket" funcionando</span></div>
+
+  <h3><span class="n">2.1</span> Linguagem e bibliotecas</h3>
+  <ul class="plain">
+    <li>Preferencialmente: <b>.NET, C# ou Java</b> — bibliotecas robustas e bem documentadas;</li>
+    <li><b>Python ou JavaScript</b> são alternativas, mas exigem <b>justificativa</b> (🤔 por que o enunciado pede justificativa? O que torna uma biblioteca "robusta e bem documentida"?);</li>
+    <li>Pesquisem a biblioteca de <b>sockets TCP</b> da linguagem escolhida na documentação oficial.</li>
+  </ul>
+
+  <h3><span class="n">2.2</span> Ferramentas obrigatórias</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>SDK/runtime da linguagem instalado e funcionando</span></label>
+    <label class="chk"><input type="checkbox"><span>Repositório <b>Git</b> criado, com acesso de todos os membros</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Wireshark</b> instalado (será usado nos testes de segurança!)</span></label>
+    <label class="chk"><input type="checkbox"><span>Banco de dados escolhido e rodando (local, Docker ou nuvem)</span></label>
+  </div>
+
+  <h3><span class="n">2.3</span> Teste de fumaça de rede</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Um "servidor mínimo" aceita conexão e responde a uma mensagem de teste</span></label>
+    <label class="chk"><input type="checkbox"><span>Dois processos no MESMO computador conversam por socket</span></label>
+    <label class="chk"><input type="checkbox"><span>Dois computadores da MESMA rede conversam por socket (🤔 quais portas/firewall podem atrapalhar?)</span></label>
+  </div>
+  <div class="callout c-reflex"><b>🤔 Pergunta de estudo</b>Em qual camada do <b>modelo OSI</b> os sockets operam? O que o TCP garante — e o que NÃO garante? A resposta certa vale pontos na apresentação!</div>
+  <details><summary>📚 Onde estudar</summary><div class="inner">
+    <p>Documentação oficial de sockets da linguagem escolhida · tutorial Wireshark (captura e filtros básicos) · material de aulas sobre modelo OSI e TCP/IP.</p>
+  </div></details>
+</section>
+
+<!-- ============ FASE 3 ============ -->
+<section class="card" id="f3">
+  <h2>🖥️ <span class="ph">FASE 3</span> Servidor: Event Bus, Usuários e Partidas</h2>
+  <div class="badges"><span class="badge bg-blue">Semanas 2–3</span><span class="badge bg-gold">Entregável: servidor gerenciando usuários e partidas</span></div>
+
+  <h3><span class="n">3.1</span> Fundação: event bus e serviços</h3>
+  <ul class="plain">
+    <li>Implementem o <b>event bus</b> estudado no curso: quem publica eventos? quem assina?</li>
+    <li>Organizem o servidor em <b>serviços</b> (gestão de usuários, gestão de partidas) — 🤔 que padrão de design ajuda a desacoplar esses serviços do transporte?</li>
+    <li>Definam o tratamento de <b>exceções</b>: o que acontece se uma mensagem chega malformada? se um cliente cai no meio do processamento?</li>
+  </ul>
+
+  <h3><span class="n">3.2</span> Gestão de usuários</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Registro de vários usuários (username + password) funcionando</span></label>
+    <label class="chk"><input type="checkbox"><span>Dados de registro <b>persistidos de forma segura</b> no banco (🤔 como? hash? criptografia? qual a diferença?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Autenticação que <b>não expõe</b> os dados de registro (🤔 o que a resposta do servidor deve conter — e o que NÃO deve?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Lista de usuários <b>online</b> disponível (🤔 o que significa "online"? conexão aberta? login ativo? heartbeat?)</span></label>
+  </div>
+  <div class="callout c-armadilha"><b>🔥 Armadilha clássica</b>"Persistir de forma segura" e "não expor dados" são <b>dois requisitos diferentes</b>. Um não resolve o outro. Separem os dois problemas e testem cada um.</div>
+
+  <h3><span class="n">3.3</span> Gestão de partidas</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Criação de nova partida por um usuário logado</span></label>
+    <label class="chk"><input type="checkbox"><span>Envio de convite a qualquer usuário online</span></label>
+    <label class="chk"><input type="checkbox"><span>Destinatário pode <b>aceitar</b> ou <b>recusar</b> (🤔 e se o convidado estiver ocupado em outra partida?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Fila de ações/jogadas por turno gerenciada pelo event bus</span></label>
+    <label class="chk"><input type="checkbox"><span>Roteamento de mensagens <b>por partida</b>, sem limite de partidas simultâneas</span></label>
+    <label class="chk"><input type="checkbox"><span>Teste com 3+ clientes conectados ao mesmo servidor ao mesmo tempo</span></label>
+  </div>
+  <div class="callout c-reflex"><b>🤔 Perguntas de arquitetura</b>Quando dois eventos chegam "ao mesmo tempo", em que ordem são processados? O que é uma fila (queue) e por que o enunciado exige o conceito de event-bus para gerenciar jogadas por turno? Como saber se uma partida já foi iniciada por aquele par de jogadores?</div>
+</section>
+
+<!-- ============ FASE 4 ============ -->
+<section class="card" id="f4">
+  <h2>🖥️ <span class="ph">FASE 4</span> Cliente e Interface</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 3</span><span class="badge bg-gold">Entregável: cliente completo conectado ao servidor</span></div>
+
+  <h3><span class="n">4.1</span> Fluxos do cliente</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Tela/fluxo de registro</span></label>
+    <label class="chk"><input type="checkbox"><span>Tela/fluxo de login</span></label>
+    <label class="chk"><input type="checkbox"><span>Visualização de usuários online</span></label>
+    <label class="chk"><input type="checkbox"><span>Criar partida + escolher convidado</span></label>
+    <label class="chk"><input type="checkbox"><span>Receber convite → aceitar / recusar</span></label>
+    <label class="chk"><input type="checkbox"><span>Tabuleiro interativo (clicar = jogada da vez)</span></label>
+    <label class="chk"><input type="checkbox"><span>Exibição de resultado final para ambos</span></label>
+    <label class="chk"><input type="checkbox"><span>Opção de abandonar partida</span></label>
+  </div>
+  <div class="callout c-reflex"><b>🤔 Perguntas de UX</b>Como o usuário sabe de quem é a vez? Como ele é avisado de um convite enquanto está na tela inicial? O que aparece se a conexão cair? Uma UI "simples e intuitiva" (requisito do enunciado) — para vocês, o que isso significa concretamente?</div>
+
+  <h3><span class="n">4.2</span> Cliente e rede</h3>
+  <ul class="plain">
+    <li>O cliente <b>emite e recebe</b> dados via socket (cliente-servidor e, indiretamente, cliente-cliente via servidor — 🤔 por que o cliente fala com o cliente <i>através</i> do servidor?)</li>
+    <li>A serialização definida na Fase 1 é usada nos dois lados de forma <b>simétrica</b></li>
+    <li>Entradas do usuário são <b>validadas</b> antes de virar mensagens (🤔 quais caracteres/comprimentos são aceitáveis?)</li>
+  </ul>
+</section>
+
+<!-- ============ FASE 5 ============ -->
+<section class="card" id="f5">
+  <h2>🔄 <span class="ph">FASE 5</span> Sincronização do Estado do Jogo</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 4</span><span class="badge bg-gold">Entregável: partida completa sincronizada em tempo real</span></div>
+
+  <h3><span class="n">5.1</span> Regras de turno</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Só o jogador da vez consegue realizar jogada (🤔 quem <b>impede</b> o outro — o cliente ou o servidor? Por quê?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Jogada inválida é rejeitada com mensagem clara (ex.: célula ocupada, fora do turno)</span></label>
+    <label class="chk"><input type="checkbox"><span>O tabuleiro é <b>atualizado para ambos os jogadores</b> a cada jogada</span></label>
+    <label class="chk"><input type="checkbox"><span>Teste com duas "jogadas rápidas" quase simultâneas — o que acontece? (🤔 qual componente garante a ordem?)</span></label>
+  </div>
+
+  <h3><span class="n">5.2</span> Fim de partida</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Detecção de vitória implementada (segundo as regras da Fase 0)</span></label>
+    <label class="chk"><input type="checkbox"><span>Detecção de empate implementada</span></label>
+    <label class="chk"><input type="checkbox"><span>Resultado final mostrado para <b>ambos</b> (vencedor, perdedor ou empate)</span></label>
+    <label class="chk"><input type="checkbox"><span>Abandono concede vitória ao adversário automaticamente</span></label>
+  </div>
+  <div class="callout c-atencao"><b>🎯 Atenção — pergunta de defesa</b>Se dois computadores mostram o tabuleiro, quem é a <b>fonte da verdade</b> do estado do jogo? O que impede que um cliente modificado envie jogadas ilegais? Definam isso conscientemente — o instrutor vai perguntar!</div>
+  <div class="callout c-dica"><b>💡 Estratégia de integração</b>Antes de conectar a rede, façam o jogo funcionar com <b>dois jogadores no mesmo processo</b> (local). A sincronização em rede é uma camada que se soma — se a lógica local está errada, o resto complica.</div>
+</section>
+
+<!-- ============ FASE 6 ============ -->
+<section class="card" id="f6">
+  <h2>🔐 <span class="ph">FASE 6</span> Segurança em Redes</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 4</span><span class="badge bg-gold">Entregável: vulnerabilidades identificadas + protocolos integrados</span></div>
+
+  <h3><span class="n">6.1</span> Identifiquem vulnerabilidades do próprio projeto</h3>
+  <p>O enunciado pede para <b>identificar vulnerabilidades</b>. Façam um exercício de "hacking ético" contra o seu próprio desenho — sem soluções prontas, apenas perguntas:</p>
+  <ul class="plain">
+    <li>🤔 Se eu capturar o tráfego com Wireshark durante um login, o que eu vejo? Deveria ver isso?</li>
+    <li>🤔 Posso enviar mensagens "falsas" ao servidor fingindo ser outro usuário? O que me identificaria?</li>
+    <li>🤔 Posso jogar fora do turno ou nas células do adversário? Quem valida?</li>
+    <li>🤔 O que acontece se eu abrir 10.000 conexões no servidor? (relação com qual ameaça estudada?)</li>
+  </ul>
+
+  <h3><span class="n">6.2</span> Integrem protocolos de segurança</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Transporte seguro avaliado/integrado (TLS/SSL — desejável no enunciado)</span></label>
+    <label class="chk"><input type="checkbox"><span>Hash aplicado às credenciais (🤔 por que hash e não criptografia reversível para senhas?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Grupo sabe explicar o que cada protocolo protege: <b>confidencialidade</b>, <b>integridade</b>, <b>autenticação</b></span></label>
+    <label class="chk"><input type="checkbox"><span>Evidência preparada: captura ANTES e DEPOIS da proteção (para a apresentação!)</span></label>
+  </div>
+  <div class="callout c-reflex"><b>🤔 Para a defesa</b>Onde TLS/SSL atuam no modelo OSI? O que é o handshake e quais identidades ele confirma? Se o enunciado menciona "SHA-64" como exemplo — que papel um algoritmo de hash desempenha aqui? Pesquisem e saibam explicar com suas palavras.</div>
+  <div class="callout c-dica"><b>📦 Nice-to-have de testes</b>Simular ataques (DDoS, Man-in-the-Middle, etc.) vale pontos extras — planejem com o orientador como fazê-lo de forma controlada e ética.</div>
+</section>
+
+<!-- ============ FASE 7 ============ -->
+<section class="card" id="f7">
+  <h2>🧪 <span class="ph">FASE 7</span> Testes</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 5</span><span class="badge bg-gold">Entregável: testes funcionais + segurança + e2e</span></div>
+
+  <h3><span class="n">7.1</span> Testes funcionais</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Plano de testes escrito ANTES de executar (cenário → passos → resultado esperado)</span></label>
+    <label class="chk"><input type="checkbox"><span>Todos os requisitos base têm pelo menos um teste</span></label>
+    <label class="chk"><input type="checkbox"><span>Testes com <b>todos os possíveis resultados de jogo</b> (🤔 a lista da Fase 0 ajuda — quais são todos?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Testes <b>end-to-end</b>: dois clientes reais em máquinas diferentes</span></label>
+  </div>
+
+  <h3><span class="n">7.2</span> Casos de borda (edge cases)</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Jogador fecha o app no meio da partida (🤔 o que acontece com a partida? com o adversário?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Servidor reiniciado no meio do jogo (🤔 o estado sobrevive? por quê?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Mensagem malformada enviada ao servidor (não pode derrubar o serviço!)</span></label>
+    <label class="chk"><input type="checkbox"><span>Duas partidas simultâneas entre pares diferentes de usuários</span></label>
+    <label class="chk"><input type="checkbox"><span>Registro de username já existente</span></label>
+    <label class="chk"><input type="checkbox"><span>Credenciais erradas no login</span></label>
+  </div>
+
+  <h3><span class="n">7.3</span> Verificação de segurança com Wireshark</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Captura de uma sessão completa (registro → login → partida)</span></label>
+    <label class="chk"><input type="checkbox"><span>Análise: qual camada? qual porta? os dados estão legíveis ou protegidos?</span></label>
+    <label class="chk"><input type="checkbox"><span>Capturas arquivadas como <b>evidência</b> para a documentação/apresentação</span></label>
+  </div>
+  <div class="callout c-dica"><b>💡 Dica de evidência</b>Salvem os arquivos de captura com nomes descritivos (ex.: login_sem_protecao.pcapng) — "mostrar no Wireshark" é um dos pontos mais fortes de uma demonstração.</div>
+</section>
+
+<!-- ============ FASE 8 ============ -->
+<section class="card" id="f8">
+  <h2>📡 <span class="ph">FASE 8</span> Monitoramento e Depuração</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 5</span><span class="badge bg-gold">Entregável: logging de eventos do servidor</span></div>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Logging de <b>jogadores</b> (conexão, registro, login, desconexão)</span></label>
+    <label class="chk"><input type="checkbox"><span>Logging de <b>partidas</b> (início e fim, com participantes)</span></label>
+    <label class="chk"><input type="checkbox"><span>Logging de <b>erros</b> (mensagens inválidas, exceções, falhas de rede)</span></label>
+    <label class="chk"><input type="checkbox"><span>[Desejável] Logs <b>persistidos no banco de dados</b> (🤔 que tabela/estrutura? o que cada registro deveria conter?)</span></label>
+    <label class="chk"><input type="checkbox"><span>Método de depuração documentado: como vocês inspecionam a comunicação quando algo falha?</span></label>
+  </div>
+  <div class="callout c-reflex"><b>🤔 Pergunta</b>Quando uma jogada "não chega", quais as primeiras perguntas que o log deveria responder? (quem enviou, quando, o quê, para qual partida, com qual resultado?) Projetem os logs respondendo a elas.</div>
+</section>
+
+<!-- ============ FASE 9 ============ -->
+<section class="card" id="f9">
+  <h2>✨ <span class="ph">FASE 9</span> Requisitos Opcionais (nice-to-have)</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 6</span><span class="badge bg-gold">Só depois dos requisitos base 100% estáveis!</span></div>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span><b>Placar/Scoreboard:</b> ranking público por vitórias e empates (🤔 que consulta ao banco? como atualizar após cada partida?)</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Bot player:</b> jogador virtual gerenciado pelo servidor (player vs. computer) (🤔 onde a "inteligência" do bot roda — cliente ou servidor? por quê?)</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Falha e recuperação:</b> jogador desconectado consegue reconectar a uma partida em andamento (🤔 como o servidor o reconhece de volta?)</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Server dashboard:</b> interface de administrador com usuários conectados, jogos ativos, estatísticas e erros em tempo real</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Implantação em nuvem:</b> aplicação implantada e testada com amigos (🤔 como expor portas com segurança?)</span></label>
+  </div>
+  <div class="callout c-atencao"><b>🎯 Priorização</b>Lista corta > lista longa mal feita. Escolham <b>1 ou 2</b> itens e os entreguem bem documentados, em vez de começar cinco e não terminar nenhum. Documentem claramente o que é base e o que é opcional na entrega.</div>
+</section>
+
+<!-- ============ FASE 10 ============ -->
+<section class="card" id="f10">
+  <h2>📖 <span class="ph">FASE 10</span> Documentação</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 6</span><span class="badge bg-gold">Escreva DURANTE o desenvolvimento, não depois</span></div>
+
+  <h3><span class="n">10.1</span> Componentes de rede a documentar</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span><b>Cliente:</b> responsabilidades, telas, como conecta</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Servidor:</b> serviços, event bus, gerenciamento de usuários/partidas</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Banco de dados (BDD):</b> estrutura, o que persiste e por quê</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Protocolo:</b> tipos de mensagem, payloads, exemplos reais</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Broker (se usar MQTT):</b> papel no sistema; se não usar, justificar a escolha</span></label>
+  </div>
+
+  <h3><span class="n">10.2</span> Diagramas e explicações exigidos</h3>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span><b>Diagrama de estado</b> da partida</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Diagrama de sequência</b> de uma jogada e de um convite</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Fluxos de rede</b> (quem fala com quem, por onde)</span></label>
+    <label class="chk"><input type="checkbox"><span><b>IPC</b> explicada: onde ocorre comunicação entre processos e o que trafega</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Payloads</b> explicados com exemplos reais capturados/serializados</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Justificativa das bibliotecas</b> de rede escolhidas</span></label>
+    <label class="chk"><input type="checkbox"><span><b>Monitoramento e depuração:</b> como fazer na prática (incluindo Wireshark)</span></label>
+  </div>
+
+  <h3><span class="n">10.3</span> Estrutura sugerida do documento</h3>
+  <pre class="code"><span class="c">-- Preencham cada seção com o conteúdo de VOCÊS:</span>
+1. Visão geral e jogo escolhido (com justificativa)
+2. Requisitos (funcionais e não funcionais) + tabela da Fase 1
+3. Arquitetura (diagrama + papel de cada componente)
+4. Protocolo e payloads (tabela de mensagens + exemplos)
+5. Segurança (vulnerabilidades identificadas + proteções + evidências)
+6. Testes (plano, resultados, capturas do Wireshark)
+7. Monitoramento (o que é logado, onde, como depurar)
+8. Decisões e justificativas (perguntas → respostas do grupo)</pre>
+</section>
+
+<!-- ============ FASE 11 ============ -->
+<section class="card" id="f11">
+  <h2>🎤 <span class="ph">FASE 11</span> Apresentação Final</h2>
+  <div class="badges"><span class="badge bg-blue">Semana 6</span><span class="badge bg-gold">Demonstração ao vivo + conceitos aprendidos</span></div>
+
+  <h3><span class="n">11.1</span> Roteiro da demo (dica de ordem)</h3>
+  <div class="flow">
+    <span>subir servidor</span><i>→</i><span>registrar 2 usuários</span><i>→</i><span>login</span><i>→</i><span>ver online</span><i>→</i><span>convidar</span><i>→</i><span>aceitar</span><i>→</i><span>jogar partida completa</span><i>→</i><span>resultado</span><i>→</i><span>abandono (2ª partida)</span><i>→</i><span>logs</span><i>→</i><span>Wireshark</span>
+  </div>
+  <div class="chklist">
+    <label class="chk"><input type="checkbox"><span>Ambiente do apresentador testado no dia (servidor, banco, rede)</span></label>
+    <label class="chk"><input type="checkbox"><span>Plano B: vídeo da demonstração gravado</span></label>
+    <label class="chk"><input type="checkbox"><span>Cada membro consegue explicar QUALQUER parte (roteação de conhecimento)</span></label>
+  </div>
+
+  <h3><span class="n">11.2</span> Perguntas que vocês devem conseguir responder</h3>
+  <ul class="plain">
+    <li>Onde os sockets atuam no modelo OSI e por que TCP foi escolhido?</li>
+    <li>Como o event bus gerencia a fila de jogadas por turno?</li>
+    <li>Como as credenciais são persistidas e por que essa abordagem é segura?</li>
+    <li>Como uma mensagem chega apenas à partida correta com N partidas ativas?</li>
+    <li>O que o Wireshark mostrou antes/depois das proteções?</li>
+    <li>O que aconteceria se dois jogadores jogassem no mesmo instante?</li>
+  </ul>
+  <div class="callout c-ondeest"><b>💙 Lembrete final</b>Este guia existe para que <b>vocês</b> construam e <b>defendam</b> o projeto. Cada "🤔" é um possível questionamento do instrutor. Se o grupo responde a todos — e demonstra tudo ao vivo — o capstone está pronto. Boa construção! 🚀</div>
+</section>
+
+<!-- ============ ERROS COMUNS ============ -->
+<section class="card" id="erros">
+  <h2>🚨 <span class="ph">ALERTA</span> Erros Comuns (Evite!)</h2>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th>❌ Erro</th><th>✅ Prevenção</th></tr>
+    <tr><td>Escolher jogo complexo/tempo real sem consultar o orientador</td><td>Consultar antes (requisito explícito do enunciado) — Fase 0</td></tr>
+    <tr><td>Começar a UI antes de definir o protocolo</td><td>Protocolo primeiro; a interface nasce dele — Fase 1.3</td></tr>
+    <tr><td>Senhas em texto puro no banco</td><td>Política de persistência segura — Fase 3.2 / 6.2</td></tr>
+    <tr><td>Validar jogadas apenas no cliente</td><td>Definir a fonte da verdade do estado — Fase 5.2</td></tr>
+    <tr><td>Sem tratamento de exceções nas desconexões</td><td>Casos de borda — Fase 3.1 / 7.2</td></tr>
+    <tr><td>Suportar apenas UMA partida por vez</td><td>Roteamento por partida + teste com 3+ clientes — Fase 3.3</td></tr>
+    <tr><td>Testar só o caminho feliz</td><td>Plano de testes com bordas e todos os resultados — Fase 7</td></tr>
+    <tr><td>Wireshark deixado para a última hora</td><td>Instalar na Fase 2 e capturar desde o "hello socket"</td></tr>
+    <tr><td>Começar nice-to-have antes do base</td><td>Priorização — Fase 9</td></tr>
+    <tr><td>Documentação escrita na última noite</td><td>Escrever durante; diagramas já feitos no design</td></tr>
+    <tr><td>Só um membro entende o código</td><td>Rotação de conhecimento — Fase 11.1</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ CHECKLIST FINAL ============ -->
+<section class="card" id="final">
+  <h2>✅ <span class="ph">ENTREGA</span> Checklist Final do Capstone</h2>
+  <p class="sub">Confira item a item antes de enviar e apresentar.</p>
+  <div class="chklist big-final">
+    <label class="chk"><input type="checkbox"><span>🎮 Aplicação completa: 2 usuários simultâneos, estado em tempo real sincronizado, testes end-to-end</span></label>
+    <label class="chk"><input type="checkbox"><span>📜 Todos os requisitos base implementados e demonstráveis</span></label>
+    <label class="chk"><input type="checkbox"><span>🔐 Vulnerabilidades identificadas + protocolos de segurança/criptografia integrados (TLS, SSL, hash — desejável)</span></label>
+    <label class="chk"><input type="checkbox"><span>🏗️ Arquitetura cliente-servidor com roteamento por partida, sem limite de usuários/partidas</span></label>
+    <label class="chk"><input type="checkbox"><span>🚌 Event bus gerenciando fila de ações/jogadas por turno</span></label>
+    <label class="chk"><input type="checkbox"><span>🔌 Sockets TCP funcionando cliente-servidor e cliente-cliente (via servidor)</span></label>
+    <label class="chk"><input type="checkbox"><span>🖥️ UI simples: online, partidas, jogar, ranking (se implementado)</span></label>
+    <label class="chk"><input type="checkbox"><span>🧪 Testes funcionais + todos os resultados de jogo + verificação com Wireshark</span></label>
+    <label class="chk"><input type="checkbox"><span>📡 Monitoramento: logging de jogadores, partidas e erros ([desejável] no banco)</span></label>
+    <label class="chk"><input type="checkbox"><span>📖 Documentação: componentes, diagramas de estado/sequência/fluxos, IPC, payloads, justificativa de bibliotecas</span></label>
+    <label class="chk"><input type="checkbox"><span>✨ Nice-to-have claramente separados do base (scoreboard/bot/recuperação/dashboard/nuvem)</span></label>
+    <label class="chk"><input type="checkbox"><span>🗂️ Repositório Git limpo, com README e histórico de contribuição do grupo</span></label>
+    <label class="chk"><input type="checkbox"><span>🎤 Apresentação ensaiada com roteiro de demo + perguntas simuladas</span></label>
+  </div>
+</section>
+
+</main>
+</div>
+
+<div class="fab">
+  <button class="pr" id="fabPrint" title="Imprimir / PDF">🖨️</button>
+  <button class="up" id="fabTop" title="Voltar ao topo">↑</button>
+</div>
+
+<footer>
+  <b>Tutorial Guia — Capstone: Jogo Multiplayer 2P em Rede · Tecnologia de Redes para Desenvolvedores</b><br>
+  Material de apoio metodológico, apenas para uso educacional. Não distribuir sem autorização prévia por escrito.<br>
+  © 2026 | Todos os direitos reservados. · Ao enviar este projeto, reconheço não violar as políticas acadêmicas do curso.
+</footer>
+
+<script>
+const SECTIONS=[
+ ["p0","🚀","Início"],["pCron","🗓️","Cronograma"],
+ ["f0","🎮","Fase 0 · Jogo & Escopo"],["f1","🗺️","Fase 1 · Design"],
+ ["f2","🧰","Fase 2 · Ambiente"],["f3","🖥️","Fase 3 · Servidor"],
+ ["f4","🖥️","Fase 4 · Cliente"],["f5","🔄","Fase 5 · Sincronização"],
+ ["f6","🔐","Fase 6 · Segurança"],["f7","🧪","Fase 7 · Testes"],
+ ["f8","📡","Fase 8 · Monitoramento"],["f9","✨","Fase 9 · Nice-to-have"],
+ ["f10","📖","Fase 10 · Documentação"],["f11","🎤","Fase 11 · Apresentação"],
+ ["erros","🚨","Erros comuns"],["final","✅","Checklist final"]
+];
+const nav=$("nav");
+SECTIONS.forEach(([id,ic,tx])=>{
+  const a=document.createElement("a");a.className="navlink";a.href="#"+id;a.dataset.for=id;
+  a.innerHTML=`<span>${ic}</span><span>${tx}</span><span class="done" style="display:none">✓</span>`;nav.appendChild(a);
+});
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const KEY="capstoneTutorialProgress";
+let saved={};try{saved=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+const boxes=$$("main input[type=checkbox]");
+boxes.forEach((b,i)=>{
+  b.checked=!!saved[i];
+  b.addEventListener("change",()=>{saved[i]=b.checked;localStorage.setItem(KEY,JSON.stringify(saved));refresh()});
+});
+function refresh(){
+  boxes.forEach((b,i)=>b.checked=!!saved[i]);
+  const total=boxes.length;let done=0;
+  SECTIONS.forEach(([id])=>{
+    const sec=document.getElementById(id);if(!sec)return;
+    const cb=sec.querySelectorAll("input[type=checkbox]");
+    const ok=cb.length&&[...cb].every(c=>c.checked);
+    const link=nav.querySelector(`[data-for="${id}"] .done`);
+    if(link)link.style.display=ok?"inline":"none";
+    done+=[...cb].filter(c=>c.checked).length;
+  });
+  const pct=total?Math.round(done/total*100):0;
+  $("#miniBar").style.width=pct+"%";$("#miniTxt").textContent=pct+"%";
+  $("#sideBar").style.width=pct+"%";
+  $("#sideTxt").textContent=`${done} de ${total} etapas concluídas`;
+  if(pct===100)confetti();
+}
+function confetti(){const c=document.createElement("div");
+  c.style.cssText="position:fixed;inset:0;pointer-events:none;z-index:99";
+  const cols=["#2196f3","#00b0ff","#ffb300","#22c55e"];
+  for(let i=0;i<70;i++){const d=document.createElement("i");
+    d.style.cssText=`position:absolute;top:-12px;left:${Math.random()*100}%;width:8px;height:12px;border-radius:3px;background:${cols[i%4]};animation:f ${2+Math.random()*2}s linear forwards`;
+    c.appendChild(d)}
+  const st=document.createElement("style");st.textContent="@keyframes f{to{transform:translateY(105vh) rotate(720deg)}}";
+  document.head.appendChild(st);document.body.appendChild(c);
+  setTimeout(()=>{c.remove();st.remove()},4800)}
+const io=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting){
+    nav.querySelectorAll(".navlink").forEach(a=>a.classList.toggle("active",a.dataset.for===e.target.id))}})
+},{rootMargin:"-20% 0px -70% 0px"});
+SECTIONS.forEach(([id])=>{const s=document.getElementById(id);if(s)io.observe(s)});
+ $("#search").addEventListener("input",e=>{
+  const q=e.target.value.toLowerCase();
+  nav.querySelectorAll(".navlink").forEach(a=>{
+    a.style.display=a.textContent.toLowerCase().includes(q)?"flex":"none"})});
+ $("#menuBtn").onclick=()=>$("#sidebar").classList.toggle("open");
+document.addEventListener("click",e=>{
+  if(window.innerWidth<=900&&!$("#sidebar").contains(e.target)&&e.target!==$("#menuBtn"))
+    $("#sidebar").classList.remove("open")});
+const doPrint=()=>window.print();
+ $("#btnPrint").onclick=doPrint;$("#fabPrint").onclick=doPrint;
+ $("#fabTop").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
+ $("#btnReset").onclick=()=>{if(confirm("Zerar todo o progresso dos checklists?")){saved={};localStorage.removeItem(KEY);refresh()}};
+refresh();
+</script>
+</body>
+</html>
