@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🛡️ Guardião da Rede — Jogo de Segurança</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --b900:#06203f;--b800:#0a2f6b;--b700:#0d47a1;--b600:#1565c0;--b400:#2196f3;
+  --cyan:#00b0ff;--ink:#0f2440;--muted:#5b7396;--ok:#22c55e;--bad:#ef4444;--gold:#ffb300;
+  --bg1:#eaf3ff;--card:#fff;--line:#d7e5f8;--r:18px;--shadow:0 10px 30px rgba(13,71,161,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Poppins',system-ui,'Segoe UI',Roboto,Arial,sans-serif;color:var(--ink);min-height:100vh;
+  background:
+    radial-gradient(900px 500px at 110% -10%,rgba(0,176,255,.18),transparent 60%),
+    radial-gradient(700px 420px at -10% 110%,rgba(13,71,161,.16),transparent 60%),
+    linear-gradient(180deg,var(--bg1),#f7fbff 55%,var(--bg1));
+}
+.deco{position:fixed;border-radius:50%;z-index:0;pointer-events:none}
+.c1{width:420px;height:420px;background:radial-gradient(circle at 30% 30%,#1565c0,#0a2f6b);top:-160px;left:-140px;opacity:.9}
+.c2{width:150px;height:150px;background:#0d47a1;top:220px;left:-60px;opacity:.85}
+.c3{width:360px;height:360px;background:radial-gradient(circle at 60% 60%,#0b3a86,#061f47);bottom:-180px;right:-120px;opacity:.9}
+header{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;flex-wrap:wrap}
+.brand b{color:var(--b700);font-size:1.05rem;display:block}
+.brand span{color:var(--muted);font-size:.75rem}
+.hud{display:flex;gap:8px;align-items:center}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.85rem;box-shadow:var(--shadow)}
+.chip small{color:var(--muted);font-weight:400}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:14px;transition:.18s}
+.btn{background:linear-gradient(135deg,var(--b600),var(--b400));color:#fff;font-weight:700;padding:14px 26px;font-size:1rem;box-shadow:0 8px 20px rgba(21,101,192,.35)}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.btn.ghost{background:var(--card);color:var(--b700);border:1.5px solid var(--line);box-shadow:var(--shadow)}
+.btn.small{padding:9px 16px;font-size:.85rem;border-radius:11px}
+main{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:10px 16px 60px}
+.hidden{display:none!important}
+.screen{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:26px}
+.center{text-align:center}
+h1{font-size:clamp(1.5rem,4vw,2.2rem);color:var(--b800);line-height:1.2}
+h2{font-size:1.25rem;color:var(--b800)}
+.sub{color:var(--muted);font-size:.95rem;margin:8px 0 18px}
+.rules{text-align:left;margin:16px auto 20px;max-width:580px}
+.rules li{margin:7px 0 7px 4px;font-size:.92rem;color:#33507a;list-style:none;padding-left:26px;position:relative}
+.rules li::before{content:"✔";position:absolute;left:0;color:var(--ok);font-weight:800}
+input{font-family:inherit;font-size:1rem;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;outline:none;width:min(320px,90%);text-align:center}
+input:focus{border-color:var(--b400);box-shadow:0 0 0 4px rgba(33,150,243,.15)}
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
+.lvl{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);text-align:left;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.lvl::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,rgba(33,150,243,.15),rgba(0,176,255,.08))}
+.lvl h3{color:var(--b800);font-size:.98rem;display:flex;gap:8px;align-items:center}
+.lvl .meta{font-size:.8rem;color:var(--muted)}
+.lvl .stars{color:var(--gold);letter-spacing:2px}
+.lvl.locked{opacity:.55;filter:grayscale(.4)}
+.lvl .tipbtn{background:#e8f2ff;color:var(--b700);font-weight:600;padding:7px 12px;border-radius:10px;font-size:.8rem;align-self:flex-start}
+.tipbox{background:#f0f7ff;border:1px dashed var(--b400);border-radius:12px;padding:10px 12px;font-size:.8rem;color:#28527f;margin-top:4px}
+.quizhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.pbar{height:10px;background:#e3edfb;border-radius:99px;overflow:hidden;margin:8px 0 18px}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--b600),var(--cyan));transition:width .4s}
+.q{font-size:1.12rem;font-weight:600;color:var(--b900);margin-bottom:16px;line-height:1.45}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;background:#f5f9ff;border:1.5px solid var(--line);padding:13px 15px;border-radius:13px;font-size:.93rem;color:#22406b;font-weight:500}
+.opt:hover:not(:disabled){border-color:var(--b400);background:#eaf4ff;transform:translateX(3px)}
+.opt .k{display:inline-block;background:var(--b700);color:#fff;border-radius:7px;width:24px;height:24px;text-align:center;line-height:24px;font-size:.75rem;margin-right:9px;font-weight:700}
+.opt.ok{background:#e9fbef;border-color:var(--ok);color:#14532d}
+.opt.ok .k{background:var(--ok)}
+.opt.bad{background:#fdecec;border-color:var(--bad);color:#7f1d1d;animation:shake .4s}
+.opt:disabled{cursor:default}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.fb{border-radius:13px;padding:14px 16px;margin-top:16px;font-size:.9rem;line-height:1.5;animation:fade .3s}
+.fb.ok{background:#e9fbef;border:1.5px solid var(--ok)}
+.fb.bad{background:#fdecec;border:1.5px solid var(--bad)}
+.fb b{display:block;margin-bottom:4px}
+.next{margin-top:16px;float:right}
+.matchwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+@media(max-width:640px){.matchwrap{grid-template-columns:1fr}}
+.mcol{display:grid;gap:9px;align-content:start}
+.mcol h4{color:var(--b700);font-size:.85rem;text-transform:uppercase;letter-spacing:.5px}
+.mitem{text-align:left;background:#f5f9ff;border:1.5px solid var(--line);padding:12px;border-radius:12px;font-size:.86rem;color:#22406b;font-weight:500}
+.mitem:hover:not(.done){border-color:var(--b400)}
+.mitem.sel{border-color:var(--b600);background:#e3f0ff;box-shadow:0 0 0 3px rgba(21,101,192,.18)}
+.mitem.done{background:#e9fbef;border-color:var(--ok);color:#14532d;cursor:default}
+.mitem.err{animation:shake .4s;background:#fdecec;border-color:var(--bad)}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(6,32,63,.55);display:flex;align-items:center;justify-content:center;padding:18px;animation:fade .25s}
+.mcard{background:#fff;border-radius:20px;max-width:430px;width:100%;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:pop .3s}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.bigstars{font-size:2.4rem;letter-spacing:6px;margin:6px 0;color:var(--gold)}
+.resgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:18px 0}
+.stat{background:#f2f8ff;border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat b{font-size:1.35rem;color:var(--b700);display:block}
+.stat span{font-size:.72rem;color:var(--muted)}
+.badge{font-size:1.25rem;font-weight:800;color:var(--b800);background:linear-gradient(135deg,#fff8e1,#ffe9b0);border:1px solid #f3d47c;padding:12px 20px;border-radius:14px;display:inline-block;margin:10px 0}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.cf{position:absolute;top:-12px;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+footer{position:relative;z-index:2;text-align:center;color:var(--muted);font-size:.72rem;padding:0 16px 26px}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--b600),var(--cyan));display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;color:#fff;box-shadow:var(--shadow);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="deco c1"></div><div class="deco c2"></div><div class="deco c3"></div>
+
+<header>
+  <div class="brand"><b>🛡️ Guardião da Rede</b><span>Jogo interativo de Segurança de Redes</span></div>
+  <div class="hud">
+    <div class="chip">🏆 <small>Pontos:</small> <span id="hudScore">0</span></div>
+    <div class="chip">🔥 <small>Sequência:</small> <span id="hudStreak">0</span></div>
+    <button class="chip" id="btnMute" title="Som">🔊</button>
+    <button class="chip" id="btnHome" title="Mapa de níveis">🏠</button>
+  </div>
+</header>
+
+<main>
+  <!-- ==================== START ==================== -->
+  <section id="scr-start" class="screen">
+    <div class="card center">
+      <div class="logo">🛡️</div>
+      <h1>Guardião da Rede 🛡️</h1>
+      <p class="sub">Missão: proteger a integridade, a confidencialidade e a disponibilidade da rede contra
+      <b>malware, phishing, DDoS, MITM, zero-days e injeção de SQL</b> — dominando firewalls, VPNs, proxies, IDS e HTTPS/SSL.</p>
+      <ul class="rules">
+        <li><b>8 níveis:</b> Fundamentos · Malware · Ameaças de Rede · Firewalls · VPNs & Proxies · IDS · HTTPS/SSL · SQL Injection</li>
+        <li>Resposta certa no quiz = <b>10 pontos</b>; par ligado à primeira = <b>10</b> (depois = 5)</li>
+        <li>Acerte <b>tudo</b> num nível e ganhe <b>+5 de bônus “Perfeito!”</b> ⭐</li>
+        <li>Complete um nível para <b>desbloquear o próximo</b> — o progresso fica salvo no navegador</li>
+      </ul>
+      <div style="margin:6px 0 14px">
+        <input id="inpName" maxlength="18" placeholder="Digite seu codinome, agente…">
+      </div>
+      <button class="btn" id="btnStart">▶ Iniciar Missão</button>
+      <p class="sub" style="margin-top:14px" id="bestTxt">Melhor pontuação: —</p>
+      <button class="btn ghost small" id="btnReset">🗑 Zerar progresso</button>
+    </div>
+  </section>
+
+  <!-- ==================== LEVEL MAP ==================== -->
+  <section id="scr-levels" class="screen hidden">
+    <div class="card center">
+      <h1>Sala de Operações</h1>
+      <p class="sub" id="welcomeTxt"></p>
+      <div class="levels" id="lvlGrid"></div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn" id="btnFinish">📊 Ver Relatório Final</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== QUIZ ==================== -->
+  <section id="scr-quiz" class="screen hidden">
+    <div class="card">
+      <div class="quizhead">
+        <span class="chip" id="qLevel"></span>
+        <span class="chip" id="qCount"></span>
+      </div>
+      <div class="pbar"><i id="qBar"></i></div>
+      <div class="q" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div id="qFb"></div>
+      <button class="btn next hidden" id="qNext">Continuar ➜</button>
+    </div>
+  </section>
+
+  <!-- ==================== MATCH ==================== -->
+  <section id="scr-match" class="screen hidden">
+    <div class="card">
+      <div class="quizhead">
+        <span class="chip" id="mLevel"></span>
+        <span class="chip" id="mCount"></span>
+      </div>
+      <p class="sub" style="margin:6px 0 2px">Clique num item da <b>esquerda</b> e depois no seu par da <b>direita</b>. Acertos à primeira valem 10 pontos!</p>
+      <div class="pbar"><i id="mBar"></i></div>
+      <div class="matchwrap">
+        <div class="mcol"><h4>Conceitos</h4><div id="mLeft"></div></div>
+        <div class="mcol"><h4>Definições</h4><div id="mRight"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== RESULT ==================== -->
+  <section id="scr-result" class="screen hidden">
+    <div class="card center">
+      <div style="font-size:3.4rem" id="resEmoji">🏆</div>
+      <h1 id="resRank">Relatório</h1>
+      <div class="badge" id="resBadge"></div>
+      <div class="resgrid">
+        <div class="stat"><b id="resPts">0</b><span>PONTOS</span></div>
+        <div class="stat"><b id="resPct">0%</b><span>APROVEITAMENTO</span></div>
+        <div class="stat"><b id="resStars">0</b><span>ESTRELAS ⭐</span></div>
+      </div>
+      <div id="resDetail" style="text-align:left;font-size:.85rem;color:#33507a;margin-bottom:18px"></div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn" id="btnReplay">🔁 Nova Missão</button>
+        <button class="btn ghost" id="btnMap">🗺 Sala de Operações</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal hidden" id="modal"><div class="mcard" id="mcard"></div></div>
+<div id="confetti"></div>
+
+<footer>Material apenas para uso educacional — não distribuir sem autorização prévia por escrito. © 2026 | Todos os direitos reservados.</footer>
+
+<script>
+/* ============ DADOS ============ */
+const LEVELS=[
+{id:1,icon:"🧱",title:"Fundamentos: Integridade, Confidencialidade e Disponibilidade",kind:"quiz",meta:"Quiz · 5 perguntas",
+tip:"Segurança de rede é o conjunto de políticas, procedimentos e tecnologias projetadas para proteger três pilares: Integridade (nada alterado sem autorização), Confidencialidade (acesso só por autorizados) e Disponibilidade (tudo funcionando quando necessário).",
+questions:[
+{q:"O que é segurança de rede?",
+o:["Conjunto de políticas, procedimentos e tecnologias projetadas para proteger a integridade, a confidencialidade e a disponibilidade de informações e recursos de rede","Um programa antivírus instalado no roteador","A velocidade máxima de transmissão da rede","Um tipo de cabo de rede blindado"],a:0,
+e:"Ela protege os três pilares: integridade, confidencialidade e disponibilidade."},
+{q:"O que a INTEGRIDADE garante?",
+o:["Que informações e recursos não sejam alterados de maneira não autorizada, seja por ações intencionais ou não intencionais","Que todos possam ler os arquivos livremente","Que a rede fique sempre rápida","Que existam backups em fitas magnéticas"],a:0,
+e:"Integridade = nada é modificado sem autorização, nem por acidente, nem por má intenção."},
+{q:"O que a CONFIDENCIALIDADE garante?",
+o:["Que as informações sejam acessíveis somente por usuários autorizados","Que os dados sejam copiados em dois locais","Que a rede Wi-Fi tenha senha de 4 caracteres","Que a cobertura da rede seja total"],a:0,
+e:"Confidencialidade = só quem é autorizado consegue acessar a informação."},
+{q:"O que a DISPONIBILIDADE garante?",
+o:["Que os sistemas e dados estejam disponíveis para usuários autorizados quando eles precisarem","Que o site exiba muitos anúncios","Que os dados fiquem sempre públicos","Que o servidor seja o mais caro do mercado"],a:0,
+e:"Disponibilidade = o serviço funciona para quem precisa, quando precisa."},
+{q:"Por que a segurança de rede é importante?",
+o:["Dados confidenciais que trafegam pela rede devem chegar intactos e seguros ao destino, e existem regulamentações que regem como transmiti-los","Porque aumenta o desempenho da rede","Porque economiza energia dos servidores","Porque elimina a necessidade de backups"],a:0,
+e:"Dados financeiros, médicos e pessoais devem chegar intactos; várias regulamentações regem sua transmissão."}]},
+
+{id:2,icon:"🦠",title:"Malware: o zoológico de ameaças",kind:"quiz",meta:"Quiz · 7 perguntas",
+tip:"Malware = Malicioso + Software. Tipos: vírus (hospedeiro de programas), worms (se espalham pela rede), trojans (disfarçados de legítimos), ransomware (exige resgate), spyware (espiona) e adware (anúncios indesejados). Previna com design robusto, antivírus atualizado, atualizações e boas práticas de navegação.",
+questions:[
+{q:"O que é malware?",
+o:["Termo geral que abrange todos os tipos de software malicioso projetado para danificar, interromper, roubar informações ou causar danos a sistemas e redes","Qualquer software gratuito","Um aplicativo de mensagens","Um sistema operacional antigo"],a:0,
+e:"A palavra vem de Malicioso + Software. “Vírus” é apenas uma subcategoria de malware."},
+{q:"O que caracteriza um VÍRUS?",
+o:["Programa intrusivo inserido em outros programas/arquivos ocultos; usa o sistema operacional como hospedeiro para operar e se replicar","Um programa que se espalha sozinho pela rede sem infectar arquivos","Um software que exige resgate para liberar dados","Um anúncio pop-up indesejado"],a:0,
+e:"O nome vem da analogia com vírus biológicos: ele infecta e se replica usando o hospedeiro."},
+{q:"O que caracteriza um WORM (verme)?",
+o:["Programa que se replica e se espalha por redes sem infectar outros arquivos, hibernando até um estímulo externo o ative","Um vírus que precisa de um arquivo hospedeiro","Um trojan que rouba senhas","Um adware de publicidade legítima"],a:0,
+e:"Extremamente perigoso: quando um worm é detectado, provavelmente já se espalhou para milhares de usuários."},
+{q:"O que caracteriza um TROJAN (cavalo de Troia)?",
+o:["Programa malicioso disfarçado de software legítimo que, uma vez instalado, abre gateways e concede acesso a usuários não autorizados","Um software que só mostra anúncios","Um vírus de ação exclusiva na BIOS","Um worm sem replicação"],a:0,
+e:"O nome vem do mito do cavalo de Troia: entra escondido usando a credibilidade de algo legítimo."},
+{q:"O que faz o RANSOMWARE?",
+o:["Criptografa ou rouba dados do usuário e exige um resgate para restaurar o acesso","Exibe publicidade indesejada em pop-ups","Registra as teclas digitadas pelo usuário","Faz cópias de backup dos dados"],a:0,
+e:"O nome combina Ransom (resgate) + Software."},
+{q:"Qual é a diferença entre SPYWARE e ADWARE?",
+o:["Spyware coleta informações do usuário sem consentimento (ex.: keyloggers); adware exibe anúncios indesejados e pode redirecionar pesquisas","Spyware exibe anúncios; adware rouba senhas","São a mesma coisa com nomes diferentes","Nenhum deles é considerado malware"],a:0,
+e:"Hoje existe uma linha tênue entre adware e publicidade legítima — mas o espionagem do spyware é sempre ilícita."},
+{q:"Qual NÃO é uma forma recomendada de evitar malware?",
+o:["Desativar todas as notificações de autorização do sistema para acelerar o uso","Manter sistema operacional e softwares atualizados","Instalar e atualizar regularmente antivírus/antimalware","Praticar boas práticas de navegação, atento aos sites e arquivos baixados"],a:0,
+e:"O sistema pede autorização antes de executar programas críticos justamente para protegê-lo. Design robusto, atualizações e antivírus são as defesas corretas."}]},
+
+{id:3,icon:"🎣",title:"Phishing, DDoS, MITM e Zero-day",kind:"quiz",meta:"Quiz · 7 perguntas",
+tip:"Phishing 'pesca' credenciais com e-mails e sites falsos. DDoS sobrecarrega o serviço com requisições de várias fontes. MITM intercepta e altera a comunicação entre duas partes (interceptação de rede e spoofing). Zero-day são falhas que escaparam do controle de qualidade.",
+questions:[
+{q:"O que é phishing?",
+o:["Técnica usada para enganar pessoas e fazê-las revelar informações confidenciais, como senhas e detalhes de cartão, por e-mails falsos, sites fraudulentos e mensagens falsas","Um tipo de vírus que criptografa arquivos","Um ataque que derruba servidores","Uma ferramenta de antivírus"],a:0,
+e:"O nome vem da semelhança fonética com “fishing” (pescar): o golpista pesca vítimas."},
+{q:"Qual é a principal forma de prevenção ao phishing?",
+o:["Conscientização e treinamento dos usuários, além de filtros de e-mail e verificação da fonte das solicitações","Aumentar a RAM dos servidores","Usar apenas navegadores antigos","Desligar a Internet à noite"],a:0,
+e:"Pessoas com poucas habilidades tecnológicas são particularmente vulneráveis — educar é essencial. Empresas até enviam e-mails falsos internos para treinar funcionários."},
+{q:"O que é um ataque DDoS (Distributed Denial of Service)?",
+o:["Esforço coordenado de diversas fontes para solicitar um serviço web até sobrecarregar o servidor e impedi-lo de processar novas solicitações","A interceptação silenciosa de e-mails","A instalação de um keylogger","A exploração de uma falha desconhecida"],a:0,
+e:"A diferença para uma sobrecarga legítima é a intenção de afetar negativamente o serviço."},
+{q:"Como se prevenir de um ataque DDoS?",
+o:["Sistemas de mitigação com bloqueio automático de IPs maliciosos, CAPTCHA, autenticação de usuários e sistemas redundantes","Remover o firewall para acelerar o tráfego","Publicar o endereço IP do servidor","Responder o ataque com outro ataque"],a:0,
+e:"É mais fácil monitorar e controlar o tráfego quando apenas usuários autenticados acessam a API."},
+{q:"O que é um ataque do Homem no Meio (MITM)?",
+o:["O invasor intercepta e possivelmente altera a comunicação entre duas partes sem que elas saibam, por interceptação de rede ou spoofing de IPs","Um vírus que imita o sistema operacional","Uma falha de dia zero no firewall","Um tipo de ransomware em rede local"],a:0,
+e:"Spoofing é a falsificação de endereços IP para representar uma das partes da comunicação."},
+{q:"Como se prevenir de ataques MITM?",
+o:["Criptografia das informações, uso de certificados digitais para verificar a origem e monitoramento de rede para detectar comportamentos anômalos","Usar senhas curtas para facilitar a digitação","Desativar a criptografia em redes Wi-Fi","Compartilhar a chave privada entre os usuários"],a:0,
+e:"Conexões não reconhecidas, picos de latência ou destinos desconhecidos podem indicar um “farejador” na rede."},
+{q:"O que é uma vulnerabilidade de dia zero (zero-day)?",
+o:["Bug ou vulnerabilidade no código que passou despercebido durante o controle de qualidade e pode ser explorado até ser corrigido com atualizações","Um ataque que dura exatamente um dia","Uma senha com validade de 24 horas","Um backup feito no dia zero"],a:0,
+e:"A única prevenção possível é um processo de testes rigoroso e a implantação regular de correções."}]},
+
+{id:4,icon:"🔥",title:"Firewalls: a barreira da rede",kind:"quiz",meta:"Quiz · 5 perguntas",
+tip:"O firewall monitora e controla o tráfego com base em regras predeterminadas, separando a rede interna confiável das redes externas. Três gerações: filtragem de pacotes (cabeçalho), inspeção com estado (contexto das conexões) e aplicação (conteúdo: HTTP, FTP, DNS). Configure regras de entrada e saída.",
+questions:[
+{q:"O que é um firewall?",
+o:["Sistema de segurança que monitora e controla o tráfego de entrada e saída da rede com base em regras predeterminadas, criando uma barreira entre a rede interna confiável e as redes externas não confiáveis","Um software de edição de imagens","Um roteador mais caro","Um cabo reforçado contra incêndio"],a:0,
+e:"Pode ser implementado por software ou hardware, geralmente combinado com outras medidas de segurança."},
+{q:"O que caracteriza a PRIMEIRA geração de firewall (filtragem de pacotes)?",
+o:["Opera na camada de rede, compara cada pacote a um conjunto predefinido de regras; é rápido, mas inspeciona apenas o cabeçalho, não o conteúdo","Opera na camada de aplicação e entende HTTP e FTP","Monitora o estado das conexões TCP","Bloqueia apenas tráfego de saída"],a:0,
+e:"Por não inspecionar o conteúdo, é menos eficaz contra ameaças mais sofisticadas."},
+{q:"O que caracteriza a SEGUNDA geração de firewall (inspeção com estado)?",
+o:["Opera nas camadas de rede e transporte, monitora o estado das conexões e decide com base no contexto — evitando vazamento de dados e ajudando contra DDoS","Analisa apenas o cabeçalho dos pacotes","Só funciona com protocolos criptografados","É uma regra de firewall do roteador"],a:0,
+e:"Ao conhecer o estado das conexões, ele toma decisões mais seguras que a filtragem simples."},
+{q:"O que caracteriza a TERCEIRA geração de firewall (aplicação)?",
+o:["Opera na camada de aplicação, entende protocolos como HTTP, FTP e DNS e bloqueia tráfego com base no conteúdo e comportamento do aplicativo","Trabalha apenas com endereços IP de origem","Só existe em hardware dedicado","Ignora o conteúdo dos pacotes"],a:0,
+e:"É extremamente eficaz contra ataques baseados em aplicativos, como injeções de SQL e scripts."},
+{q:"Sobre as regras de entrada e saída de um firewall, é correto afirmar:",
+o:["As regras de entrada definem o tráfego que pode entrar (ex.: permitir HTTP, bloquear SSH) e as de saída controlam o que pode sair (ex.: bloquear portas desnecessárias)","As regras de entrada só servem para bloquear tudo","As regras de saída nunca devem ser configuradas","Regras de firewall não afetam conexões"],a:0,
+e:"Se uma conexão não funcionar, lembre-se: normalmente é preciso configurar também o firewall do roteador!"}]},
+
+{id:5,icon:"🔀",title:"VPNs e Proxies",kind:"match",meta:"Ligar pares · 9 pares",
+tip:"A VPN cria um túnel criptografado sobre a Internet (acesso remoto, ponto a ponto, tunelamento, sobre LAN). O proxy é um intermediário entre cliente e servidor: filtra conteúdo, guarda cache e mascara o IP para dar anonimato.",
+pairs:[
+["🔐 VPN (Rede Privada Virtual)","Conexão segura e criptografada sobre uma rede menos segura (Internet), criando um túnel que protege os dados de interceptação e espionagem"],
+["🏠 VPN de acesso remoto","Permite que usuários se conectem à rede da empresa de locais remotos pela Internet, com acesso como se estivessem na rede local"],
+["🏢 VPN ponto a ponto","Conecta escritórios remotos à sede via Internet, eliminando links físicos tradicionais caros com túneis seguros entre locais"],
+["🚇 Tunelamento","Encapsula um protocolo de rede dentro de outro para criar um túnel seguro; nós intermediários não conseguem interpretar o conteúdo"],
+["📡 VPN sobre LAN","Usa a rede local da empresa em vez da Internet para isolar áreas e serviços internos, adicionando autenticação e criptografia às redes Wi-Fi"],
+["🔀 Proxy","Servidor que atua como intermediário entre cliente e servidor, podendo filtrar conteúdo, melhorar o desempenho com cache e fornecer anonimato"],
+["⛔ Controle de acesso (proxy)","Restringe o acesso a recursos específicos da Internet para implementar políticas de uso aceitável e bloquear conteúdo inapropriado"],
+["⚡ Cache (proxy)","Armazena conteúdo solicitado com frequência, melhorando o desempenho da rede, o tempo de carregamento e reduzindo a banda utilizada"],
+["🕵️ Anonimato (proxy)","Mascara o endereço IP do cliente, protegendo a identidade e a privacidade do usuário ou da empresa"]]},
+
+
+{id:6,icon:"🚨",title:"Detecção de Intrusão (IDS)",kind:"quiz",meta:"Quiz · 7 perguntas",
+tip:"O IDS monitora e ALERTA (o firewall bloqueia). Detecção por assinatura (ataques conhecidos), por anomalias (desvios do comportamento normal) e por reputação. NIDS vigia a rede atrás do firewall; HIDS vigia um host; PIDS vigia protocolos e APIDS a camada de aplicação. Cuidado com as táticas de evasão!",
+questions:[
+{q:"O que é um Sistema de Detecção de Intrusão (IDS)?",
+o:["Ferramenta que monitora o tráfego de rede em busca de atividades suspeitas, identificando e alertando sobre acessos não autorizados ou comportamento anômalo","Um dispositivo que bloqueia diretamente todo o tráfego indesejado","Um antivírus para servidores web","Um tipo de firewall da primeira geração"],a:0,
+e:"Diferente do firewall (que bloqueia), o IDS detecta e alerta — inclusive sobre usuários autorizados com comportamento anômalo."},
+{q:"Como funciona a detecção COM BASE EM ASSINATURA?",
+o:["Compara o tráfego com um banco de dados de assinaturas de ataques conhecidas, gerando alerta quando há correspondência","Aprende o comportamento normal e alerta em desvios","Bloqueia IPs de má reputação","Inspeciona apenas conexões HTTPS"],a:0,
+e:"É eficaz contra ataques conhecidos, mas menos eficaz contra ataques novos ou desconhecidos."},
+{q:"Como funciona a detecção BASEADA EM ANOMALIAS?",
+o:["Estabelece um perfil do comportamento normal do tráfego e gera alertas em desvios significativos, usando aprendizado de máquina","Compara o tráfego com um catálogo fixo de vírus","Substitui o firewall no perímetro","Bloqueia todo tráfego desconhecido"],a:0,
+e:"Pode gerar mais falsos positivos: nem todo comportamento anômalo é malicioso — cabe a um administrador (moderador) decidir."},
+{q:"O que é um NIDS (IDS de rede)?",
+o:["Monitora o tráfego de entrada e saída da rede, colocado em pontos estratégicos (geralmente atrás do firewall) e frequentemente fora de banda, analisando cópias dos pacotes","Fica instalado dentro de um laptop específico","Monitora apenas protocolos HTTP","Substitui a filtragem de pacotes"],a:0,
+e:"Fora de banda, o tráfego legítimo não precisa esperar para ser analisado."},
+{q:"O que é um HIDS (IDS baseado em host)?",
+o:["Instalado em um ponto específico (laptop, roteador, servidor), monitora só aquele dispositivo, tirando instantâneos de arquivos críticos e comparando-os ao longo do tempo","Analisa cópias de todo o tráfego da rede","Vigia exclusivamente conexões SQL","É um firewall de aplicação"],a:0,
+e:"Pode detectar atividades maliciosas de um nó comprometido, como ransomware se espalhando de um dispositivo infectado."},
+{q:"Para que servem o PIDS e o APIDS?",
+o:["PIDS monitora protocolos de conexão (ex.: HTTP/HTTPS em servidores web); APIDS opera na camada de aplicação, por exemplo entre servidor web e banco SQL para detectar injeções","São antivírus de terceira geração","São tipos de VPN corporativa","São técnicas de criptografia"],a:0,
+e:"NIDS e HIDS são os mais comuns; PIDS/APIDS são IDS especializados."},
+{q:"Qual das opções NÃO é uma tática de evasão de IDS?",
+o:["Instalar antivírus com assinaturas atualizadas","Inundar o IDS com tráfego malicioso (DDoS) para sobrecarregá-lo","Fragmentar pacotes maliciosos e enviá-los fora de ordem para impedir a remontagem","Gerar um grande número de alertas falsos para distrair a equipe (fadiga do operador)"],a:0,
+e:"Outras táticas incluem falsificação de IPs/DNS e o uso de criptografia sem que o IDS tenha a chave de descriptografia."}]},
+
+{id:7,icon:"🤝",title:"HTTPS, SSL e TLS",kind:"quiz",meta:"Quiz · 6 perguntas",
+tip:"HTTPS é a variante segura do HTTP e usa SSL/TLS. Três pilares: criptografia (privacidade), autenticação (handshake confirma identidades) e integridade de dados (assinatura digital). A chave pública cifra; só a chave privada — que nunca sai do servidor — decifra.",
+questions:[
+{q:"O que é o HTTPS?",
+o:["Protocolo usado para comunicação entre cliente e servidor (normalmente usuário e site); é a variante segura do HTTP, baseada na criptografia, usando SSL e TLS","Um protocolo de transferência de arquivos em claro","Um antivírus integrado ao navegador","Um tipo de firewall de aplicação"],a:0,
+e:"Ele estabelece a comunicação criptografada entre o navegador e o servidor web."},
+{q:"Quais são os três pilares fundamentais do SSL/TLS?",
+o:["Criptografia, autenticação e integridade de dados","Velocidade, cache e anonimato","Filtragem, bloqueio e alerta","Entrada, saída e perfil"],a:0,
+e:"Criptografia garante privacidade; autenticação confirma identidades; integridade garante que nada foi adulterado."},
+{q:"O que é o handshake do SSL?",
+o:["Processo de autenticação entre dois dispositivos para confirmar suas identidades, garantindo que ambas as partes são quem dizem ser","Uma técnica de compressão de dados","O nome do erro quando o site não abre","Uma regra de firewall de saída"],a:0,
+e:"Fases: conexão estabelecida → autenticação do servidor → autenticação do cliente → mudar para o modo criptografado."},
+{q:"Na criptografia SSL/TLS, qual é o papel das chaves pública e privada?",
+o:["O servidor envia o certificado com a chave pública; o navegador usa-a para criptografar dados confidenciais, e somente o servidor, com a chave privada correspondente, pode descriptografá-los","Ambas as chaves são transmitidas pela rede","A chave privada é pública e a pública é secreta","O navegador guarda a chave privada do servidor"],a:0,
+e:"A chave privada é mantida em segredo pelo servidor e nunca é transmitida pela rede."},
+{q:"Supondo os primos p = 5 e q = 11, qual é o módulo m usado na criptografia?",
+o:["m = 5 × 11 = 55","m = 5 + 11 = 16","m = 11 − 5 = 6","m = 5² = 25"],a:0,
+e:"O módulo é o produto dos dois primos: m = 55. E f(n) = (p−1)×(q−1) = 40."},
+{q:"Com f(n) = 40 e expoente público = 7, qual é o expoente da chave privada, sabendo que (privado × 7) mod 40 = 1?",
+o:["23","17","40","55"],a:0,
+e:"23 × 7 = 161 e 161 mod 40 = 1 — por isso o expoente privado é 23."}]},
+
+{id:8,icon:"💉",title:"Injeção de SQL e Vulnerabilidades",kind:"quiz",meta:"Quiz · 7 perguntas",
+tip:"Injeção de SQL explora entradas de usuário não validadas. Previna com validação de entrada (listas de permissões, escape de caracteres), prepared statements (placeholders) e ORMs (Hibernate, Django ORM, ActiveRecord). Ferramentas: Acunetix, OpenVAS e Nexpose. Mitigação = ação imediata; contingência = plano de recuperação.",
+questions:[
+{q:"O que é injeção de SQL?",
+o:["Técnica de ataque na qual o invasor insere código SQL malicioso em uma consulta que um aplicativo web envia ao banco de dados","Um método de backup de bancos SQL","Uma linguagem de consulta segura","Um antivírus para bancos de dados"],a:0,
+e:"Permite executar ações não autorizadas: ler dados confidenciais, modificar ou excluir dados e executar operações administrativas."},
+{q:"Por que a consulta abaixo é vulnerável? consulta = \"SELECT * FROM usuarios WHERE nome = '\" + userInput + \"';\"",
+o:["Porque userInput é concatenado diretamente na string SQL — se contiver código malicioso, ele será executado","Porque usa a palavra SELECT","Porque faltam espaços na string","Porque usa aspas duplas"],a:0,
+e:"A injeção de dados também se espalhou para outras linguagens, como a vulnerabilidade na biblioteca Log4j (2021)."},
+{q:"O que é a validação de entrada como prevenção à injeção de SQL?",
+o:["Verificar se a entrada do usuário é válida e segura antes de processá-la, usando listas de permissões, verificações, restrições de comprimento e escape de caracteres especiais","Criptografar o banco inteiro","Bloquear todos os usuários externos","Renomear as tabelas do banco"],a:0,
+e:"Validar antes de processar é a primeira linha de defesa."},
+{q:"O que são declarações preparadas (prepared statements)?",
+o:["Consultas que separam o código SQL dos dados de entrada, usando espaços reservados (placeholders) para os dados, o que impede a execução de código malicioso","Consultas escritas com antecedência no banco","Consultas que rodam sem banco de dados","Consultas apenas para administradores"],a:0,
+e:"Ex.: prepareStatement(\"SELECT * FROM usuarios WHERE nome = ?\") + setString(1, entrada)."},
+{q:"O que é o uso de ORM (Object-Relational Mapping) como prevenção?",
+o:["Usar frameworks que interagem com o banco em vez de escrever SQL direto, delegando o gerenciamento a um agente com políticas seguras","Um tipo de backup em nuvem","Uma ferramenta de monitoramento de tráfego","Uma linguagem de programação antiga"],a:0,
+e:"Exemplos: Hibernate (Java), Django ORM (Python) e ActiveRecord (Ruby on Rails)."},
+{q:"Qual das opções lista corretamente ferramentas de identificação de vulnerabilidades?",
+o:["Acunetix (serviços web), OpenVAS (código aberto, testes de rede) e Nexpose (redes grandes e complexas)","Photoshop, GIMP e Paint","Word, Excel e PowerPoint","Django, Rails e Laravel"],a:0,
+e:"Essas ferramentas analisam tráfego e sistemas, detectam padrões de vulnerabilidades conhecidas e simulam ataques para testar a rede."},
+{q:"Qual é a diferença entre MITIGAÇÃO e CONTINGÊNCIA?",
+o:["Mitigação são as ações imediatas (atualizações, patches, firewalls/IDS, troca de senhas); contingência são os planos aplicados quando, apesar das medidas, uma intrusão afeta sistemas ou dados","São sinônimos com nomes diferentes","Mitigação é só para phishing; contingência só para DDoS","Contingência substitui as políticas de segurança"],a:0,
+e:"O plano de contingência inclui: identificar sistemas críticos, análise de risco, resposta a incidentes (notificar, conter, recuperar) e testes do plano."}]}
+];
+
+/* ============ ESTADO & PERSISTÊNCIA ============ */
+const PTS=10,PTS2=5,BONUS=5;
+const MAXS=LEVELS.map(l=>l.kind==="quiz"?l.questions.length*PTS+BONUS:l.pairs.length*PTS+BONUS);
+const TOTMAX=MAXS.reduce((a,b)=>a+b,0);
+const S={name:"Agente",level:null,qi:0,qc:0,streak:0,runScores:{},runStars:{},answered:false,
+         selL:null,selR:null,mDone:0,mAttempts:{},mFirst:{}};
+let prog;try{prog=JSON.parse(localStorage.getItem("netGuardGame"))||{}}catch(e){prog={}}
+prog.unlocked=prog.unlocked||1;prog.best=prog.best||{};prog.bestTotal=prog.bestTotal||0;
+const save=()=>localStorage.setItem("netGuardGame",JSON.stringify(prog));
+const $=id=>document.getElementById(id);
+const screens=["scr-start","scr-levels","scr-quiz","scr-match","scr-result"];
+function show(id){screens.forEach(s=>$(s).classList.add("hidden"));$(id).classList.remove("hidden");window.scrollTo(0,0)}
+function updateHud(){$("hudScore").textContent=Object.values(S.runScores).reduce((a,b)=>a+b,0);$("hudStreak").textContent=S.streak}
+
+/* ============ SOM ============ */
+let actx=null,muted=false;
+function beep(f,d,t="sine",v=.12){if(muted)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+ const o=actx.createOscillator(),g=actx.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;
+ o.connect(g);g.connect(actx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.stop(actx.currentTime+d)}catch(e){}}
+const sOk=()=>{beep(660,.12);setTimeout(()=>beep(990,.2),110)};
+const sBad=()=>beep(180,.28,"sawtooth",.09);
+const sWin=()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.22),i*140));
+ $("btnMute").onclick=e=>{muted=!muted;e.target.textContent=muted?"🔇":"🔊"};
+
+/* ============ CONFETTI ============ */
+function confetti(n=90){const c=$("confetti"),cols=["#2196f3","#00b0ff","#ffb300","#22c55e","#ef4444","#1565c0"];
+ for(let i=0;i<n;i++){const d=document.createElement("div");d.className="cf";
+  d.style.cssText=`left:${Math.random()*100}%;width:${6+Math.random()*7}px;height:${9+Math.random()*10}px;background:${cols[i%cols.length]};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*.6}s`;
+  c.appendChild(d);setTimeout(()=>d.remove(),4600)}}
+
+/* ============ INÍCIO ============ */
+ $("btnStart").onclick=()=>{S.name=$("inpName").value.trim()||"Agente";$("welcomeTxt").textContent=`Bem-vindo(a), ${S.name}! Escolha uma missão para começar.`;renderLevels();show("scr-levels");beep(520,.1)};
+ $("btnReset").onclick=()=>{if(confirm("Apagar todo o progresso salvo?")){prog={unlocked:1,best:{},bestTotal:0};save();location.reload()}};
+ $("btnHome").onclick=()=>{if(S.runStars&&Object.keys(S.runStars).length)renderLevels();show("scr-levels")};
+function showBest(){$("bestTxt").textContent=prog.bestTotal?`Melhor pontuação: ${prog.bestTotal}/${TOTMAX} 🏆`:"Melhor pontuação: —"}
+showBest();
+
+/* ============ MAPA ============ */
+function renderLevels(){const g=$("lvlGrid");g.innerHTML="";
+ LEVELS.forEach((l,i)=>{const locked=l.id>prog.unlocked;const b=prog.best[l.id];
+  const d=document.createElement("div");d.className="lvl"+(locked?" locked":"");
+  d.innerHTML=`<h3>${l.icon} Missão ${l.id}: ${l.title}</h3><span class="meta">${locked?"🔒 Complete a missão anterior":l.meta}</span>
+   ${b?`<span class="stars">${"⭐".repeat(b.stars)}${"☆".repeat(3-b.stars)} <small style="color:var(--muted)">melhor: ${b.score} pts</small></span>`:""}
+   ${locked?"":`<button class="tipbtn">📘 Dica da teoria</button><div class="tipbox hidden">${l.tip}</div>
+   <button class="btn small" style="align-self:flex-start">${b?"🔁 Repetir":"▶ Iniciar"}</button>`}`;
+  if(!locked){
+   d.querySelector(".tipbtn").onclick=()=>d.querySelector(".tipbox").classList.toggle("hidden");
+   d.querySelector(".btn").onclick=()=>startLevel(i)}
+  g.appendChild(d)})}
+
+/* ============ QUIZ ============ */
+function startLevel(i){const l=LEVELS[i];S.level=i;S.qi=0;S.qc=0;S.streak=0;S.answered=false;
+ if(l.kind==="quiz"){show("scr-quiz");renderQuiz()}else{show("scr-match");initMatch()}}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function renderQuiz(){const l=LEVELS[S.level],q=l.questions[S.qi];S.answered=false;
+ $("qLevel").textContent=`${l.icon} ${l.title}`;
+ $("qCount").textContent=`Pergunta ${S.qi+1}/${l.questions.length}`;
+ $("qBar").style.width=(S.qi/l.questions.length*100)+"%";
+ $("qText").textContent=q.q;$("qFb").innerHTML="";$("qNext").classList.add("hidden");
+ const box=$("qOpts");box.innerHTML="";
+ shuffle(q.o.map((t,ix)=>({t,ok:ix===q.a}))).forEach((op,ix)=>{
+  const b=document.createElement("button");b.className="opt";
+  b.innerHTML=`<span class="k">${"ABCD"[ix]}</span>${op.t}`;
+  b.onclick=()=>answer(b,op.ok);box.appendChild(b)})}
+function answer(btn,ok){if(S.answered)return;S.answered=true;
+ const l=LEVELS[S.level],q=l.questions[S.qi],fb=$("qFb");
+ [...$("qOpts").children].forEach(b=>{b.disabled=true;
+  if(b===btn&&ok)b.classList.add("ok");
+  if(b===btn&&!ok)b.classList.add("bad");
+  if(ok===false&&b.innerHTML.includes(q.o[q.a]))b.classList.add("ok")});
+ if(ok){S.qc++;S.streak++;sOk()}else{S.streak=0;sBad()}
+ fb.innerHTML=ok?`<div class="fb ok"><b>✅ Correto! ${S.streak>=3?"🔥 Sequência de "+S.streak:""}</b>${q.e}</div>`
+                :`<div class="fb bad"><b>❌ Não foi essa…</b>${q.e}</div>`;
+ const nx=$("qNext");nx.classList.remove("hidden");
+ nx.textContent=S.qi+1<l.questions.length?"Continuar ➜":"Ver resultado da missão 🎉";
+ $("qBar").style.width=((S.qi+1)/l.questions.length*100)+"%"}
+ $("qNext").onclick=()=>{const l=LEVELS[S.level];
+ if(S.qi+1<l.questions.length){S.qi++;renderQuiz()}
+ else{const max=l.questions.length*PTS;let score=S.qc*PTS;const st=S.qc/l.questions.length;
+  if(S.qc===l.questions.length){score+=BONUS;confetti(50)}levelDone(score,max,st)}};
+
+/* ============ MATCH ============ */
+function initMatch(){const l=LEVELS[S.level];S.mDone=0;S.mAttempts={};S.mFirst={};S.selL=null;S.selR=null;
+ $("mLevel").textContent=`${l.icon} ${l.title}`;
+ const n=l.pairs.length;$("mLeft").innerHTML="";$("mRight").innerHTML="";
+ l.pairs.forEach((p,i)=>{const b=document.createElement("button");b.className="mitem";b.dataset.pid=i;b.textContent=p[0];
+  b.onclick=()=>pick("L",b);$("mLeft").appendChild(b)});
+ shuffle(l.pairs.map((p,i)=>({t:p[1],pid:i}))).forEach(o=>{const b=document.createElement("button");
+  b.className="mitem";b.dataset.pid=o.pid;b.textContent=o.t;b.onclick=()=>pick("R",b);$("mRight").appendChild(b)});
+ $("mCount").textContent=`Pares: 0/${n}`;$("mBar").style.width="0%"}
+function pick(side,el){if(el.classList.contains("done"))return;
+ if(side==="L"){S.selL=el;$("mLeft").querySelectorAll(".mitem").forEach(x=>x.classList.remove("sel"));el.classList.add("sel")}
+ else{S.selR=el;$("mRight").querySelectorAll(".mitem").forEach(x=>x.classList.remove("sel"));el.classList.add("sel")}
+ if(S.selL&&S.selR)checkPair()}
+function checkPair(){const L=S.selL,R=S.selR,pidL=L.dataset.pid,pidR=R.dataset.pid;
+ L.classList.remove("sel");R.classList.remove("sel");S.selL=S.selR=null;
+ S.mAttempts[pidL]=(S.mAttempts[pidL]||0)+1;
+ if(pidL===pidR){const first=S.mAttempts[pidL]===1;S.mFirst[pidL]=first;
+  L.classList.add("done");R.classList.add("done");S.mDone++;sOk();
+  if(first)S.streak++;updateHud();
+  const n=LEVELS[S.level].pairs.length;
+  $("mCount").textContent=`Pares: ${S.mDone}/${n}`;
+  $("mBar").style.width=(S.mDone/n*100)+"%";
+  if(S.mDone===n){let score=0;Object.values(S.mFirst).forEach(f=>score+=f?PTS:PTS2);
+   const max=n*PTS;const st=Object.values(S.mFirst).filter(Boolean).length/n;
+   if(Object.values(S.mFirst).every(Boolean)){score+=BONUS;confetti(50)}levelDone(score,max,st)}}
+ else{sBad();S.streak=0;updateHud();R.classList.add("err");setTimeout(()=>R.classList.remove("err"),450)}}
+
+/* ============ MISSÃO CONCLUÍDA ============ */
+function levelDone(score,max,ratio){const id=LEVELS[S.level].id;
+ S.runScores[id]=score;const stars=ratio>=.99?3:ratio>=.7?2:1;S.runStars[id]=stars;
+ if(!prog.best[id]||score>prog.best[id].score)prog.best[id]={score,stars};
+ prog.unlocked=Math.max(prog.unlocked,Math.min(id+1,LEVELS.length));save();updateHud();sWin();
+ const nxt=LEVELS[S.level+1];
+ $("mcard").innerHTML=`<div style="font-size:3rem">${stars===3?"🌟":stars===2?"🎉":"👍"}</div>
+  <h2>Missão ${id} concluída!</h2>
+  <div class="bigstars">${"⭐".repeat(stars)}${"☆".repeat(3-stars)}</div>
+  <p style="color:var(--muted);font-size:.9rem">Pontos na missão: <b>${score}/${max}</b>${score===max?" — Perfeito! +5 de bônus 🎁":""}</p>
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap">
+   ${nxt?`<button class="btn" id="mNext">Missão ${nxt.id}: ${nxt.icon} ➜</button>`:""}
+   <button class="btn ${nxt?"ghost":""}" id="mMap">🗺 Sala de Operações</button></div>`;
+ $("modal").classList.remove("hidden");
+ if($("mNext"))$("mNext").onclick=()=>{$("modal").classList.add("hidden");startLevel(S.level+1)};
+ $("mMap").onclick=()=>{$("modal").classList.add("hidden");renderLevels();show("scr-levels")}}
+
+/* ============ RESULTADO FINAL ============ */
+function finish(){const total=Object.values(S.runScores).reduce((a,b)=>a+b,0);
+ const played=Object.keys(S.runScores).length;if(!played){alert("Jogue pelo menos uma missão primeiro! 🙂");return}
+ const pct=Math.round(total/TOTMAX*100);const stars=Object.values(S.runStars).reduce((a,b)=>a+b,0);
+ if(total>prog.bestTotal){prog.bestTotal=total;save();showBest()}
+ const rank=pct>=90?["🛡️","Guardião da Rede!"]:pct>=75?["🥇","Analista de Segurança Sênior"]:pct>=60?["🥈","Analista de Segurança"]:pct>=40?["🥉","Vigia de Rede"]:["🌱","Aprendiz de Ciberdefesa"];
+ $("resEmoji").textContent=rank[0];$("resRank").textContent=`${S.name}, você é: ${rank[1]}`;
+ $("resBadge").textContent=`${total} / ${TOTMAX} pontos`;
+ $("resPts").textContent=total;$("resPct").textContent=pct+"%";$("resStars").textContent=stars+"/"+LEVELS.length*3;
+ $("resDetail").innerHTML=LEVELS.map(l=>{const sc=S.runScores[l.id];
+  return sc!==undefined?`<div>✔ ${l.icon} <b>${l.title}</b>: ${sc}/${MAXS[l.id-1]} pts · ${"⭐".repeat(S.runStars[l.id])}</div>`:`<div>◻ ${l.icon} ${l.title}: missão não iniciada</div>`}).join("");
+ show("scr-result");if(pct>=60)confetti(120);sWin()}
+ $("btnFinish").onclick=finish;
+ $("btnReplay").onclick=()=>{S.runScores={};S.runStars={};S.streak=0;updateHud();renderLevels();show("scr-levels")};
+ $("btnMap").onclick=()=>{renderLevels();show("scr-levels")};
+
+/* ============ TECLADO ============ */
+document.addEventListener("keydown",e=>{
+ if(!$("scr-quiz").classList.contains("hidden")){
+  if(!S.answered&&"1234".includes(e.key)){const o=$("qOpts").children[+e.key-1];if(o)o.click()}
+  if(e.key==="Enter"&&S.answered)$("qNext").click()}});
+updateHud();
+</script>
+</body>
+</html>
