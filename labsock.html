@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratório de Sockets — Simulador + Tutorial + Chat</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2129; --borda:#30363d;
+    --verde:#3fb950; --azul:#58a6ff; --amarelo:#e3b341; --verm:#f85149; --roxo:#bc8cff;
+    --texto:#e6edf3; --cinza:#8b949e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--texto);font-family:"Segoe UI",system-ui,sans-serif;padding:14px;max-width:1200px;margin:0 auto;}
+  header h1{font-size:21px;display:flex;align-items:center;gap:8px;}
+  header .sub{color:var(--cinza);font-size:13px;margin-top:3px;}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px;}
+  nav button{background:var(--panel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:8px 14px;font-size:13.5px;cursor:pointer;transition:all .15s;}
+  nav button:hover{border-color:var(--azul);}
+  nav button.on{border-color:var(--verde);color:var(--verde);font-weight:700;background:rgba(63,185,80,.08);}
+  .tab{display:none;animation:aparece .25s;}
+  .tab.ativa{display:block;}
+  @keyframes aparece{from{opacity:0;transform:translateY(4px);}to{opacity:1;}}
+  h2{font-size:18px;margin-bottom:6px;}
+  h3{font-size:15px;margin:14px 0 6px;}
+  p,li{font-size:13.8px;line-height:1.55;}
+  ul,ol{margin:6px 0 6px 22px;}
+  code{color:var(--amarelo);font-family:Consolas,monospace;font-size:12.5px;background:var(--panel2);padding:1px 5px;border-radius:5px;}
+  table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12.8px;}
+  th,td{border:1px solid var(--borda);padding:6px 9px;text-align:left;}
+  th{background:var(--panel2);}
+  .callout{border-left:3px solid var(--verde);background:var(--panel);padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0;font-size:13.5px;}
+  .callout.warn{border-color:var(--amarelo);}
+  .callout.info{border-color:var(--azul);}
+  button{font-family:inherit;}
+  .cardgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:12px 0;}
+  .card{background:var(--panel);border:1px solid var(--borda);border-radius:10px;padding:14px;}
+  .card h3{margin:0 0 6px;}
+  .card .num{display:inline-block;background:var(--azul);color:#0d1117;font-weight:800;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;margin-right:6px;font-size:13px;}
+  .card p{color:var(--cinza);font-size:12.8px;}
+  .card button{margin-top:9px;background:var(--panel2);color:var(--azul);border:1px solid var(--borda);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;}
+  .card button:hover{border-color:var(--azul);}
+
+  /* ===== código ===== */
+  .codebox{border:1px solid var(--borda);border-radius:10px;overflow:hidden;margin:10px 0;}
+  .cbar{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);padding:6px 10px;font-size:12px;color:var(--cinza);}
+  .btn-copy{background:transparent;border:1px solid var(--borda);color:var(--texto);border-radius:6px;padding:3px 10px;font-size:11.5px;cursor:pointer;}
+  .btn-copy:hover{border-color:var(--verde);color:var(--verde);}
+  .codebox pre, pre.solpre{background:#010409;padding:12px 14px;overflow:auto;font:12.4px/1.55 Consolas,"Courier New",monospace;color:#d5e3f0;}
+  .codebox pre em{color:var(--amarelo);font-style:normal;}
+  .codebox pre b{color:#7ee787;font-weight:400;font-style:italic;}
+  pre.solpre em{color:var(--amarelo);font-style:normal;} pre.solpre b{color:#7ee787;font-weight:400;font-style:italic;}
+  pre.fluxo{background:var(--panel);border:1px solid var(--borda);border-radius:10px;padding:12px;overflow:auto;font:12.5px/1.5 Consolas,monospace;color:var(--texto);margin:8px 0;}
+  details.sol{margin:6px 0 14px;background:var(--panel);border:1px dashed var(--verde);border-radius:8px;padding:8px 12px;}
+  details.sol summary{cursor:pointer;color:var(--verde);font-weight:600;font-size:13px;}
+  details.big{background:var(--panel);border:1px solid var(--borda);border-radius:10px;padding:10px 14px;margin:12px 0;}
+  details.big summary{cursor:pointer;font-weight:700;font-size:14.5px;}
+  .chk{display:block;margin:6px 0;font-size:13.5px;cursor:pointer;}
+  .chk input{accent-color:var(--verde);margin-right:6px;}
+
+  /* ===== simulador ===== */
+  .barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0;}
+  .barra button,.barra select{background:var(--panel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;}
+  .barra button:hover:not(:disabled){border-color:var(--azul);transform:translateY(-1px);}
+  .barra button:disabled{opacity:.35;cursor:not-allowed;}
+  #simBtnPasso{border-color:var(--verde)!important;color:var(--verde)!important;font-weight:600;}
+  #simBtnAuto{border-color:var(--azul)!important;color:var(--azul)!important;font-weight:600;}
+  .info-passo{margin-left:auto;color:var(--cinza);font-size:12.5px;font-family:Consolas,monospace;}
+  #simBarraMsg{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap;}
+  #simBarraMsg label{font-size:13px;color:var(--cinza);}
+  #simMsg{flex:1;min-width:220px;max-width:420px;background:var(--panel2);border:1px solid var(--borda);border-radius:8px;color:var(--texto);padding:8px 10px;font-size:13px;font-family:Consolas,monospace;}
+  .palco-wrap{overflow-x:auto;}
+  #simPalco{position:relative;height:430px;border:1px solid var(--borda);border-radius:12px;overflow:hidden;min-width:560px;
+    background:linear-gradient(rgba(88,166,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(88,166,255,.05) 1px,transparent 1px);background-size:26px 26px;}
+  svg#simCabos{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .rede-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:rgba(139,148,158,.25);font-size:22px;font-weight:700;letter-spacing:4px;pointer-events:none;}
+  .maquina{position:absolute;width:195px;background:var(--panel);border:2px solid var(--azul);border-radius:10px;padding:9px 11px;transition:box-shadow .35s;z-index:3;}
+  .maquina.ativa{box-shadow:0 0 18px rgba(88,166,255,.55);}
+  .maquina h3{font-size:13px;display:flex;justify-content:space-between;align-items:center;font-weight:600;margin:0;}
+  .maquina .ip{font-size:10.5px;color:var(--cinza);font-family:Consolas,monospace;font-weight:400;}
+  .status{font-size:10.8px;margin-top:6px;padding:5px 6px;border-radius:6px;background:var(--bg);border:1px solid var(--borda);color:var(--cinza);font-family:Consolas,monospace;min-height:28px;line-height:1.35;}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+  .chip{font-size:10px;font-family:Consolas,monospace;background:var(--panel2);border:1px solid var(--borda);border-radius:10px;padding:2px 8px;color:var(--amarelo);}
+  .chip.vazio{color:var(--cinza);border-style:dashed;}
+  .packet{position:absolute;padding:3px 9px;font-size:11px;font-family:Consolas,monospace;border-radius:12px;color:#0d1117;font-weight:700;white-space:nowrap;z-index:6;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+  #simLog{height:245px;overflow-y:auto;background:#010409;border:1px solid var(--borda);border-radius:12px;padding:12px;font-family:Consolas,monospace;font-size:12.5px;line-height:1.55;}
+  #simLog div{animation:aparece .25s;}
+  .l-cmd{color:var(--azul);} .l-ok{color:var(--verde);} .l-info{color:var(--cinza);}
+  .l-warn{color:var(--amarelo);} .l-erro{color:var(--verm);} .l-srv{color:var(--roxo);} .l-cli{color:var(--azul);}
+
+  /* ===== chat ao vivo ===== */
+  .chat-grid{display:grid;grid-template-columns:330px 1fr;gap:12px;margin-top:10px;}
+  .serv-panel{background:var(--panel);border:2px solid var(--roxo);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;}
+  .serv-panel h3{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:center;}
+  .serv-panel .porta{font-size:10.5px;color:var(--cinza);font-family:Consolas,monospace;font-weight:400;}
+  #chatSlog{flex:1;min-height:230px;max-height:360px;overflow-y:auto;background:#010409;border:1px solid var(--borda);border-radius:8px;padding:10px;font:12.3px/1.55 Consolas,monospace;}
+  #chatSlog div{animation:aparece .2s;}
+  .s-cmd{color:#79c0ff;} .s-info{color:var(--cinza);font-style:italic;} .s-ok{color:var(--verde);}
+  .aviso{display:flex;gap:6px;}
+  .aviso input{flex:1;background:var(--panel2);border:1px solid var(--borda);border-radius:8px;color:var(--texto);padding:6px 9px;font-size:12.5px;}
+  .clients{display:flex;flex-direction:column;gap:10px;}
+  .cpanel{background:var(--panel);border:1px solid var(--borda);border-radius:10px;padding:8px 10px;}
+  .chead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+  .badge{margin-left:auto;font-size:10.5px;padding:2px 8px;border-radius:10px;border:1px solid var(--borda);color:var(--cinza);font-family:Consolas,monospace;font-weight:400;}
+  .b-on{color:var(--verde);border-color:var(--verde);} .b-wait{color:var(--amarelo);border-color:var(--amarelo);}
+  .ccon{margin-left:8px;background:var(--panel2);border:1px solid var(--borda);color:var(--texto);border-radius:8px;padding:3px 9px;font-size:11.5px;cursor:pointer;}
+  .ccon:hover:not(:disabled){border-color:var(--verde);color:var(--verde);}
+  .ccon:disabled{opacity:.4;cursor:default;}
+  .cterm{margin-top:7px;height:118px;overflow-y:auto;background:#010409;border:1px solid var(--borda);border-radius:8px;padding:8px 10px;font:12.3px/1.5 Consolas,monospace;white-space:pre-wrap;}
+  .cterm div{animation:aparece .2s;}
+  .crow{display:flex;gap:6px;margin-top:7px;}
+  .crow input{flex:1;background:var(--panel2);border:1px solid var(--borda);border-radius:8px;color:var(--texto);padding:6px 9px;font-size:12.5px;font-family:Consolas,monospace;}
+  .crow input:disabled{opacity:.45;}
+  .crow button{background:var(--panel2);border:1px solid var(--borda);color:var(--verde);border-radius:8px;padding:6px 12px;cursor:pointer;}
+  .crow button:disabled{opacity:.4;cursor:default;}
+  .c-ok{color:var(--verde);} .c-ask{color:var(--amarelo);font-weight:700;} .c-info{color:var(--cinza);font-style:italic;}
+  .c-sys{color:var(--amarelo);} .c-srv{color:var(--roxo);} .c-priv{color:#ffa657;}
+  .chat-bar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;}
+  .chat-bar button{background:var(--panel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:7px 13px;font-size:13px;cursor:pointer;}
+  .chat-bar button:hover:not(:disabled){border-color:var(--verde);}
+  .chat-bar button:disabled{opacity:.45;cursor:default;}
+  .rodape{color:var(--cinza);font-size:12px;margin-top:14px;text-align:center;}
+  @media(max-width:820px){ .chat-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔌 Laboratório de Sockets em Python</h1>
+  <p class="sub">Simulador TCP + Tutorial + Chat multiusuário <b>funcionando ao vivo no navegador</b> + Projeto guiado para o VSCode · funciona 100% offline</p>
+</header>
+
+<nav>
+  <button data-go="inicio" class="on">🏠 Início</button>
+  <button data-go="sim">🔌 Simulador TCP</button>
+  <button data-go="tutorial">📖 Tutorial</button>
+  <button data-go="chat">💬 Chat ao Vivo</button>
+  <button data-go="projeto">🎯 Projeto Guiado</button>
+</nav>
+
+<!-- ============ ABA INÍCIO ============ -->
+<section id="tab-inicio" class="tab ativa">
+  <h2>Como usar este laboratório</h2>
+  <p>Este arquivo reúne todo o material da aula em um só lugar. Siga o roteiro na ordem:</p>
+  <div class="cardgrid">
+    <div class="card">
+      <h3><span class="num">1</span>Simulador TCP</h3>
+      <p>Veja o que acontece "por baixo" do <code>serversock.py</code> e do <code>clientesock.py</code>: bind, listen, handshake, pacotes, close.</p>
+      <button data-go="sim">Abrir simulador →</button>
+    </div>
+    <div class="card">
+      <h3><span class="num">2</span>Tutorial</h3>
+      <p>Os dois exemplos explicados linha a linha + como rodar no VSCode com dois terminais. Códigos com botão de copiar.</p>
+      <button data-go="tutorial">Abrir tutorial →</button>
+    </div>
+    <div class="card">
+      <h3><span class="num">3</span>Chat ao Vivo</h3>
+      <p><b>O projeto final funcionando!</b> Conecte 3 clientes no navegador e converse entre eles — broadcast, threads, comandos.</p>
+      <button data-go="chat">Abrir chat →</button>
+    </div>
+    <div class="card">
+      <h3><span class="num">4</span>Projeto Guiado</h3>
+      <p>Construa o chat de verdade em Python: esqueletos com TODOs numerados, soluções reveláveis e gabarito completo.</p>
+      <button data-go="projeto">Abrir projeto →</button>
+    </div>
+  </div>
+  <div class="callout info">
+    💡 <b>Fluxo sugerido em aula:</b> projete a aba 1 e avance passo a passo → alunos reproduzem os exemplos da aba 2 no VSCode →
+    mostre a demonstração automática da aba 3 → alunos implementam os TODOs da aba 4 (gabarito fica com o professor).
+  </div>
+  <div class="callout warn">
+    ⚠️ <b>Requisitos para a Parte 4 (VSCode):</b> Python 3 instalado e o VSCode. As abas 1, 2, 3 e 4 deste arquivo funcionam em qualquer navegador, sem internet.
+  </div>
+</section>
+
+<!-- ============ ABA SIMULADOR ============ -->
+<section id="tab-sim" class="tab">
+  <h2>🔌 Simulador de Sockets TCP <span style="font-size:13px;color:var(--cinza);font-weight:400;">cliente × servidor</span></h2>
+  <p style="color:var(--cinza);font-size:13px;">
+    Veja passo a passo o que acontece "por baixo" do <b>serversock.py</b> e do <b>clientesock.py</b>. Use ▶ para avançar devagar ou ⏩ para ver tudo.
+    Linhas <span style="color:var(--roxo);">roxas</span> = terminal do SERVIDOR · linhas <span style="color:var(--azul);">azuis</span> = terminal do CLIENTE.
+  </p>
+  <div class="barra">
+    <button id="simBtnPasso">▶ Próximo passo</button>
+    <button id="simBtnAuto">⏩ Executar tudo</button>
+    <button id="simBtnReset">↺ Reiniciar</button>
+    <button id="simBtnB" disabled>＋ Conectar Cliente B</button>
+    <button id="simBtnC" disabled>＋ Conectar Cliente C</button>
+    <select id="simVel">
+      <option value="0.6">🐢 Devagar</option>
+      <option value="1" selected>▶ Normal</option>
+      <option value="2">⚡ Rápido</option>
+    </select>
+    <span class="info-passo" id="simInfo">Passo 0/0</span>
+  </div>
+  <div id="simBarraMsg">
+    <label>💬 Mensagem que o cliente vai digitar:</label>
+    <input id="simMsg" value="Olá, servidor!" maxlength="40">
+  </div>
+  <div class="palco-wrap">
+    <div id="simPalco">
+      <svg id="simCabos"></svg>
+      <div class="rede-label">REDE</div>
+      <div class="maquina" id="simServidor" style="right:22px;top:150px;border-color:var(--roxo);">
+        <h3>🖥️ SERVIDOR <span class="ip">127.0.0.1</span></h3>
+        <div class="status" id="simStatusSrv">socket: não criado</div>
+        <div class="chips" id="simChipsSrv"></div>
+      </div>
+    </div>
+  </div>
+  <div id="simLog"></div>
+  <details class="big">
+    <summary>📖 Cola rápida — o que cada função faz (vale para a prova!)</summary>
+    <table>
+      <tr><th>Função</th><th>Quem usa</th><th>O que faz</th></tr>
+      <tr><td><code>socket.socket(AF_INET, SOCK_STREAM)</code></td><td>os dois</td><td>Cria o socket TCP (o "telefone")</td></tr>
+      <tr><td><code>bind((host, porta))</code></td><td>servidor</td><td>Reserva o IP:porta para este processo</td></tr>
+      <tr><td><code>listen(n)</code></td><td>servidor</td><td>Fica à escuta; <code>n</code> = fila de espera</td></tr>
+      <tr><td><code>accept()</code></td><td>servidor</td><td><b>Bloqueia</b> até um cliente conectar; devolve <code>(conexao, endereco)</code></td></tr>
+      <tr><td><code>connect((host, porta))</code></td><td>cliente</td><td>Pede conexão (handshake SYN/SYN+ACK/ACK)</td></tr>
+      <tr><td><code>sendall(bytes)</code></td><td>os dois</td><td>Envia bytes pela conexão</td></tr>
+      <tr><td><code>recv(n)</code></td><td>os dois</td><td>Recebe até <code>n</code> bytes; devolve <code>b""</code> quando o outro lado fecha</td></tr>
+      <tr><td><code>close()</code></td><td>os dois</td><td>Encerra (FIN)</td></tr>
+      <tr><td><code>setsockopt(SO_REUSEADDR)</code></td><td>servidor</td><td>Permite reusar a porta ao reiniciar rápido</td></tr>
+    </table>
+    <p style="margin-top:8px;color:var(--cinza);">💡 <b>Regra de ouro:</b> o socket <code>servidor</code> só serve para <i>aceitar</i> conexões. Quem conversa é o <code>conexao</code> que o <code>accept()</code> devolve — um novo para cada cliente!</p>
+  </details>
+</section>
+
+<!-- ============ ABA TUTORIAL ============ -->
+<section id="tab-tutorial" class="tab">
+  <h2>📖 Tutorial — Sockets em Python</h2>
+
+  <h3>1 · Teoria essencial</h3>
+  <p>Um <b>socket</b> é uma das "pontas" de uma conexão de rede — o elo entre o seu programa e a placa de rede.</p>
+  <ul>
+    <li><b>IP</b> (<code>127.0.0.1</code>) = o endereço do prédio</li>
+    <li><b>Porta</b> (<code>5000</code>) = o número do apartamento/ramal</li>
+    <li><b>Socket</b> = o aparelho de telefone que você usa para falar</li>
+  </ul>
+  <table>
+    <tr><th></th><th>TCP (<code>SOCK_STREAM</code>)</th><th>UDP (<code>SOCK_DGRAM</code>)</th></tr>
+    <tr><td>Conexão prévia</td><td>✅ sim (handshake)</td><td>❌ não</td></tr>
+    <tr><td>Garantia de entrega</td><td>✅ sim</td><td>❌ não</td></tr>
+    <tr><td>Ordem dos dados</td><td>✅ garantida</td><td>❌ não</td></tr>
+    <tr><td>Uso típico</td><td>chat, web, e-mail</td><td>jogos, streaming, DNS</td></tr>
+  </table>
+  <p><b>Nosso chat usa TCP</b> — não podemos perder mensagens!</p>
+  <pre class="fluxo">SERVIDOR                                CLIENTE
+─────────                               ─────────
+socket()   ← cria o telefone            socket()   ← cria o telefone
+bind()     ← escolhe IP:porta
+listen()   ← vira "balcão"
+accept()   ← espera o cliente  ◄─────►  connect()  ← aperta a mão 🤝
+recv()     ← recebe bytes     ◄───────  sendall()  → envia bytes
+sendall()  → envia bytes     ───────►  recv()     ← recebe bytes
+   ... (ciclo se repete) ...
+close()                                close()</pre>
+  <div class="callout warn">⚠️ <code>accept()</code> e <code>recv()</code> são <b>bloqueantes</b>: o programa <b>para</b> naquela linha até algo acontecer. Guarde isso — é a causa do problema que o chat vai resolver!</div>
+
+  <h3>2 · Exemplo 1 — <code>serversock.py</code></h3>
+  <div class="codebox">
+    <div class="cbar"><span>serversock.py</span><button class="btn-copy">📋 copiar</button></div>
+    <pre>import socket
+
+HOST = "127.0.0.1"
+PORTA = 5000
+
+servidor = socket.socket(
+    socket.AF_INET,
+    socket.SOCK_STREAM
+)
+
+servidor.setsockopt(
+    socket.SOL_SOCKET,
+    socket.SO_REUSEADDR,
+    1
+)
+
+servidor.bind((HOST, PORTA))
+servidor.listen(1)
+
+print("Servidor iniciado!")
+print(f"Aguardando conexão na porta {PORTA}...")
+
+while True:
+    conexao, endereco = servidor.accept()
+    print(f"Cliente conectado: {endereco}")
+
+    with conexao:
+        while True:
+            dados = conexao.recv(1024)
+
+            if not dados:
+                break
+
+            mensagem = dados.decode("utf-8")
+            print("Cliente:", mensagem)
+
+            resposta = f"Servidor recebeu: {mensagem}"
+            conexao.sendall(resposta.encode("utf-8"))
+
+    print("Cliente desconectado.")</pre>
+  </div>
+  <ul>
+    <li><code>HOST = "127.0.0.1"</code> — <i>localhost</i>: só aceita conexões <b>desta máquina</b>. Para outros computadores, use <code>"0.0.0.0"</code>.</li>
+    <li><code>AF_INET</code> = IPv4 · <code>SOCK_STREAM</code> = TCP.</li>
+    <li><code>SO_REUSEADDR</code> — evita <code>Address already in use</code> ao reiniciar rápido.</li>
+    <li><code>accept()</code> devolve <b>duas coisas</b>: <code>conexao</code> (NOVO socket, exclusivo dessa conversa) e <code>endereco</code>.</li>
+    <li><code>if not dados: break</code> — <code>recv()</code> vazio (<code>b""</code>) = cliente fechou a conexão.</li>
+    <li><code>with conexao:</code> — fecha o socket automaticamente, mesmo com erro.</li>
+    <li>Se for Texto → <code>encode("utf-8")</code>; se receber Bytes → <code>decode("utf-8")</code>. <b>A rede só transporta bytes!</b></li>
+  </ul>
+
+  <h3>3 · Exemplo 2 — <code>clientesock.py</code></h3>
+  <div class="codebox">
+    <div class="cbar"><span>clientesock.py</span><button class="btn-copy">📋 copiar</button></div>
+    <pre>import socket
+
+HOST = "127.0.0.1"
+PORTA = 5000
+
+cliente = socket.socket(
+    socket.AF_INET,
+    socket.SOCK_STREAM
+)
+
+cliente.connect((HOST, PORTA))
+
+print("Conectado ao servidor!")
+
+while True:
+    mensagem = input("Digite uma mensagem: ")
+
+    if mensagem.lower() == "sair":
+        break
+
+    cliente.sendall(mensagem.encode("utf-8"))
+
+    resposta = cliente.recv(1024)
+    print(resposta.decode("utf-8"))
+
+cliente.close()
+print("Conexão encerrada.")</pre>
+  </div>
+  <ul>
+    <li>O cliente <b>não</b> usa <code>bind/listen/accept</code> — ele <i>liga</i>, não <i>atende</i>.</li>
+    <li><code>connect()</code> dispara o <b>handshake TCP</b> (SYN → SYN+ACK → ACK).</li>
+    <li>Ciclo: <b>digita → envia → recebe → mostra</b>. Digitar <code>sair</code> quebra o loop.</li>
+    <li>Se o servidor não estiver rodando: <code>ConnectionRefusedError</code>.</li>
+  </ul>
+
+  <h3>4 · Executando no VSCode</h3>
+  <ol>
+    <li>Crie a pasta <code>aula-socket</code> e abra no VSCode (<i>Arquivo → Abrir Pasta</i>).</li>
+    <li>Crie <code>serversock.py</code> e <code>clientesock.py</code>, cole os códigos (botão 📋 acima) e <b>salve</b> (<code>Ctrl+S</code>).</li>
+    <li>Abra o terminal: <code>Ctrl+`</code> (Terminal → Novo Terminal).</li>
+    <li><b>Terminal 1:</b> <code>python serversock.py</code> → "Servidor iniciado!"</li>
+    <li>Abra um <b>segundo terminal</b> (botão <b>＋</b> no painel do terminal).</li>
+    <li><b>Terminal 2:</b> <code>python clientesock.py</code> → "Conectado ao servidor!"</li>
+    <li>Digite mensagens e observe <b>os dois terminais simultaneamente</b>. 🔥</li>
+    <li>Encerrar: <code>sair</code> no cliente; <code>Ctrl+C</code> no servidor.</li>
+  </ol>
+  <table>
+    <tr><th>Problema na 1ª execução</th><th>Solução</th></tr>
+    <tr><td><code>python</code> não reconhecido (Windows)</td><td>use <code>py serversock.py</code></td></tr>
+    <tr><td><code>ConnectionRefusedError</code></td><td>o servidor não está rodando — <b>rode-o primeiro</b></td></tr>
+    <tr><td><code>Address already in use</code></td><td>já existe um servidor aberto; feche-o ou troque a porta</td></tr>
+  </table>
+  <div class="callout">💡 <b>Desafio extra:</b> rode em 2 computadores da mesma rede → servidor com <code>HOST = "0.0.0.0"</code>, cliente usa o IP real do servidor (<code>ipconfig</code> no Windows / <code>ip a</code> no Linux) e libere o firewall.</div>
+  <div class="callout info">👉 Em seguida, vá para a aba <b>💬 Chat ao Vivo</b> para ver o destino final: o chat multiusuário!</div>
+</section>
+
+<!-- ============ ABA CHAT AO VIVO ============ -->
+<section id="tab-chat" class="tab">
+  <h2>💬 Chat Multiusuário — AO VIVO no navegador</h2>
+  <p style="font-size:13.5px;">Este é o projeto da Parte 5 <b>funcionando de verdade</b>: cada painel abaixo equivale a <b>um terminal do VSCode</b>.
+  O painel roxo é o servidor — repare nos logs do <code>accept()</code>, da criação de <b>threads</b> e do <code>broadcast()</code> a cada mensagem.</p>
+  <div class="chat-bar">
+    <button id="chatDemo">🤖 Demonstração automática</button>
+    <button id="chatLimpar">🧹 Limpar tudo</button>
+  </div>
+  <div class="chat-grid">
+    <div class="serv-panel">
+      <h3>🖥️ servidor_chat.py <span class="porta">0.0.0.0:5555</span></h3>
+      <div class="chips" id="chatChips"></div>
+      <div id="chatSlog"></div>
+      <div class="aviso">
+        <input id="chatAviso" placeholder="aviso do servidor (broadcast global)…">
+        <button id="chatAvisoBtn" title="enviar a todos">📣</button>
+      </div>
+    </div>
+    <div class="clients" id="chatClients"></div>
+  </div>
+  <details class="big" style="margin-top:12px;">
+    <summary>❓ Como usar / o que observar</summary>
+    <ul>
+      <li>Clique em <b>🔌 conectar</b> em pelo menos 2 clientes, digite um nome em cada e converse entre os painéis.</li>
+      <li>Cada mensagem vira uma linha <code>broadcast(...)</code> no log do servidor e aparece <b>em todos</b> os clientes conectados.</li>
+      <li>Comandos: <code>/usuarios</code> (responde <b>só para quem pediu</b>), <code>/msg Nome texto</code> (mensagem privada, desafio 2 do projeto), <code>/sair</code> (anuncia a saída para todos).</li>
+      <li>Repare: cada cliente online ganha um chip <code>🧵 nome</code> no servidor = <b>uma thread</b> — é isso que permite todos conversarem ao mesmo tempo.</li>
+      <li>O botão 🤖 roda uma conversa completa automaticamente (Ana e Beto) — ótimo para projeção em aula.</li>
+      <li>Os timestamps <code>[hh:mm]</code> mostrados aqui são exatamente o <b>Desafio G2</b> da avaliação 😉</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ ABA PROJETO ============ -->
+<section id="tab-projeto" class="tab">
+  <h2>🎯 Projeto Guiado — Chat multiusuário no terminal (Python + VSCode)</h2>
+
+  <h3>5.1 · Por que o <code>serversock.py</code> NÃO serve para chat?</h3>
+  <p><b>Experimente:</b> rode <code>serversock.py</code> e conecte <b>2 clientes</b>. O segundo fica <b>travado</b> — só será atendido quando o primeiro sair. Motivo: <code>accept()</code>/<code>recv()</code> são bloqueantes e o servidor atende <b>um por vez</b>.</p>
+  <p><b>Solução:</b> <code>threading</code> (uma thread por cliente) + <code>broadcast</code> (repassar a todos).</p>
+  <pre class="fluxo">                 ┌─────────── SERVIDOR ───────────┐
+  Cliente A ◄───►│ while True:  accept()          │
+                 │   └─► thread(A) ─► broadcast() │
+  Cliente B ◄───►│   └─► thread(B) ─► broadcast() │
+  Cliente C ◄───►│   └─► thread(C) ─► broadcast() │
+                 └────────────────────────────────┘</pre>
+  <div class="callout">🎬 <b>Veja acontecendo:</b> a aba <b>💬 Chat ao Vivo</b> mostra exatamente essa arquitetura funcionando — conecte clientes lá e compare com o seu código!</div>
+  <div class="callout info">🧵 Conceitos novos: <code>threading.Thread(target=f, args=(a,b), daemon=True)</code> roda a função <b>em paralelo</b> · a lista compartilhada usa <code>threading.Lock()</code> como "fila de banheiro" 🚻 · <b>broadcast</b> envia a mesma mensagem para todos.</div>
+
+  <h3>5.3 · FASE 1 — Servidor: <code>servidor_chat.py</code></h3>
+  <p>A função <code>broadcast</code> já está <b>pronta</b> (estude-a!). Ordem dos TODOs: <b style="color:var(--verde);">6 → 1 → 2 → 3 → 4 → 5</b>.</p>
+  <div class="codebox">
+    <div class="cbar"><span>servidor_chat.py — esqueleto com TODOs</span><button class="btn-copy">📋 copiar</button></div>
+    <pre># =====================================================
+# servidor_chat.py — CHAT MULTIUSUÁRIO (esqueleto)
+# =====================================================
+import socket
+import threading
+
+HOST = "0.0.0.0"      # aceita conexões de qualquer interface
+PORTA = 5555
+
+clientes = []            # cada item será: {"nome": str, "conexao": socket}
+lock = threading.Lock()  # trava de acesso à lista
+
+
+def broadcast(mensagem):
+    # [JÁ PRONTA — estude!] Envia 'mensagem' para TODOS os clientes.
+    with lock:
+        destinatarios = list(clientes)   # copia = seguro remover durante o loop
+    for c in destinatarios:
+        try:
+            c["conexao"].sendall(mensagem.encode("utf-8"))
+        except OSError:
+            with lock:
+                if c in clientes:
+                    clientes.remove(c)   # cliente caiu → remove
+
+
+def atender(conexao, endereco):
+    # Rodará dentro de uma thread. Cuida de UM cliente até ele sair.
+    nome = None
+    try:
+        # TODO 1 — perguntar o nome:
+        #   a) sendall com a pergunta "Qual é o seu nome? " (encode utf-8)
+        #   b) recv → decode → strip
+        #      se vier vazio, use: nome = f"Anonimo-{endereco[1]}"
+
+        # TODO 2 — registrar o cliente na lista (com lock):
+        #   with lock: clientes.append({"nome": nome, "conexao": conexao})
+
+        # TODO 3 — anunciar a entrada:
+        #   print no servidor: f"[+] {nome} entrou ({endereco[0]}:{endereco[1]})"
+        #   broadcast: f"*** {nome} entrou no chat ***"
+
+        # TODO 4 — loop principal de mensagens:
+        #   while True:
+        #       dados = conexao.recv(1024)
+        #       if not dados: break          <- cliente saiu/caiu
+        #       texto = dados.decode("utf-8")
+        #       print(f"[{nome}] {texto}")   <- no terminal do servidor
+        #       broadcast(f"[{nome}] {texto}")
+
+        pass  # remova este 'pass' quando implementar
+    except (ConnectionResetError, OSError):
+        pass
+    finally:
+        # TODO 5 — limpeza (roda sempre, mesmo com erro):
+        #   a) se nome foi definido: remover este cliente de 'clientes' (com lock)
+        #      dica: clientes[:] = [c for c in clientes if c["conexao"] is not conexao]
+        #   b) broadcast(f"*** {nome} saiu do chat ***")
+        #   c) print(f"[-] {nome} desconectou")
+        conexao.close()
+
+
+def main():
+    servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    servidor.bind((HOST, PORTA))
+    servidor.listen()
+    print(f"💬 Servidor de chat na porta {PORTA} — Ctrl+C encerra.")
+    try:
+        while True:
+            conexao, endereco = servidor.accept()
+            # TODO 6 — criar e iniciar UMA THREAD por cliente:
+            #   t = threading.Thread(target=atender, args=(conexao, endereco), daemon=True)
+            #   t.start()
+            #   print(f"[i] {endereco} conectou — thread {t.name} criada")
+            pass  # remova este 'pass' quando implementar
+    except KeyboardInterrupt:
+        print("\nServidor encerrado.")
+    finally:
+        servidor.close()
+
+
+if __name__ == "__main__":
+    main()</pre>
+  </div>
+  <details class="sol"><summary>✔ solução do TODO 1 — perguntar o nome</summary>
+<pre class="solpre">conexao.sendall("Qual é o seu nome? ".encode("utf-8"))
+nome = conexao.recv(1024).decode("utf-8").strip() or f"Anonimo-{endereco[1]}"</pre></details>
+  <details class="sol"><summary>✔ solução do TODO 2 — registrar na lista (com lock)</summary>
+<pre class="solpre">with lock:
+    clientes.append({"nome": nome, "conexao": conexao})</pre></details>
+  <details class="sol"><summary>✔ solução do TODO 3 — anunciar a entrada</summary>
+<pre class="solpre">print(f"[+] {nome} entrou ({endereco[0]}:{endereco[1]})")
+broadcast(f"*** {nome} entrou no chat ***")</pre></details>
+  <details class="sol"><summary>✔ solução do TODO 4 — loop de mensagens</summary>
+<pre class="solpre">while True:
+    dados = conexao.recv(1024)
+    if not dados:
+        break
+    texto = dados.decode("utf-8")
+    print(f"[{nome}] {texto}")
+    broadcast(f"[{nome}] {texto}")</pre></details>
+  <details class="sol"><summary>✔ solução do TODO 5 — limpeza no finally</summary>
+<pre class="solpre">if nome:
+    with lock:
+        clientes[:] = [c for c in clientes if c["conexao"] is not conexao]
+    broadcast(f"*** {nome} saiu do chat ***")
+    print(f"[-] {nome} desconectou")
+conexao.close()</pre></details>
+  <details class="sol"><summary>✔ solução do TODO 6 — uma thread por cliente (no main)</summary>
+<pre class="solpre">t = threading.Thread(target=atender, args=(conexao, endereco), daemon=True)
+t.start()
+print(f"[i] {endereco} conectou — thread {t.name} criada")</pre></details>
+
+  <h3>5.4 · FASE 2 — Cliente: <code>cliente_chat.py</code></h3>
+  <p>A função <code>receber</code> já está pronta — é ela que permite <b>receber e digitar ao mesmo tempo</b>!</p>
+  <div class="codebox">
+    <div class="cbar"><span>cliente_chat.py — esqueleto com TODOs</span><button class="btn-copy">📋 copiar</button></div>
+    <pre># =====================================================
+# cliente_chat.py — CHAT MULTIUSUÁRIO (esqueleto)
+# =====================================================
+import socket
+import threading
+
+HOST = "127.0.0.1"
+PORTA = 5555
+
+
+def receber(cliente):
+    # [JÁ PRONTA] Thread que imprime tudo que chega do servidor.
+    while True:
+        try:
+            dados = cliente.recv(1024)
+            if not dados:
+                print("\n[servidor fechou a conexão]")
+                break
+            print("\r" + dados.decode("utf-8"))
+        except OSError:
+            break
+
+
+def main():
+    cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    cliente.connect((HOST, PORTA))
+    print("Conectado ao chat! Digite /sair para sair.\n")
+
+    # TODO C1 — inicie a thread 'receber':
+    #   threading.Thread(target=receber, args=(cliente,), daemon=True).start()
+
+    try:
+        while True:
+            mensagem = input()
+            # TODO C2 — se mensagem.strip() == "/sair": break
+            # TODO C3 — senão: cliente.sendall(mensagem.encode("utf-8"))
+            pass  # remova este 'pass' quando implementar
+    except (KeyboardInterrupt, EOFError):
+        pass
+    finally:
+        cliente.close()
+        print("Conexão encerrada.")
+
+
+if __name__ == "__main__":
+    main()</pre>
+  </div>
+  <details class="sol"><summary>✔ solução do TODO C1 — iniciar a thread de recepção</summary>
+<pre class="solpre">threading.Thread(target=receber, args=(cliente,), daemon=True).start()</pre></details>
+  <details class="sol"><summary>✔ solução dos TODOs C2 e C3 — loop de envio</summary>
+<pre class="solpre">mensagem = input()
+if mensagem.strip().lower() == "/sair":
+    break
+cliente.sendall(mensagem.encode("utf-8"))</pre></details>
+
+  <h3>5.5 · Roteiro de teste no VSCode</h3>
+  <p>Abra <b>4 terminais</b> (botão <b>＋</b> no painel do terminal):</p>
+  <table>
+    <tr><th>Terminal</th><th>Comando</th><th>Papel</th></tr>
+    <tr><td>1</td><td><code>python servidor_chat.py</code></td><td>🖥️ servidor (fica rodando)</td></tr>
+    <tr><td>2</td><td><code>python cliente_chat.py</code></td><td>💻 "Ana"</td></tr>
+    <tr><td>3</td><td><code>python cliente_chat.py</code></td><td>💻 "Beto"</td></tr>
+    <tr><td>4</td><td><code>python cliente_chat.py</code></td><td>💻 "Caio"</td></tr>
+  </table>
+  <label class="chk"><input type="checkbox"> Ana envia → Beto e Caio recebem <code>[Ana] oi</code></label>
+  <label class="chk"><input type="checkbox"> Entradas e saídas são anunciadas (<code>*** X entrou/saiu ***</code>)</label>
+  <label class="chk"><input type="checkbox"> <code>/sair</code> remove o usuário e avisa os demais</label>
+  <label class="chk"><input type="checkbox"> Servidor continua de pé mesmo quando todos os clientes saem</label>
+  <label class="chk"><input type="checkbox"> Dois clientes conversam ao mesmo tempo (mensagens intercaladas)</label>
+
+  <details class="big">
+    <summary>🔒 5.6 · GABARITO — solução completa comentada (professor)</summary>
+    <p style="font-weight:700;margin:8px 0 4px;">servidor_chat.py</p>
+    <div class="codebox">
+      <div class="cbar"><span>servidor_chat.py — completo</span><button class="btn-copy">📋 copiar</button></div>
+      <pre>import socket
+import threading
+
+HOST = "0.0.0.0"
+PORTA = 5555
+
+clientes = []
+lock = threading.Lock()
+
+
+def broadcast(mensagem):
+    with lock:
+        destinatarios = list(clientes)
+    for c in destinatarios:
+        try:
+            c["conexao"].sendall(mensagem.encode("utf-8"))
+        except OSError:
+            with lock:
+                if c in clientes:
+                    clientes.remove(c)
+
+
+def atender(conexao, endereco):
+    nome = None
+    try:
+        conexao.sendall("Qual é o seu nome? ".encode("utf-8"))
+        nome = conexao.recv(1024).decode("utf-8").strip() or f"Anonimo-{endereco[1]}"
+
+        with lock:
+            clientes.append({"nome": nome, "conexao": conexao})
+
+        print(f"[+] {nome} entrou ({endereco[0]}:{endereco[1]})")
+        broadcast(f"*** {nome} entrou no chat ***")
+
+        while True:
+            dados = conexao.recv(1024)
+            if not dados:
+                break
+            texto = dados.decode("utf-8")
+            print(f"[{nome}] {texto}")
+            broadcast(f"[{nome}] {texto}")
+    except (ConnectionResetError, OSError):
+        pass
+    finally:
+        if nome:
+            with lock:
+                clientes[:] = [c for c in clientes if c["conexao"] is not conexao]
+            broadcast(f"*** {nome} saiu do chat ***")
+            print(f"[-] {nome} desconectou")
+        conexao.close()
+
+
+def main():
+    servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    servidor.bind((HOST, PORTA))
+    servidor.listen()
+    print(f"💬 Servidor de chat na porta {PORTA} — Ctrl+C encerra.")
+    try:
+        while True:
+            conexao, endereco = servidor.accept()
+            t = threading.Thread(target=atender, args=(conexao, endereco), daemon=True)
+            t.start()
+            print(f"[i] {endereco} conectou — thread {t.name} criada")
+    except KeyboardInterrupt:
+        print("\nServidor encerrado.")
+    finally:
+        servidor.close()
+
+
+if __name__ == "__main__":
+    main()</pre>
+    </div>
+    <p style="font-weight:700;margin:8px 0 4px;">cliente_chat.py</p>
+    <div class="codebox">
+      <div class="cbar"><span>cliente_chat.py — completo</span><button class="btn-copy">📋 copiar</button></div>
+      <pre>import socket
+import threading
+
+HOST = "127.0.0.1"
+PORTA = 5555
+
+
+def receber(cliente):
+    while True:
+        try:
+            dados = cliente.recv(1024)
+            if not dados:
+                print("\n[servidor fechou a conexão]")
+                break
+            print("\r" + dados.decode("utf-8"))
+        except OSError:
+            break
+
+
+def main():
+    cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    cliente.connect((HOST, PORTA))
+    print("Conectado ao chat! Digite /sair para sair.\n")
+
+    threading.Thread(target=receber, args=(cliente,), daemon=True).start()
+
+    try:
+        while True:
+            mensagem = input()
+            if mensagem.strip().lower() == "/sair":
+                break
+            cliente.sendall(mensagem.encode("utf-8"))
+    except (KeyboardInterrupt, EOFError):
+        pass
+    finally:
+        cliente.close()
+        print("Conexão encerrada.")
+
+
+if __name__ == "__main__":
+    main()</pre>
+    </div>
+  </details>
+
+  <h3>5.7 · Desafios para expandir</h3>
+  <ol>
+    <li><code>/usuarios</code> — listar quem está online. <i>Dica: <code>[c["nome"] for c in clientes]</code>.</i></li>
+    <li><code>/msg Nome texto</code> — mensagem privada para um usuário só.</li>
+    <li><b>Timestamp</b> — prefixar <code>[14:32]</code> com <code>datetime.now().strftime("%H:%M")</code>.</li>
+    <li><b>Limite de usuários</b> — recusar o 11º com "chat cheio".</li>
+    <li><b>Log em arquivo</b> — gravar tudo em <code>chat.log</code> com <code>open("chat.log", "a")</code>.</li>
+    <li><b>Nome duplicado</b> — se o nome já existe, pedir de novo.</li>
+    <li><b>(Avançado)</b> Salas de conversa com um dicionário de listas.</li>
+  </ol>
+
+  <h3>5.8 · Erros comuns do projeto</h3>
+  <table>
+    <tr><th>Sintoma</th><th>Causa provável</th><th>Correção</th></tr>
+    <tr><td><code>WinError 10048</code> / Address already in use</td><td>servidor já aberto em outro terminal</td><td>feche o outro ou mude a PORTA</td></tr>
+    <tr><td><code>ConnectionRefusedError 10061</code></td><td>servidor não está rodando</td><td>inicie o servidor <b>primeiro</b></td></tr>
+    <tr><td><code>UnicodeDecodeError</code></td><td>encode/decode diferentes</td><td>sempre <code>utf-8</code> dos dois lados</td></tr>
+    <tr><td>Cliente some sem aviso</td><td><code>recv()</code> vazio não tratado</td><td>trate <code>if not dados: break</code> + <code>finally</code></td></tr>
+    <tr><td>Threads "sobrevivem" ao fechar</td><td>sem <code>daemon=True</code></td><td>use <code>daemon=True</code> no Thread</td></tr>
+    <tr><td>Mensagem "some" ao digitar</td><td>outro usuário escreveu ao mesmo tempo</td><td>normal no terminal; melhoria com <code>print("\r"+...)</code></td></tr>
+  </table>
+
+  <h3>5.9 · Mapa: Simulador/Chat ↔ Código real</h3>
+  <table>
+    <tr><th>O que você viu nas abas 🔌/💬</th><th>Onde está no código</th></tr>
+    <tr><td>SYN → SYN+ACK → ACK</td><td><code>connect()</code> (cliente) ↔ <code>accept()</code> (servidor)</td></tr>
+    <tr><td>Pacote 📨 indo / chegando</td><td><code>sendall()</code> / <code>recv()</code></td></tr>
+    <tr><td>Pacote FIN vermelho</td><td><code>close()</code> → <code>recv()</code> devolve <code>b""</code></td></tr>
+    <tr><td>Chip 🧵 no servidor do chat</td><td><code>threading.Thread(target=atender, ...).start()</code></td></tr>
+    <tr><td>Mensagem aparecendo em todos</td><td><code>broadcast()</code></td></tr>
+    <tr><td><code>/usuarios</code> respondendo só para um</td><td><code>conexao.sendall(...)</code> direto, sem broadcast</td></tr>
+  </table>
+</section>
+
+<p class="rodape">Material didático — Sockets em Python · Simulador + Tutorial + Chat ao vivo + Projeto guiado · Funciona offline 🚀</p>
+
+<script>
+/* ================= NAVEGAÇÃO ================= */
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('ativa', t.id==='tab-'+id));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.go===id));
+  if(id==='sim' && window.Sim) Sim.redesenhar();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>switchTab(b.dataset.go));
+
+/* ================= COPIAR CÓDIGO ================= */
+function flashBtn(btn){const t=btn.textContent;btn.textContent='copiado ✔';setTimeout(()=>btn.textContent=t,1200);}
+function copiarTexto(txt,btn){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>flashBtn(btn)).catch(()=>fallbackCopy(txt,btn));
+  }else fallbackCopy(txt,btn);
+}
+function fallbackCopy(txt,btn){
+  const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);
+  ta.select();try{document.execCommand('copy');flashBtn(btn);}catch(e){}ta.remove();
+}
+document.addEventListener('click',e=>{
+  if(e.target.classList&&e.target.classList.contains('btn-copy')){
+    const box=e.target.closest('.codebox');
+    copiarTexto(box.querySelector('pre').innerText,e.target);
+  }
+});
+
+/* ================= DESTAQUE DE SINTAXE ================= */
+function destacar(){
+  document.querySelectorAll('.codebox pre, pre.solpre').forEach(pre=>{
+    let t=pre.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    t=t.replace(/("[^"\n]*"|'[^'\n]*')/g,'<em>$1</em>');
+    t=t.replace(/#[^\n]*/g,m=>'<b>'+m+'</b>');
+    pre.innerHTML=t;
+  });
+}
+
+/* ================= SIMULADOR TCP ================= */
+const Sim=(()=>{
+  const NS='http://www.w3.org/2000/svg';
+  const palco=document.getElementById('simPalco');
+  const logEl=document.getElementById('simLog');
+  const svg=document.getElementById('simCabos');
+  const servidorEl=document.getElementById('simServidor');
+  const statusSrv=document.getElementById('simStatusSrv');
+  const chipsSrv=document.getElementById('simChipsSrv');
+  const btnPasso=document.getElementById('simBtnPasso');
+  const btnAuto=document.getElementById('simBtnAuto');
+  const btnReset=document.getElementById('simBtnReset');
+  const btnB=document.getElementById('simBtnB');
+  const btnC=document.getElementById('simBtnC');
+  const inpMsg=document.getElementById('simMsg');
+  const infoPasso=document.getElementById('simInfo');
+  const velSel=document.getElementById('simVel');
+
+  let clientes=[],lanes=[],idx=0,ocupado=false,autoRodando=false,finalizado=false;
+  const servidor={el:servidorEl,status:statusSrv,chips:chipsSrv};
+
+  const vel=()=>parseFloat(velSel.value);
+  const espera=ms=>new Promise(r=>setTimeout(r,ms/vel()));
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  function linha(html,cls){const d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=html;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
+  const logCmd=t=>linha('&gt; '+esc(t),'l-cmd');
+  const logOk=t=>linha('✔ '+esc(t),'l-ok');
+  const logInfo=t=>linha(esc(t),'l-info');
+  const logWarn=t=>linha('⚠ '+esc(t),'l-warn');
+  const logSrv=t=>linha(esc(t),'l-srv');
+  const logCli=t=>linha(esc(t),'l-cli');
+
+  function pos(el){const r=el.getBoundingClientRect(),p=palco.getBoundingClientRect();return{x:r.left-p.left,y:r.top-p.top,w:r.width,h:r.height};}
+
+  function criarCliente(nome){
+    const i=clientes.length;
+    const div=document.createElement('div');
+    div.className='maquina';div.style.left='22px';div.style.top=(24+i*128)+'px';
+    div.innerHTML='<h3>💻 '+nome+' <span class="ip">127.0.0.1</span></h3><div class="status">socket: não criado</div><div class="chips"></div>';
+    palco.appendChild(div);
+    const c={nome,el:div,status:div.querySelector('.status'),chips:div.querySelector('.chips'),porta:40000+Math.floor(Math.random()*20000)};
+    clientes.push(c);desenharLanes();return c;
+  }
+  function setStatus(ent,txt,cor){ent.status.textContent=txt;ent.status.style.color=cor||'';ent.el.classList.add('ativa');setTimeout(()=>ent.el.classList.remove('ativa'),900);}
+  function addChip(ent,txt,cor){const s=document.createElement('span');s.className='chip';s.textContent=txt;if(cor)s.style.color=cor;ent.chips.appendChild(s);}
+
+  function desenharLanes(){
+    svg.innerHTML='';lanes=[];
+    const ps=pos(servidor.el),sy=ps.y+ps.h/2;
+    clientes.forEach(c=>{
+      const pc=pos(c.el);
+      const x1=pc.x+pc.w,y1=pc.y+pc.h/2,mid=(x1+ps.x)/2;
+      const pl=document.createElementNS(NS,'polyline');
+      pl.setAttribute('points',x1+','+y1+' '+mid+','+y1+' '+mid+','+sy+' '+ps.x+','+sy);
+      pl.setAttribute('fill','none');pl.setAttribute('stroke','#58a6ff');
+      pl.setAttribute('stroke-dasharray','6 6');pl.setAttribute('stroke-width','1.6');pl.setAttribute('opacity','.35');
+      svg.appendChild(pl);
+      lanes.push([{x:x1,y:y1},{x:mid,y:y1},{x:mid,y:sy},{x:ps.x,y:sy}]);
+    });
+  }
+
+  function animarPacote(laneIdx,reverso,label,cor){
+    return new Promise(res=>{
+      const pts0=lanes[laneIdx];
+      if(!pts0){res();return;}
+      const pts=reverso?[...pts0].reverse():pts0;
+      let segs=[],total=0;
+      for(let i=0;i<pts.length-1;i++){
+        const dx=pts[i+1].x-pts[i].x,dy=pts[i+1].y-pts[i].y,len=Math.hypot(dx,dy)||1;
+        segs.push({x:pts[i].x,y:pts[i].y,dx,dy,len});total+=len;
+      }
+      const pkt=document.createElement('div');pkt.className='packet';pkt.textContent=label;pkt.style.background=cor;
+      palco.appendChild(pkt);
+      const dur=1150/vel();const t0=performance.now();
+      function frame(t){
+        const frac=Math.min((t-t0)/dur,1);let d=frac*total,s=segs[segs.length-1],dd=d;
+        for(const sg of segs){if(dd<=sg.len){s=sg;break;}dd-=sg.len;}
+        const x=s.x+(dd/s.len)*s.dx,y=s.y+(dd/s.len)*s.dy;
+        pkt.style.left=(x-pkt.offsetWidth/2)+'px';pkt.style.top=(y-pkt.offsetHeight/2)+'px';
+        if(frac<1)requestAnimationFrame(frame);else{pkt.remove();res();}
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  const trunc=(s,n=18)=>s.length>n?s.slice(0,n-1)+'…':s;
+  const msgAtual=()=>inpMsg.value.trim()||'Olá, servidor!';
+
+  async function handshake(i){
+    await espera(250);
+    await animarPacote(i,false,'SYN','var(--azul)');
+    await espera(120);
+    await animarPacote(i,true,'SYN+ACK','var(--roxo)');
+    await espera(120);
+    await animarPacote(i,false,'ACK','var(--verde)');
+  }
+
+  const passos=[
+   {codigo:'servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)',acao:async()=>{
+     setStatus(servidor,'socket TCP criado ✔','var(--verde)');
+     logOk('Criado o socket do servidor. AF_INET = IPv4 | SOCK_STREAM = TCP (conexão confiável).');}},
+   {codigo:'servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)',acao:async()=>{
+     logOk('SO_REUSEADDR: permite reusar a porta 5000 imediatamente se o servidor reiniciar.');}},
+   {codigo:'servidor.bind(("127.0.0.1", 5000))',acao:async()=>{
+     addChip(servidor,'porta 5000','var(--amarelo)');
+     setStatus(servidor,'bind: preso ao IP 127.0.0.1, porta 5000','var(--amarelo)');
+     logOk('bind(): amarra o socket ao endereço. 127.0.0.1 = só esta máquina (localhost).');}},
+   {codigo:'servidor.listen(1)',acao:async()=>{
+     setStatus(servidor,'LISTEN — aguardando clientes…','var(--amarelo)');
+     logOk('listen(): o socket virou um "balcão de atendimento". O 1 é o tamanho da fila de espera.');}},
+   {codigo:'conexao, endereco = servidor.accept()',acao:async()=>{
+     setStatus(servidor,'accept() BLOQUEADO — esperando…','var(--amarelo)');
+     logInfo('accept() PAUSA o servidor aqui. Ele só continua quando um cliente conectar.');
+     await espera(600);}},
+   {codigo:'cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)',acao:async()=>{
+     setStatus(clientes[0],'socket TCP criado ✔','var(--verde)');
+     logOk('O cliente também cria o seu próprio socket.');}},
+   {codigo:'cliente.connect(("127.0.0.1", 5000))',acao:async()=>{
+     logInfo('🤝 Handshake TCP em 3 tempos:');
+     await handshake(0);
+     setStatus(clientes[0],'CONECTADO ✔ (porta '+clientes[0].porta+')','var(--verde)');
+     setStatus(servidor,'accept() desbloqueou! Cliente aceito.','var(--verde)');
+     addChip(servidor,'conexao A','var(--verde)');
+     logOk('1) Cliente → SYN: "quero me conectar"');
+     logOk('2) Servidor → SYN+ACK: "aceito, e eu também quero"');
+     logOk('3) Cliente → ACK: "confirmado!" — conexão ESTABELECIDA');
+     logWarn('Repare: foi AGORA que o accept() retornou (conexao, endereco).');}},
+   {codigo:'mensagem = input("Digite uma mensagem: ")',acao:async()=>{
+     logCli('mensagem = "'+msgAtual()+'"');
+     logInfo('(no simulador, a mensagem vem do campo acima do terminal)');
+     await espera(300);}},
+   {codigo:'cliente.sendall(mensagem.encode("utf-8"))',acao:async()=>{
+     setStatus(clientes[0],'sendall: enviando bytes…','var(--azul)');
+     await animarPacote(0,false,'📨 '+trunc(msgAtual()),'var(--azul)');
+     logOk('encode() transforma texto em BYTES — a rede só transporta bytes!');
+     logCli('bytes enviados: b"'+trunc(msgAtual(),26)+'"');}},
+   {codigo:'dados = conexao.recv(1024)',acao:async()=>{
+     setStatus(servidor,'recv(1024) recebeu dados ✔','var(--verde)');
+     logSrv('dados = b"'+trunc(msgAtual(),26)+'"');
+     logInfo('recv(1024): lê até 1024 bytes. Também BLOQUEIA até chegar algo.');}},
+   {codigo:'mensagem = dados.decode("utf-8")',acao:async()=>{
+     logSrv('mensagem = "'+msgAtual()+'"');
+     logOk('decode(): bytes → texto (o inverso do encode).');}},
+   {codigo:'print("Cliente:", mensagem)',acao:async()=>{
+     logSrv('Cliente: '+msgAtual());
+     logInfo('(linha impressa no terminal DO SERVIDOR)');}},
+   {codigo:'resposta = f"Servidor recebeu: {mensagem}"',acao:async()=>{
+     logSrv('resposta = "Servidor recebeu: '+msgAtual()+'"');}},
+   {codigo:'conexao.sendall(resposta.encode("utf-8"))',acao:async()=>{
+     setStatus(servidor,'respondendo…','var(--roxo)');
+     await animarPacote(0,true,'📨 '+trunc('Servidor recebeu: '+msgAtual(),30),'var(--roxo)');
+     logSrv('Resposta enviada de volta pelo MESMO socket "conexao".');}},
+   {codigo:'resposta = cliente.recv(1024)',acao:async()=>{
+     logCli('resposta = b"Servidor recebeu: '+trunc(msgAtual(),20)+'"');}},
+   {codigo:'print(resposta.decode("utf-8"))',acao:async()=>{
+     logCli('Servidor recebeu: '+msgAtual());
+     logInfo('(linha impressa no terminal DO CLIENTE)');}},
+   {codigo:'# while True → volta para o input() e repete o ciclo',acao:async()=>{
+     logInfo('O ciclo input → sendall → recv se repete para sempre…');}},
+   {codigo:'mensagem = input("Digite uma mensagem: ")   # usuário digitou: sair',acao:async()=>{
+     logCli('mensagem = "sair"');
+     logWarn('"sair" → o break encerra o while True no cliente.');}},
+   {codigo:'cliente.close()',acao:async()=>{
+     await animarPacote(0,false,'FIN','var(--verm)');
+     setStatus(clientes[0],'FECHADO','var(--verm)');
+     setStatus(servidor,'recv() devolveu b"" → cliente saiu','var(--verm)');
+     logWarn('FIN: aviso de encerramento. recv() no servidor retorna VAZIO (b"").');}},
+   {codigo:'# not dados → break → fim do "with conexao" (fecha sozinho)',acao:async()=>{
+     logInfo('recv() vazio = o cliente encerrou. O with fecha a conexão do servidor automaticamente.');
+     await espera(300);}},
+   {codigo:'conexao, endereco = servidor.accept()   # de novo!',acao:async()=>{
+     setStatus(servidor,'accept() de novo — pronto p/ próximo cliente','var(--amarelo)');
+     logInfo('O servidor NUNCA para: volta ao accept() esperando o próximo cliente.');
+     logWarn('👉 Agora clique em "＋ Conectar Cliente B" para ver vários clientes!');}},
+  ];
+
+  function atualizarBotoes(){
+    btnPasso.disabled=ocupado||autoRodando||idx>=passos.length;
+    const podeExtra=finalizado&&!ocupado&&!autoRodando;
+    btnB.disabled=!podeExtra||btnB.dataset.usado==='1';
+    btnC.disabled=!podeExtra||btnC.dataset.usado==='1';
+    infoPasso.textContent='Passo '+Math.min(idx,passos.length)+'/'+passos.length;
+  }
+
+  async function proximo(){
+    if(ocupado||idx>=passos.length)return;
+    ocupado=true;atualizarBotoes();
+    const p=passos[idx];
+    logCmd(p.codigo);
+    await p.acao();
+    idx++;ocupado=false;
+    if(idx>=passos.length){finalizado=true;linha('✔ <b>Simulação completa!</b> Reinicie ou conecte o Cliente B / C.','l-ok');}
+    atualizarBotoes();
+  }
+
+  async function conectarExtra(nome){
+    if(ocupado)return;
+    ocupado=true;atualizarBotoes();
+    const c=criarCliente(nome);
+    const i=clientes.length-1;
+    const varn=nome.toLowerCase().replace(' ','');
+    logCmd('# ===== '+nome+' entra em cena =====');
+    logCmd(varn+'_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)');
+    setStatus(c,'socket criado ✔','var(--verde)');
+    await espera(500);
+    logCmd(varn+'_sock.connect(("127.0.0.1", 5000))');
+    logInfo('O accept() do servidor desbloqueia DE NOVO e devolve OUTRA conexão…');
+    await handshake(i);
+    setStatus(c,'CONECTADO ✔ (porta '+c.porta+')','var(--verde)');
+    setStatus(servidor,'novo accept() → nova conexão!','var(--verde)');
+    addChip(servidor,'conexao '+nome.slice(-1),'var(--verde)');
+    logOk(nome+' conectado! No chat do guia, o servidor cria uma THREAD só para ele e volta ao accept().');
+    const msg='Oi, sou o '+nome+'!';
+    await espera(400);
+    logCmd(varn+'_sock.sendall("'+msg+'".encode("utf-8"))');
+    await animarPacote(i,false,'📨 '+trunc(msg),'var(--azul)');
+    logSrv('['+nome+'] '+msg+'   (a thread do servidor atende '+nome+' em paralelo)');
+    await espera(300);
+    await animarPacote(i,true,'broadcast ✔','var(--roxo)');
+    logInfo('No chat, essa mensagem seria entregue aos OUTROS clientes (broadcast).');
+    logWarn('Vários clientes + uma thread por cliente + broadcast = CHAT MULTIUSUÁRIO 🎯 (aba 💬 Chat ao Vivo)');
+    ocupado=false;atualizarBotoes();
+  }
+
+  btnPasso.onclick=proximo;
+  btnAuto.onclick=async()=>{
+    if(autoRodando){autoRodando=false;btnAuto.textContent='⏩ Executar tudo';atualizarBotoes();return;}
+    autoRodando=true;btnAuto.textContent='⏸ Pausar';atualizarBotoes();
+    while(autoRodando&&idx<passos.length){await proximo();await espera(650);}
+    autoRodando=false;btnAuto.textContent='⏩ Executar tudo';atualizarBotoes();
+  };
+  btnReset.onclick=reset;
+  btnB.onclick=()=>{btnB.dataset.usado='1';conectarExtra('Cliente B');};
+  btnC.onclick=()=>{btnC.dataset.usado='1';conectarExtra('Cliente C');};
+
+  function reset(){
+    autoRodando=false;btnAuto.textContent='⏩ Executar tudo';
+    idx=0;ocupado=false;finalizado=false;
+    clientes.forEach(c=>c.el.remove());
+    clientes=[];lanes=[];
+    document.querySelectorAll('.packet').forEach(p=>p.remove());
+    logEl.innerHTML='';chipsSrv.innerHTML='';
+    setStatus(servidor,'socket: não criado');
+    btnB.dataset.usado='';btnC.dataset.usado='';
+    criarCliente('Cliente A');
+    linha('Terminal reiniciado. Clique em ▶ Próximo passo (ou ⏩ para ver tudo).','l-info');
+    atualizarBotoes();
+  }
+
+  window.addEventListener('resize',()=>{if(!ocupado)desenharLanes();});
+  reset();
+  return {redesenhar:()=>{if(!ocupado)desenharLanes();}};
+})();
+
+/* ================= CHAT AO VIVO ================= */
+const Chat=(()=>{
+  const slog=document.getElementById('chatSlog');
+  const chips=document.getElementById('chatChips');
+  const wrap=document.getElementById('chatClients');
+  const btnDemo=document.getElementById('chatDemo');
+  const btnLimpar=document.getElementById('chatLimpar');
+  const avisoInp=document.getElementById('chatAviso');
+  const avisoBtn=document.getElementById('chatAvisoBtn');
+
+  const hora=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+  function sLinha(html,cls){const d=document.createElement('div');if(cls)d.className=cls;d.innerHTML=html;slog.appendChild(d);slog.scrollTop=slog.scrollHeight;}
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const clientes=[];
+  function criarPainel(rotulo){
+    const div=document.createElement('div');div.className='cpanel';
+    div.innerHTML='<div class="chead"><span>💻 '+rotulo+'</span><span class="badge" data-badge>desconectado</span><button class="ccon">🔌 conectar</button></div>'+
+      '<div class="cterm" data-term></div><div class="crow"><input data-inp placeholder="digite aqui…" disabled><button data-send disabled>➤</button></div>';
+    wrap.appendChild(div);
+    const c={rotulo,el:div,term:div.querySelector('[data-term]'),inp:div.querySelector('[data-inp]'),send:div.querySelector('[data-send]'),btn:div.querySelector('.ccon'),badge:div.querySelector('[data-badge]'),estado:'off',nome:null};
+    c.btn.onclick=()=>conectar(c);
+    c.send.onclick=()=>enviar(c);
+    c.inp.addEventListener('keydown',e=>{if(e.key==='Enter')enviar(c);});
+    clientes.push(c);
+  }
+  criarPainel('Cliente 1');criarPainel('Cliente 2');criarPainel('Cliente 3');
+
+  function escrever(c,txt,cls){
+    const d=document.createElement('div');if(cls)d.className=cls;d.textContent=txt;
+    c.term.appendChild(d);c.term.scrollTop=c.term.scrollHeight;
+  }
+  function setBadge(c,txt,cls){c.badge.textContent=txt;c.badge.className='badge '+cls;}
+  function atualizarChips(){
+    chips.innerHTML='';
+    const on=online();
+    if(!on.length){const s=document.createElement('span');s.className='chip vazio';s.textContent='nenhuma thread ativa';chips.appendChild(s);return;}
+    on.forEach(c=>{const s=document.createElement('span');s.className='chip';s.textContent='🧵 '+c.nome;chips.appendChild(s);});
+  }
+  const online=()=>clientes.filter(c=>c.estado==='chat');
+
+  function broadcastSys(texto){
+    sLinha('&gt; broadcast("'+esc(texto)+'")','s-cmd');
+    online().forEach(c=>escrever(c,texto,'c-sys'));
+  }
+  function broadcastMsg(autor,texto){
+    const linhaC='['+hora()+'] ['+autor+'] '+texto;
+    sLinha('&gt; broadcast("'+esc(linhaC)+'")','s-cmd');
+    online().forEach(c=>escrever(c,linhaC));
+  }
+
+  function conectar(c){
+    if(c.estado!=='off')return;
+    c.estado='nome';
+    const varn=c.rotulo.toLowerCase().replace(' ','');
+    sLinha('&gt; '+varn+'.connect(("127.0.0.1", 5555))','s-cmd');
+    sLinha('accept() desbloqueou → Thread(target=atender, args=(...)).start() <i># atende '+c.rotulo+'</i>','s-info');
+    escrever(c,'✔ Conectado ao servidor 127.0.0.1:5555','c-ok');
+    escrever(c,'Qual é o seu nome?','c-ask');
+    escrever(c,'(comandos: /usuarios · /msg Nome texto · /sair)','c-info');
+    setBadge(c,'digite seu nome…','b-wait');
+    c.btn.disabled=true;
+    c.inp.disabled=false;c.send.disabled=false;c.inp.focus();
+    atualizarChips();
+  }
+
+  function enviar(c){
+    if(c.estado==='off')return;
+    const txt=c.inp.value.trim();if(!txt)return;
+    c.inp.value='';
+    if(c.estado==='nome'){
+      c.nome=txt.slice(0,14);
+      c.estado='chat';
+      sLinha('with lock: clientes.append({"nome": "'+esc(c.nome)+'", "conexao": ...})','s-cmd');
+      broadcastSys('*** '+c.nome+' entrou no chat ***');
+      setBadge(c,'🟢 online: '+c.nome,'b-on');
+      atualizarChips();
+      return;
+    }
+    if(txt==='/sair'){sair(c);return;}
+    if(txt==='/usuarios'){
+      const nomes=online().map(x=>x.nome).join(', ')||'ninguém';
+      escrever(c,'[servidor] Online: '+nomes,'c-srv');
+      sLinha('# /usuarios → resposta enviada SOMENTE para '+esc(c.nome),'s-info');
+      return;
+    }
+    if(txt.startsWith('/msg ')){
+      const partes=txt.slice(5).split(' ');
+      const alvo=partes.shift();const texto=partes.join(' ');
+      const dest=online().find(x=>x.nome&&x.nome.toLowerCase()===alvo.toLowerCase());
+      if(!dest){escrever(c,'[servidor] usuário "'+alvo+'" não encontrado','c-srv');return;}
+      escrever(c,'[privado para '+dest.nome+'] '+texto,'c-priv');
+      escrever(dest,'[privado de '+c.nome+'] '+texto,'c-priv');
+      sLinha('# /msg → entrega DIRETA a '+esc(dest.nome)+' (sem broadcast)','s-info');
+      return;
+    }
+    broadcastMsg(c.nome,txt);
+  }
+
+  function sair(c){
+    if(c.estado==='chat'&&c.nome)broadcastSys('*** '+c.nome+' saiu do chat ***');
+    sLinha('finally: '+esc(c.nome||c.rotulo)+' removido de clientes[] → conexao.close()','s-info');
+    escrever(c,'— conexão encerrada —','c-info');
+    c.estado='off';c.nome=null;
+    setBadge(c,'desconectado','');
+    c.btn.disabled=false;c.btn.textContent='🔌 conectar';
+    c.inp.disabled=true;c.send.disabled=true;
+    atualizarChips();
+  }
+
+  avisoBtn.onclick=()=>{
+    const t=avisoInp.value.trim();if(!t)return;avisoInp.value='';
+    broadcastSys('[servidor] '+t);
+  };
+  avisoInp.addEventListener('keydown',e=>{if(e.key==='Enter')avisoBtn.onclick();});
+
+  btnLimpar.onclick=()=>{
+    clientes.forEach(c=>{
+      c.estado='off';c.nome=null;c.term.innerHTML='';
+      setBadge(c,'desconectado','');
+      c.btn.disabled=false;c.btn.textContent='🔌 conectar';
+      c.inp.disabled=true;c.send.disabled=true;
+    });
+    slog.innerHTML='';atualizarChips();
+    sLinha('🧹 tudo limpo — servidor reiniciado (SO_REUSEADDR 😉)','s-ok');
+  };
+
+  let demoRodando=false;
+  btnDemo.onclick=async()=>{
+    if(demoRodando)return;demoRodando=true;btnDemo.disabled=true;btnDemo.textContent='⏳ demonstrando…';
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const digitar=async(c,txt)=>{
+      c.inp.value='';
+      for(const ch of txt){c.inp.value+=ch;await sleep(18);}
+      await sleep(180);enviar(c);
+    };
+    btnLimpar.onclick();
+    await sleep(300);
+    const a=clientes[0],b=clientes[1];
+    conectar(a);await sleep(500);await digitar(a,'Ana');await sleep(800);
+    conectar(b);await sleep(500);await digitar(b,'Beto');await sleep(800);
+    await digitar(a,'Olá, pessoal! 👋');await sleep(900);
+    await digitar(b,'Oi Ana! Tudo bem?');await sleep(900);
+    await digitar(a,'Bora pro VSCode construir isso de verdade? 😄');await sleep(900);
+    await digitar(b,'/usuarios');await sleep(900);
+    await digitar(b,'/msg Ana posso usar /sair?');await sleep(900);
+    await digitar(a,'Pode! Veja você saindo em todos os terminais…');await sleep(900);
+    await digitar(b,'/sair');await sleep(700);
+    sLinha('✨ Fim da demonstração — a Ana ficou online! Conecte o Cliente 3 e converse com ela.','s-ok');
+    btnDemo.disabled=false;btnDemo.textContent='🤖 Demonstração automática';demoRodando=false;
+  };
+
+  atualizarChips();
+  sLinha('Servidor de chat iniciado na porta 5555 (simulado no navegador).','s-ok');
+  sLinha('Cada painel de cliente = um terminal do VSCode. Conecte 2+ e converse entre eles!','s-info');
+})();
+
+/* aplica destaque de sintaxe ao carregar */
+destacar();
+</script>
+</body>
+</html>
