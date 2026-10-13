@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>☁️ Missão Nuvem — Gamificação</title>
+<style>
+:root{
+  --azul:#1565d8; --azul-esc:#0b3c8c; --azul-claro:#e8f1ff;
+  --ciano:#37b5e0; --texto:#182236; --cinza:#5c6779;
+  --verde:#18a35a; --vermelho:#e03b3b; --amarelo:#f4a91b;
+  --ouro:#ffc93c; --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,Roboto,Arial,sans-serif}
+body{background:linear-gradient(180deg,#0b3c8c 0%,#1565d8 35%,#2e8fe0 100%);min-height:100vh;color:var(--texto);overflow-x:hidden}
+/* nuvens de fundo */
+.cloud{position:fixed;background:rgba(255,255,255,.16);border-radius:100px;filter:blur(2px);pointer-events:none;z-index:0}
+.cloud::before,.cloud::after{content:'';position:absolute;background:inherit;border-radius:50%}
+.c1{width:220px;height:70px;top:12%;left:-240px;animation:drift 38s linear infinite}
+.c1::before{width:90px;height:90px;top:-38px;left:35px}
+.c1::after{width:70px;height:70px;top:-24px;left:100px}
+.c2{width:170px;height:55px;top:48%;left:-200px;animation:drift 55s linear 8s infinite}
+.c2::before{width:70px;height:70px;top:-32px;left:28px}
+.c2::after{width:55px;height:55px;top:-18px;left:80px}
+.c3{width:260px;height:80px;top:78%;left:-300px;animation:drift 46s linear 20s infinite}
+.c3::before{width:110px;height:110px;top:-50px;left:45px}
+.c3::after{width:80px;height:80px;top:-30px;left:120px}
+@keyframes drift{to{transform:translateX(calc(100vw + 340px))}}
+header{position:sticky;top:0;z-index:20;background:rgba(11,44,110,.55);backdrop-filter:blur(8px);padding:12px 18px;color:#fff;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 4px 20px rgba(0,20,60,.35)}
+.logo{font-weight:800;font-size:1.25rem;letter-spacing:.5px}
+.logo small{display:block;font-weight:400;font-size:.72rem;opacity:.85}
+.profile{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 14px;font-size:.85rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.profile b{color:var(--ouro)}
+main{position:relative;z-index:5;max-width:860px;margin:22px auto 70px;padding:0 14px}
+.card{background:#fff;border-radius:var(--r);padding:26px;box-shadow:0 10px 30px rgba(5,25,70,.28);animation:pop .25s ease}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+h1{font-size:1.6rem;color:var(--azul-esc)}
+.sub{color:var(--cinza);margin:6px 0 16px;font-size:.95rem}
+.btn{display:inline-block;border:none;cursor:pointer;border-radius:999px;padding:13px 26px;font-size:1rem;font-weight:700;color:#fff;background:linear-gradient(120deg,var(--azul),#2e8fe0);box-shadow:0 5px 16px rgba(21,101,216,.4);transition:.15s}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.btn.sec{background:#eef3fb;color:var(--azul-esc);box-shadow:none;border:2px solid #cfe0f7}
+.btn.warn{background:linear-gradient(120deg,#e03b3b,#f4704b)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.mode{background:linear-gradient(135deg,#f6faff,#eaf2ff);border:2px solid #d7e6fb;border-radius:var(--r);padding:18px;cursor:pointer;transition:.15s;text-align:left}
+.mode:hover{border-color:var(--azul);transform:translateY(-3px);box-shadow:0 8px 18px rgba(21,101,216,.18)}
+.mode .mi{font-size:1.9rem}.mode b{display:block;margin:6px 0 3px;color:var(--azul-esc)}.mode p{font-size:.82rem;color:var(--cinza);line-height:1.4}
+.xpbar{height:10px;background:#e4ebf7;border-radius:99px;overflow:hidden;margin-top:8px}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--ciano),var(--azul));transition:width .5s}
+.hud{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.hud div{background:#f2f6fd;border:1px solid #dfe8f6;border-radius:12px;padding:8px 14px;font-size:.85rem;font-weight:700;color:var(--azul-esc)}
+.combo-fire{color:var(--vermelho)!important;animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.08)}}
+.q-topic{display:inline-block;background:var(--azul-claro);color:var(--azul-esc);font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:4px 12px;border-radius:99px;margin-bottom:10px}
+.q-text{font-size:1.18rem;font-weight:700;line-height:1.45;margin-bottom:16px}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;background:#f5f8fe;border:2px solid #dce6f7;border-radius:12px;padding:13px 16px;font-size:.97rem;cursor:pointer;transition:.12s;color:var(--texto)}
+.opt:hover:not(:disabled){border-color:var(--azul);background:#eaf2ff}
+.opt.ok{border-color:var(--verde);background:#e7f7ee}
+.opt.bad{border-color:var(--vermelho);background:#fdeaea;animation:shake .3s}
+.opt:disabled{cursor:default}
+.timer{height:8px;background:#e6ecf8;border-radius:99px;overflow:hidden;margin:10px 0 18px}
+.timer i{display:block;height:100%;background:var(--ciano);transition:width 1s linear}
+.timer i.low{background:var(--vermelho)}
+.expl{margin-top:14px;background:#f2f8ff;border-left:5px solid var(--ciano);border-radius:10px;padding:12px 15px;font-size:.9rem;line-height:1.5}
+.lives{font-size:1.1rem;letter-spacing:3px}
+/* mapa campanha */
+.lvl{display:flex;gap:14px;align-items:center;background:#f7faff;border:2px solid #e0eaf9;border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.15s}
+.lvl:hover:not(.lock){border-color:var(--azul);transform:translateX(4px)}
+.lvl.lock{opacity:.45;cursor:not-allowed;filter:grayscale(1)}
+.lvl .ln{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--azul),var(--ciano));color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.lvl .li{font-size:1.5rem}
+.lvl b{color:var(--azul-esc)}.lvl small{display:block;color:var(--cinza)}
+.stars{margin-left:auto;font-size:1rem;letter-spacing:2px;white-space:nowrap}
+/* classificação */
+.boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px}
+.box{border:3px dashed #b9cdef;border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;transition:.15s;background:#fbfdff}
+.box:hover{border-color:var(--azul);background:var(--azul-claro)}
+.box.ok{border-color:var(--verde);background:#e7f7ee;animation:pulse .4s}
+.box.bad{border-color:var(--vermelho);background:#fdeaea;animation:shake .3s}
+.box b{font-size:1.05rem;color:var(--azul-esc)}.box small{display:block;color:var(--cinza);font-size:.72rem;margin-top:4px}
+.item-chip{background:linear-gradient(120deg,var(--azul),var(--ciano));color:#fff;border-radius:12px;padding:12px 18px;font-weight:700;font-size:1.05rem;text-align:center;box-shadow:0 6px 14px rgba(21,101,216,.35);margin:18px 0}
+/* match */
+.match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.mcell{border:2px solid #d9e5f7;border-radius:12px;padding:12px;font-size:.86rem;cursor:pointer;transition:.12s;background:#f8fbff;min-height:58px}
+.mcell:hover{border-color:var(--azul)}
+.mcell.sel{border-color:var(--amarelo);background:#fff8e6}
+.mcell.ok{border-color:var(--verde);background:#e7f7ee;opacity:.55;pointer-events:none}
+.mcell.bad{border-color:var(--vermelho);animation:shake .3s}
+/* conquistas */
+.achs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.ach{background:#f7faff;border:2px solid #e2ecfa;border-radius:14px;padding:14px;text-align:center;opacity:.35}
+.ach.got{opacity:1;border-color:var(--ouro);background:linear-gradient(135deg,#fffbe8,#fff4cf);box-shadow:0 4px 12px rgba(244,169,27,.25)}
+.ach .ai{font-size:2rem}.ach b{display:block;font-size:.85rem;margin-top:6px;color:var(--azul-esc)}.ach small{font-size:.72rem;color:var(--cinza)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#102a5e;color:#fff;padding:12px 22px;border-radius:99px;font-weight:700;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:pop .3s;display:flex;gap:8px;align-items:center;max-width:92vw}
+.bigstars{font-size:2.6rem;text-align:center;letter-spacing:6px;margin:10px 0}
+.center{text-align:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.match-grid,.grid2{grid-template-columns:1fr}}
+.rank{font-weight:800;color:var(--ouro)}
+footer{text-align:center;color:rgba(255,255,255,.75);font-size:.8rem;padding:16px;position:relative;z-index:5}
+</style>
+</head>
+<body>
+<div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+<header>
+  <div class="logo">☁️ MISSÃO NUVEM<small>Torne-se Arquiteto(a) da Nuvem</small></div>
+  <div class="profile">
+    <span id="rankChip">🎖️ <b class="rank">Estagiário(a)</b></span>
+    <span id="xpChip">⭐ 0 XP</span>
+    <button class="btn sec" style="padding:5px 12px;font-size:.75rem" onclick="resetGame()">↺</button>
+  </div>
+</header>
+<main id="app"></main>
+<footer>Material: Introdução à Computação em Nuvem · Redes de Computadores 2 · Uso acadêmico</footer>
+
+<script>
+/* ================= BANCO DE CONTEÚDO (baseado no material) ================= */
+const LEVELS=[
+ {id:1,t:"Fundamentos da Nuvem",icon:"🌤️",desc:"O que é a nuvem, apps autônomos e benefícios",qs:[
+  {q:"O que é a “nuvem”?",o:["Um conceito abstrato para um conjunto de recursos de computação acessados pela Internet","Um data center local da própria empresa","Um software que precisa ser instalado por CD/DVD","Apenas o armazenamento de arquivos pessoais"],a:0,ex:"A nuvem é um conceito abstrato que se refere a recursos de computação acessados pela Internet."},
+  {q:"Os aplicativos independentes (autônomos) se caracterizavam por:",o:["Exigirem internet sempre","Serem distribuídos por mídia física (CDs, DVDs) e não exigirem conexão","Funcionarem apenas em navegadores","Serem sempre pagos por assinatura"],a:1,ex:"Apps autônomos não exigiam internet e eram distribuídos por mídia física — e ainda existem hoje."},
+  {q:"Ao hospedar um site próprio, o custo INICIAL inclui:",o:["Apenas a conta de luz","Hardware + serviços de ISP e DNS + equipe de desenvolvimento e manutenção","Somente o domínio","Nada, é gratuito"],a:1,ex:"É preciso comprar hardware, contratar ISP/DNS e contratar pessoas para desenvolver e manter."},
+  {q:"Além do custo inicial, há também:",o:["Um custo recorrente de atualização e manutenção","Apenas juros do banco","Nenhum outro custo","Custo único de licença vitalícia"],a:0,ex:"Existe custo recorrente para atualização e manutenção do servidor próprio."},
+  {q:"Por que optar por serviços em nuvem?",o:["Porque é sempre mais barato","Para prever problemas e garantir um serviço rápido, confiável e seguro","Porque é mais simples de programar","Não há razão"],a:1,ex:"A resposta está em prever o que pode dar errado e garantir rapidez, confiabilidade e segurança."},
+  {q:"O benefício CUSTO da nuvem significa:",o:["É sempre gratuito","Eliminar despesas de capital com hardware, software e data centers locais","Pagar sempre mais","Comprar servidores em promoção"],a:1,ex:"A nuvem elimina despesas de compra de hardware/software e de operação de data centers locais."},
+  {q:"O benefício VELOCIDADE significa:",o:["Internet mais rápida","Provisionar grandes quantidades de recursos em minutos, com poucos cliques","Instalar software mais rápido","Navegar mais depressa"],a:1,ex:"Recursos são provisionados em minutos por autoatendimento, aliviando o planejamento de capacidade."},
+  {q:"“Escala global” significa:",o:["Servidores apenas no Brasil","Fornecer a quantidade certa de recursos, quando necessários, na localização geográfica correta","Ter um único data center gigante","Reduzir o número de usuários"],a:1,ex:"É a escalabilidade elástica: recursos certos, no momento certo, na localização certa."},
+  {q:"Sobre PRODUTIVIDADE, a nuvem:",o:["Aumenta o “staging and stacking”","Elimina tarefas demoradas de TI, focando a equipe em objetivos comerciais","Demora mais para atualizar","Exige mais configuração de hardware"],a:1,ex:"Os serviços de nuvem eliminam tarefas demoradas de gerenciamento, liberando as equipes de TI."},
+  {q:"Sobre CONFIABILIDADE, na nuvem:",o:["Os dados não podem ser copiados","Dados são replicados em vários sites redundantes, facilitando backup e recuperação de desastres","Só há um local de armazenamento","Backups são manuais"],a:1,ex:"Dados replicados em vários sites redundantes garantem disponibilidade, backup e continuidade."}]},
+ {id:2,t:"Modelos de Implementação",icon:"🏛️",desc:"Público, Privado e Híbrido",qs:[
+  {q:"Nuvens PÚBLICAS são:",o:["Exclusivas de uma empresa","De propriedade de provedores terceirizados que fornecem recursos pela Internet","Feitas de data centers caseiros","Sempre gratuitas"],a:1,ex:"Hardware, software e infraestrutura de suporte são do provedor, acessados via navegador."},
+  {q:"Qual exemplo indica uso de nuvem pública?",o:["Um servidor na sala da empresa","Google Docs ou Office 365","Um HD externo","Um pen drive corporativo"],a:1,ex:"“Se você já usou o Google Docs ou o Office 365, você usou um serviço de nuvem pública.”"},
+  {q:"Nuvens PRIVADAS são:",o:["Compartilhadas por várias empresas rivais","Recursos usados exclusivamente por uma única empresa ou organização","Sempre alugadas","Exclusivas do provedor"],a:1,ex:"São utilizadas exclusivamente por uma única empresa ou organização."},
+  {q:"Uma nuvem privada pode estar localizada:",o:["Somente em outro país","No data center da empresa, acessada por redes locais ou VPNs","Apenas na Internet aberta","Somente em casa"],a:1,ex:"Pode estar fisicamente no data center da empresa; algumas empresas pagam terceiros para hospedá-la."},
+  {q:"Em uma nuvem privada, o acesso e o tráfego geralmente envolvem:",o:["Autenticação e criptografia do tráfego","Senhas escritas em post-its","Tráfego aberto sem proteção","Nenhum controle"],a:0,ex:"Serviços e infraestrutura são acessados por autenticação e o tráfego geralmente é criptografado."},
+  {q:"Nuvens HÍBRIDAS:",o:["Somente privadas","Combinam elementos públicos e privados, interligados para compartilhar dados e aplicativos","Não existem","São só redes Wi-Fi"],a:1,ex:"A tecnologia interliga as nuvens permitindo compartilhar dados e aplicativos entre elas."},
+  {q:"Vantagem da nuvem híbrida:",o:["Menos opções de implantação","Maior flexibilidade, otimizando infraestrutura e segurança existentes","Menor flexibilidade","Proíbe mover dados"],a:1,ex:"Permite mover dados e apps entre nuvens privadas e públicas, com mais opções de implantação."},
+  {q:"Modelos híbridos multi-nuvem combinam:",o:["Somente nuvem pública","Pelo menos dois provedores de nuvem pública ou privada","Apenas servidores físicos","Nenhuma nuvem"],a:1,ex:"Cada vez mais comuns: mais de um serviço de nuvem combinado, com dois ou mais provedores."}]},
+ {id:3,t:"Modelos de Serviço",icon:"🧰",desc:"IaaS, PaaS, SaaS e FaaS/Serverless",qs:[
+  {q:"IaaS (Infraestrutura como Serviço) envolve:",o:["Alugar apenas aplicativos prontos","Alugar acesso a servidores, máquinas virtuais, rede e armazenamento","Comprar hardware","Alugar somente o software"],a:1,ex:"É alugar recursos de infraestrutura de um CSP (Cloud Service Provider)."},
+  {q:"No IaaS, o CSP é responsável por:",o:["Seu código","Gerenciar e manter a infraestrutura física e virtual","Seu banco de dados de aplicação","Seus contratos"],a:1,ex:"O usuário se concentra em instalar, configurar e gerenciar software e segurança."},
+  {q:"O PaaS inclui, além da infraestrutura:",o:["Nada além de servidores","Middleware, ferramentas de desenvolvimento, BI e gerenciamento de bancos de dados","Somente firewalls","Somente datacenters"],a:1,ex:"PaaS entrega um ambiente completo de desenvolvimento e implantação na nuvem."},
+  {q:"O objetivo do PaaS é dar suporte:",o:["Apenas ao teste","Ao ciclo de vida completo do app web: criação, teste, implantação, gerenciamento e atualização","Somente ao design","Somente à venda"],a:1,ex:"Do microsserviço simples à aplicação empresarial sofisticada, tudo dentro da plataforma."},
+  {q:"Com PaaS o usuário evita:",o:["Escrever código","Despesas com licenças, middleware e orquestradores como Kubernetes","Usar a Internet","Ter aplicativos"],a:1,ex:"Evita comprar e gerenciar licenças, infraestrutura de middleware e orquestradores de contêineres."},
+  {q:"Exemplos típicos de SaaS:",o:["EC2 e S3","E-mail, Microsoft Office 365, Google Docs e JIRA","Lambda e Functions","VMware local"],a:1,ex:"SaaS: aplicativos baseados em nuvem usados pela Internet, geralmente via navegador."},
+  {q:"No SaaS, quem gerencia hardware e software?",o:["O usuário final","O provedor, garantindo disponibilidade e segurança pelo contrato de serviço","A equipe de TI local","Ninguém"],a:1,ex:"Toda infraestrutura, middleware e dados do app ficam no data center do provedor."},
+  {q:"FaaS/Serverless executa:",o:["Sistemas operacionais inteiros","Um código (função) sob demanda, quando um estímulo externo dispara","Apenas planilhas","Nada"],a:1,ex:"O CSP provisiona e dimensiona automaticamente a infraestrutura para executar o código."},
+  {q:"“Serverless” significa literalmente que não há servidor?",o:["Sim, nenhum servidor existe","Não — sempre há um servidor nos bastidores, invisível ao desenvolvedor","Sim, é mágica","Depende do dia"],a:1,ex:"Há um servidor gerenciando a execução, mas completamente invisível para os devs."},
+  {q:"No diagrama de camadas, “aplicações hospedadas” estão em qual nível?",o:["IaaS","PaaS","SaaS","Camada física"],a:2,ex:"SaaS engloba as aplicações hospedadas; PaaS inclui SOs e desenvolvimento; IaaS, servidores, firewall e datacenters."}]},
+ {id:4,t:"Terminologia da Nuvem",icon:"📚",desc:"Warm/Cold Start, Elasticidade, Instância e mais",qs:[
+  {q:"Warm Start é quando:",o:["O recurso inicia do zero","Os recursos já estão inicializados e respondem rapidamente","O servidor esfrea demais","Há queda de energia"],a:1,ex:"A aplicação já está em execução e responde rápido, sem esperar inicialização."},
+  {q:"Cold Start é quando:",o:["O recurso já está quente","Um recurso é iniciado do zero, com inicialização completa (maior latência no 1º uso)","O clima está frio","A rede cai"],a:1,ex:"Envolve inicialização completa do ambiente, resultando em maior latência no primeiro uso."},
+  {q:"Warm vs. Cold: manter tudo “quente” implica:",o:["Nenhum custo","Custos mais altos por ciclos desnecessários, mas latência mínima","Latência alta","Menos processamento"],a:1,ex:"Para serviços com baixa demanda, cold start pode ter melhor relação custo/benefício."},
+  {q:"Elasticidade é:",o:["Esticar cabos","Dimensionar recursos dinamicamente conforme a demanda (aumentar/diminuir automaticamente)","Comprar memória fixa","Congelar a nuvem"],a:1,ex:"Permite lidar com tráfego variável aumentando ou diminuindo recursos automaticamente."},
+  {q:"Disponibilidade é:",o:["Se o produto está à venda","A medida de tempo em que um serviço está operacional e acessível","A velocidade da CPU","O tamanho do disco"],a:1,ex:"Alta disponibilidade é crucial em serviços críticos; alta elasticidade garante maior disponibilidade."},
+  {q:"Latência na nuvem é:",o:["O tempo que os dados levam para viajar entre pontos/serviços","O preço do serviço","A contagem de usuários","O tamanho do data center"],a:0,ex:"Armazenamento no México usado por serviço na Califórnia tem mais latência que serviços mais próximos."},
+  {q:"INSTÂNCIA é:",o:["Um momento instantâneo","O nome dado a um servidor virtual em execução na nuvem","Uma licença","Um backup"],a:1,ex:"É o nome atribuído a um servidor virtual que está sendo executado na nuvem."},
+  {q:"IMAGEM é:",o:["Uma foto do data center","Um modelo que contém o software que queremos executar (ex.: o sistema operacional)","Um print da tela","Um emoji"],a:1,ex:"Ex.: a AMI da AWS com o SO que rodará na instância."},
+  {q:"KEY-PAIR serve para:",o:["Abrir portas UDP","Criptografar nossa conexão com a nuvem (chave pública + privada)","Pagar a conta","Nomear a instância"],a:1,ex:"Composta por chave pública e privada, como visto na aula de segurança."},
+  {q:"FREE TIER é:",o:["A conta paga anual","Capacidades de serviços oferecidas gratuitamente (alguns cobram pelo excesso)","Um nível de login","Um tipo de firewall"],a:1,ex:"Alguns limites são automáticos; outros cobram quando o “Nível Gratuito” é excedido."}]},
+ {id:5,t:"Provedores de Nuvem (CSPs)",icon:"🏢",desc:"AWS, Google Cloud, Azure, Oracle e IBM",qs:[
+  {q:"A AWS foi lançada em:",o:["1995","2006","2015","2020"],a:1,ex:"Lançada em 2006, tornou-se uma das líderes do setor, com ampla gama de serviços."},
+  {q:"O Amazon EC2 é:",o:["SaaS de e-mail","IaaS: servidores virtuais na nuvem","FaaS","Um jogo"],a:1,ex:"EC2 (Elastic Compute Cloud) oferece servidores virtuais na nuvem."},
+  {q:"O Amazon S3 (Simple Storage Service) é:",o:["Banco de dados relacional","Armazenamento em nuvem escalável (IaaS/PaaS)","Um sistema operacional","Uma rede social"],a:1,ex:"Serviço de armazenamento simples e escalável em nuvem."},
+  {q:"O AWS Lambda é um serviço:",o:["FaaS: execute código sem se preocupar com servidores","De e-mails","De imagens","De VPN"],a:0,ex:"Lambda é o exemplo clássico de Function as a Service."},
+  {q:"Amazon RDS, Aurora e DynamoDB são serviços:",o:["PaaS de bancos de dados gerenciados","IaaS de rede","SaaS de e-mail","FaaS"],a:0,ex:"Bancos gerenciados (relacional e NoSQL) são PaaS."},
+  {q:"O Google Cloud (GCP):",o:["Roda em infraestrutura totalmente separada do Google","Executa na mesma infraestrutura usada por Pesquisa, Gmail e YouTube; nasceu em 2008 com o App Engine","Só vende hardware","Não existe"],a:1,ex:"GCP usa a mesma infra do Google e se posiciona como principal concorrente da AWS."},
+  {q:"O BigQuery (GCP) é:",o:["PaaS: armazém de dados para agilidade e insights de negócios","IaaS de redes","Um navegador","Um antivirus"],a:0,ex:"BigQuery é o data warehouse do GCP para análises de negócios."},
+  {q:"O Microsoft Azure se destaca por:",o:["Integração profunda com Windows Server, SQL Server, .NET e Active Directory","Não ter segurança","Não ter serviços de IA","Ser apenas para jogos"],a:0,ex:"Facilita migração de quem já usa software Microsoft; inclui Azure ML e Serviços Cognitivos."},
+  {q:"O Oracle Cloud é conhecido por:",o:["Oracle Autonomous Database e apps SaaS para ERP, HCM e CRM","Jogos em nuvem","Redes sociais","Videoclipes"],a:0,ex:"Foco em soluções empresariais, alto desempenho, segurança e conformidade."},
+  {q:"O IBM Cloud se destaca por:",o:["IBM Watson (IA), blockchain gerenciado e computação quântica (IBM Quantum Experience)","Apenas e-mail","Somente loja virtual","Foco exclusivo em fotos"],a:0,ex:"Forte foco em soluções híbridas e multicloud e na fronteira da ciência da computação."}]},
+ {id:6,t:"EC2 na Prática",icon:"🚀",desc:"Implantar e conectar uma instância",qs:[
+  {q:"Para usar o EC2 primeiro é preciso:",o:["Comprar um servidor","Criar/verificar uma conta na AWS (a verificação pode levar até 24h)","Contratar TV a cabo","Reinstalar o Windows"],a:1,ex:"Novas contas podem acessar o nível gratuito para testar as ferramentas."},
+  {q:"No console do EC2, antes de criar a instância devemos selecionar:",o:["A música de fundo","A região na qual a instância será implantada","A cor do tema","O fuso do celular"],a:1,ex:"A região é escolhida no seletor (ex.: N. Virginia)."},
+  {q:"A AMI (Amazon Machine Image) é:",o:["Uma música","Um modelo com o software/SO a executar (ex.: Amazon Linux 2023)","Um antivírus","Um cabo"],a:1,ex:"É a imagem contendo a configuração de software necessária para a instância."},
+  {q:"No exemplo do material, o tipo de instância elegível ao nível gratuito é:",o:["t2.micro de 64 bits","m5.24xlarge","p4.48xlarge","c9.mega"],a:0,ex:"t2.micro (1 vCPU, 1 GiB) costuma vir marcada como “Free tier eligible”."},
+  {q:"Sobre o Key pair (login):",o:["É opcional e seguro ignorar","Deve-se criar/baixar o arquivo .pem; seguir sem ele é um risco de segurança","Serve apenas para nomes","Só existe no GCP"],a:1,ex:"As credenciais criptografam a conexão; continuar sem elas compromete a segurança."},
+  {q:"O comando SSH para conectar se parece com:",o:["ssh -i \"chave.pem\" ec2-user@endereço-da-instância","ftp enviar arquivo","ping 8.8.8.8","copy pasta:"],a:0,ex:"-i indica a chave .pem; ec2-user é o usuário padrão; o restante é o DNS público."},
+  {q:"Para expor a aplicação na porta 8080 devemos:",o:["Apagar a regra SSH","Adicionar uma NOVA regra “Custom TCP” porta 8080 no grupo de segurança","Fechar o firewall","Instalar outro SO"],a:1,ex:"Nunca modifique a regra existente de SSH (porta 22) — apenas adicione a nova."},
+  {q:"Ao terminar o trabalho com a instância:",o:["Deixe rodando sempre","Pare/encerre no menu Estado da instância — enquanto roda, ela pode gerar custos!","Quebre o hardware","Renomeie o DNS"],a:1,ex:"Stop, Start, Reboot, Hibernate e Terminate estão no menu Instance state; atenção aos custos!"}]}
+];
+
+const TF=[
+ {s:"A nuvem exige conexão com a Internet para ser usada.",a:true,ex:"Aplicativos na nuvem exigem acesso à infraestrutura pela Internet."},
+ {s:"Aplicativos autônomos eram distribuídos por mídia física como CDs e DVDs.",a:true,ex:"É exatamente assim que eram distribuídos, sem exigir conexão."},
+ {s:"A nuvem PÚBLICA é usada exclusivamente por uma única empresa.",a:false,ex:"Isso define a nuvem PRIVADA; a pública é operada por provedores terceirizados."},
+ {s:"“Serverless” significa que nenhum servidor existe no sistema.",a:false,ex:"Sempre há um servidor nos bastidores — ele é apenas invisível ao desenvolvedor."},
+ {s:"Warm Start tem maior latência que Cold Start.",a:false,ex:"É o contrário: Warm já está inicializado e responde rápido; Cold inicia do zero."},
+ {s:"Elasticidade é dimensionar recursos dinamicamente conforme a demanda.",a:true,ex:"Aumenta/diminui automaticamente os recursos para tráfego variável."},
+ {s:"A AWS foi lançada em 2006.",a:true,ex:"É uma subsidiária da Amazon lançada em 2006."},
+ {s:"O GCP roda em uma infraestrutura completamente diferente da usada pelo Gmail.",a:false,ex:"GCP executa na MESMA infraestrutura que Pesquisa, Gmail e YouTube."},
+ {s:"O modelo híbrido combina nuvens públicas e privadas interligadas.",a:true,ex:"Compartilha dados e aplicativos entre elas, dando flexibilidade."},
+ {s:"No SaaS, o usuário é responsável por gerenciar o hardware.",a:false,ex:"O PROVEDOR gerencia hardware, software, disponibilidade e segurança."},
+ {s:"O Free Tier é sempre ilimitado e nunca cobra nada.",a:false,ex:"Alguns serviços cobram pelo excesso do nível gratuito."},
+ {s:"Enquanto uma instância EC2 estiver em execução, ela pode incorrer em custos.",a:true,ex:"Por isso é fundamental saber parar/encerrar a instância."},
+ {s:"Na nuvem privada, o tráfego geralmente é criptografado e há autenticação.",a:true,ex:"Serviços e infraestrutura são acessados por autenticação."},
+ {s:"No IaaS o usuário tem controle total, incluindo sistema operacional e armazenamento.",a:true,ex:"Conforme a tabela de comparação IaaS × PaaS × SaaS × FaaS."},
+ {s:"Cold Start é ideal para serviços com baixa taxa de demanda.",a:true,ex:"Para baixa demanda, inicialização a frio tem melhor custo/benefício."},
+ {s:"Um servidor na Califórnia usando armazenamento no México tem MENOS latência que se ambos estivessem próximos.",a:false,ex:"A distância aumenta a latência — o material usa justamente esse exemplo."}
+];
+
+const CLASSIFY=[
+ {n:"Amazon EC2",c:"iaas",d:"Servidores virtuais na nuvem"},
+ {n:"AWS Lambda",c:"faas",d:"Execute código sem servidores"},
+ {n:"Gmail / Office 365",c:"saas",d:"E-mail e ferramentas de escritório"},
+ {n:"Google App Engine",c:"paas",d:"Plataforma de aplicativos"},
+ {n:"Google Compute Engine",c:"iaas",d:"Máquinas virtuais na nuvem"},
+ {n:"Salesforce",c:"saas",d:"Solução de software completa"},
+ {n:"Google Cloud Functions",c:"faas",d:"Funções acionadas por eventos"},
+ {n:"Amazon RDS",c:"paas",d:"Banco de dados relacional gerenciado"},
+ {n:"Amazon VPC",c:"iaas",d:"Recursos de nuvem isolados"},
+ {n:"Kubernetes Engine (GCP)",c:"paas",d:"Gerenciamento completo de contêineres"},
+ {n:"Azure Functions",c:"faas",d:"Funções do Azure"},
+ {n:"Heroku",c:"paas",d:"Implantação de aplicativos"}
+];
+
+const MATCH=[
+ ["INSTÂNCIA","Servidor virtual em execução na nuvem"],
+ ["IMAGEM","Modelo contendo o software/SO a executar"],
+ ["KEY-PAIR","Chave pública + privada que criptografa a conexão"],
+ ["FREE TIER","Capacidades de serviços gratuitas (podem cobrar excesso)"],
+ ["ELASTICIDADE","Dimensionar recursos dinamicamente conforme demanda"],
+ ["DISPONIBILIDADE","Tempo em que o serviço está operacional e acessível"],
+ ["LATÊNCIA","Tempo de viagem dos dados entre pontos/serviços"],
+ ["WARM START","Recursos já inicializados que respondem rapidamente"],
+ ["COLD START","Início do zero, com maior latência no primeiro uso"]
+];
+
+const ACHS=[
+ {id:"first",i:"☁️",n:"Primeiro Contato",d:"Acerte sua primeira resposta"},
+ {id:"combo5",i:"🔥",n:"Em Chamas",d:"Combo de 5 acertos seguidos"},
+ {id:"combo10",i:"🌪️",n:"Tempestade",d:"Combo de 10 acertos seguidos"},
+ {id:"speed",i:"⚡",n:"Velocista",d:"Acerte em menos de 3 segundos"},
+ {id:"perfect",i:"💯",n:"Perfeição",d:"Nível da campanha com 3 estrelas"},
+ {id:"graduate",i:"🎓",n:"Graduado na Nuvem",d:"Complete os 6 níveis da campanha"},
+ {id:"sort10",i:"🏷️",n:"Categorizador",d:"10+ acertos em uma rodada de classificação"},
+ {id:"myth",i:"🕵️",n:"Caça-Mitos",d:"9+ acertos no relâmpago V/F"},
+ {id:"match",i:"🧩",n:"Vocabulário Perfeito",d:"Complete o match sem erros"},
+ {id:"architect",i:"🏆",n:"Arquiteto da Nuvem",d:"Atingir o rank máximo (2500 XP)"}
+];
+const RANKS=[[0,"Estagiário(a)"],[250,"Analista Júnior"],[750,"Analista Pleno"],[1500,"Engenheiro(a) de Nuvem"],[2500,"Arquiteto(a) da Nuvem"]];
+
+/* ================= ESTADO ================= */
+let S={xp:0,best:0,stars:{},achs:{},stats:{ok:0,bad:0}};
+try{const raw=localStorage.getItem("missaoNuvem");if(raw)S=Object.assign(S,JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem("missaoNuvem",JSON.stringify(S));}catch(e){}}
+function rank(){let r=RANKS[0][1];RANKS.forEach(([x,n])=>{if(S.xp>=x)r=n;});return r;}
+function nextXp(){let n=2500;RANKS.forEach(([x])=>{if(S.xp<x&&x<n)n=x;});return n;}
+function prevXp(){let p=0;RANKS.forEach(([x])=>{if(S.xp>=x)p=x;});return p;}
+function gainXp(v){S.xp+=v;checkRankAch();save();paintProfile();}
+function grant(id){if(!S.achs[id]){S.achs[id]=1;save();const a=ACHS.find(x=>x.id===id);toast(a.i+" Conquista desbloqueada: <b>"+a.n+"</b>");}}
+function checkRankAch(){if(S.xp>=2500)grant("architect");}
+function toast(html){const t=document.createElement("div");t.className="toast";t.innerHTML=html;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function paintProfile(){
+ document.getElementById("rankChip").innerHTML="🎖️ <b class='rank'>"+rank()+"</b>";
+ document.getElementById("xpChip").textContent="⭐ "+S.xp+" XP";
+}
+function shuffle(a){return a.slice().sort(()=>Math.random()-.5);}
+
+/* ================= TELAS ================= */
+const app=document.getElementById("app");
+let screen="home";
+function go(s){screen=s;
+ if(s==="home")viewHome();else if(s==="map")viewMap();else if(s==="achs")viewAchs();
+ else if(s==="tf")startTF();else if(s==="sort")startSort();else if(s==="match")startMatch();
+ else if(s==="quick")startQuick();
+ window.scrollTo(0,0);
+}
+
+function viewHome(){
+ const nx=nextXp(),pv=prevXp(),pct=Math.min(100,Math.round((S.xp-pv)/(nx-pv)*100));
+ const got=Object.keys(S.achs).length;
+ app.innerHTML=`<div class="card">
+  <h1>☁️ Bem-vindo(a) à Missão Nuvem!</h1>
+  <p class="sub">Sua jornada para dominar a Computação em Nuvem: fundamentos, modelos de implementação, IaaS/PaaS/SaaS/FaaS, terminologia, provedores e até uma instância EC2 real.</p>
+  <div style="background:#f4f8ff;border-radius:12px;padding:14px 16px;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;color:var(--azul-esc)">
+      <span>🎖️ ${rank()}</span><span>${S.xp} / ${nx} XP para o próximo rank</span></div>
+    <div class="xpbar"><i style="width:${pct}%"></i></div>
+    <div style="font-size:.78rem;color:var(--cinza);margin-top:6px">🏅 Conquistas: ${got}/${ACHS.length} · 🌟 Estrelas: ${Object.values(S.stars).reduce((a,b)=>a+b,0)}/18 · 🔥 Melhor combo: ${S.best}</div>
+  </div>
+  <div class="modes">
+    <div class="mode" onclick="go('map')"><div class="mi">🗺️</div><b>Campanha</b><p>6 níveis temáticos com estrelas. Vença para desbloquear o próximo.</p></div>
+    <div class="mode" onclick="go('quick')"><div class="mi">⚡</div><b>Quiz Relâmpago</b><p>12 perguntas aleatórias, 3 vidas, 15s por resposta. Sobreviva!</p></div>
+    <div class="mode" onclick="go('sort')"><div class="mi">🏷️</div><b>Classificação Turbo</b><p>Jogue cada serviço na caixa certa: IaaS, PaaS, SaaS ou FaaS.</p></div>
+    <div class="mode" onclick="go('tf')"><div class="mi">🕵️</div><b>Mitos da Nuvem (V/F)</b><p>10 afirmações rápidas: verdadeiro ou falso?</p></div>
+    <div class="mode" onclick="go('match')"><div class="mi">🧩</div><b>Match de Termos</b><p>Ligue os conceitos às suas definições sem errar.</p></div>
+    <div class="mode" onclick="go('achs')"><div class="mi">🏅</div><b>Conquistas</b><p>Veja suas medalhas e o que falta para completar.</p></div>
+  </div></div>`;
+}
+
+function viewMap(){
+ let h=`<div class="card"><h1>🗺️ Mapa da Campanha</h1><p class="sub">Complete um nível para desbloquear o próximo. Acertos: 100% = 3★ · 80% = 2★ · 60% = 1★</p>`;
+ LEVELS.forEach((L,idx)=>{
+   const prev=idx===0||S.stars[LEVELS[idx-1].id]>0;
+   const st=S.stars[L.id]||0;
+   h+=`<div class="lvl ${prev?'':'lock'}" onclick="${prev?`startLevel(${idx})`:''}">
+     <div class="ln">${prev?L.icon:"🔒"}</div>
+     <div><b>Nível ${L.id} — ${L.t}</b><small>${L.desc} · ${L.qs.length} perguntas</small></div>
+     <div class="stars">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div></div>`;
+ });
+ h+=`<div style="margin-top:14px"><button class="btn sec" onclick="go('home')">◀ Início</button></div></div>`;
+ app.innerHTML=h;
+}
+
+function viewAchs(){
+ app.innerHTML=`<div class="card"><h1>🏅 Conquistas</h1><p class="sub">Você tem ${Object.keys(S.achs).length} de ${ACHS.length} medalhas.</p>
+ <div class="achs">${ACHS.map(a=>`<div class="ach ${S.achs[a.id]?'got':''}"><div class="ai">${a.i}</div><b>${a.n}</b><small>${a.d}</small></div>`).join("")}</div>
+ <div style="margin-top:16px"><button class="btn sec" onclick="go('home')">◀ Início</button></div></div>`;
+}
+
+/* ================= MOTOR DE PERGUNTAS ================= */
+let G=null;
+function startLevel(idx){
+ const L=LEVELS[idx];
+ G={mode:"level",L,idx,i:0,ok:0,combo:0,xpRound:0,t:null,t0:0};
+ nextQ();
+}
+function startQuick(){
+ G={mode:"quick",list:shuffle(LEVELS.flatMap(l=>l.qs.map(q=>({...q,topic:"Quiz Relâmpago"})))).slice(0,12),i:0,ok:0,lives:3,combo:0,xpRound:0,t:null};
+ nextQ();
+}
+function nextQ(){
+ clearInterval(G.t);
+ if(G.mode==="level"&&G.i>=G.L.qs.length)return endLevel();
+ if(G.mode==="quick"){
+   if(G.lives<=0)return endQuick();
+   if(G.i>=G.list.length)return endQuick();
+ }
+ const Q=G.mode==="level"?G.L.qs[G.i]:G.list[G.i];
+ const tmax=G.mode==="quick"?15:30;
+ G.t0=Date.now();G.timeLeft=tmax;
+ const opts=Q.o.map((o,i)=>({o,i})).sort(()=>Math.random()-.5);
+ app.innerHTML=`<div class="card">
+  <div class="hud"><div>${G.mode==="level"?"🗺️ Nível "+G.L.id+" · "+G.L.t:"⚡ Quiz Relâmpago"}</div>
+   <div>Pergunta ${G.i+1}/${G.mode==="level"?G.L.qs.length:G.list.length}</div>
+   <div id="hudCombo">Combo x0</div>
+   ${G.mode==="quick"?`<div class="lives" id="hudLives">${"❤️".repeat(G.lives)}${"🖤".repeat(3-G.lives)}</div>`:""}
+   <div id="hudXp">+0 XP</div></div>
+  <div class="q-topic">${Q.topic||""}</div>
+  <div class="q-text">${Q.q}</div>
+  <div class="timer"><i id="tbar" style="width:100%"></i></div>
+  <div class="opts" id="opts">${opts.map(o=>`<button class="opt" onclick="answer(${o.i})">${o.o}</button>`).join("")}</div>
+  <div id="fb"></div></div>`;
+ G.t=setInterval(()=>{G.timeLeft--;const b=document.getElementById("tbar");
+   if(b){b.style.width=Math.max(0,G.timeLeft/tmax*100)+"%";if(G.timeLeft<=8)b.classList.add("low");}
+   if(G.timeLeft<=0){clearInterval(G.t);answer(-1);}},1000);
+}
+function answer(i){
+ clearInterval(G.t);G.t=null;
+ const Q=G.mode==="level"?G.L.qs[G.i]:G.list[G.i];
+ const ok=i===Q.a;
+ const btns=document.querySelectorAll("#opts .opt");
+ btns.forEach((b,idx)=>{b.disabled=true;const orig=Q.o[idx];if(idx===Q.a)b.classList.add("ok");else if(idx===i)b.classList.add("bad");});
+ let xp=0;
+ if(ok){
+  S.stats.ok++;S.ok++;G.ok++;G.combo++;S.best=Math.max(S.best,G.combo);
+  const secs=(Date.now()-G.t0)/1000;
+  if(secs<3)grant("speed");
+  const comboBonus=Math.min(G.combo,10),speedBonus=Math.max(0,Math.round((G.timeLeft>0?G.timeLeft:0)/6));
+  xp=10+comboBonus+speedBonus;
+  if(G.combo===5)grant("combo5");if(G.combo>=10)grant("combo10");grant("first");
+  document.getElementById("hudCombo").textContent="Combo x"+G.combo;
+  document.getElementById("hudCombo").classList.add("combo-fire");
+  document.getElementById("fb").innerHTML=`<div class="expl"><b>✅ Correto! +${xp} XP</b> ${Q.ex}</div>
+   <div style="margin-top:14px"><button class="btn" onclick="advance()">Continuar ▶</button></div>`;
+ }else{
+  S.stats.bad++;G.combo=0;
+  if(G.mode==="quick"){G.lives--;const l=document.getElementById("hudLives");if(l)l.innerHTML="❤️".repeat(G.lives)+"🖤".repeat(3-G.lives);}
+  document.getElementById("fb").innerHTML=`<div class="expl"><b>❌ ${i===-1?"⏰ Tempo esgotado!":"Incorreto."}</b> ${Q.ex}</div>
+   <div style="margin-top:14px"><button class="btn" onclick="advance()">Continuar ▶</button></div>`;
+ }
+ gainXp(xp);G.xpRound+=xp;document.getElementById("hudXp").textContent="+"+G.xpRound+" XP";
+ save();
+}
+function advance(){G.i++;nextQ();}
+function endLevel(){
+ const L=G.L,pct=G.ok/L.qs.length;
+ const stars=pct===1?3:pct>=.8?2:pct>=.6?1:0;
+ S.stars[L.id]=Math.max(S.stars[L.id]||0,stars);
+ if(stars===3)grant("perfect");
+ if(LEVELS.every(l=>(S.stars[l.id]||0)>0))grant("graduate");
+ save();
+ let extra=stars*15;gainXp(extra);G.xpRound+=extra;
+ app.innerHTML=`<div class="card center">
+  <h1>${stars>0?"🎉 Nível Concluído!":"😅 Quase lá!"}</h1>
+  <div class="bigstars">${"⭐".repeat(stars)}${"☆".repeat(3-stars)}</div>
+  <p><b>${G.ok}/${L.qs.length} acertos</b> · +${G.xpRound} XP nesta rodada</p>
+  <p class="sub">${stars===3?"Impecável! Você domina "+L.t+".":"Revise as explicações e tente de novo para melhorar as estrelas."}</p>
+  <div class="grid2" style="max-width:420px;margin:14px auto">
+   <button class="btn" onclick="startLevel(${G.idx})">🔄 Repetir nível</button>
+   <button class="btn sec" onclick="go('map')">🗺️ Mapa</button></div>
+ </div>`;
+}
+function endQuick(){
+ const survived=G.lives>0;
+ app.innerHTML=`<div class="card center">
+  <h1>${survived?"🏅 Sobreviveu ao Relâmpago!":"💀 Suas vidas acabaram!"}</h1>
+  <div class="score" style="font-size:2.4rem;font-weight:800;color:var(--azul-esc);margin:10px 0">${G.ok}/${G.i}</div>
+  <p>+${G.xpRound} XP nesta rodada · Melhor combo: ${G.combo}</p>
+  <div class="grid2" style="max-width:420px;margin:16px auto">
+   <button class="btn" onclick="startQuick()">⚡ Jogar de novo</button>
+   <button class="btn sec" onclick="go('home')">◀ Início</button></div></div>`;
+}
+
+/* ================= CLASSIFICAÇÃO ================= */
+function startSort(){
+ G={mode:"sort",list:shuffle(CLASSIFY),i:0,ok:0,bad:0,xpRound:0,t:null,timeLeft:90};
+ app.innerHTML=`<div class="card">
+  <div class="hud"><div>🏷️ Classificação Turbo</div><div id="sortCnt">1/${CLASSIFY.length}</div><div id="hudXp">+0 XP</div><div id="sortT">⏱️ 90s</div></div>
+  <p class="sub">Cada serviço pode ser <b>IaaS</b> (infraestrutura), <b>PaaS</b> (plataforma), <b>SaaS</b> (software pronto) ou <b>FaaS</b> (função sem servidor). Clique na caixa correta!</p>
+  <div class="item-chip" id="sortItem"></div>
+  <div class="boxes">
+    <div class="box" onclick="pickClass('iaas')"><b>IaaS</b><small>Infraestrutura como Serviço</small></div>
+    <div class="box" onclick="pickClass('paas')"><b>PaaS</b><small>Plataforma como Serviço</small></div>
+    <div class="box" onclick="pickClass('saas')"><b>SaaS</b><small>Software como Serviço</small></div>
+    <div class="box" onclick="pickClass('faas')"><b>FaaS</b><small>Função como Serviço</small></div>
+  </div></div>`;
+ G.t=setInterval(()=>{G.timeLeft--;const e=document.getElementById("sortT");
+  if(e)e.textContent="⏱️ "+G.timeLeft+"s";
+  if(G.timeLeft<=0){clearInterval(G.t);endSort();}},1000);
+ paintSort();
+}
+function paintSort(){
+ if(G.i>=G.list.length)return endSort();
+ document.getElementById("sortCnt").textContent=(G.i+1)+"/"+G.list.length;
+ const it=G.list[G.i];
+ document.getElementById("sortItem").innerHTML=it.n+'<div style="font-weight:400;font-size:.85rem;margin-top:4px">'+it.d+'</div>';
+}
+function pickClass(c){
+ const it=G.list[G.i];let ok=c===it.c;
+ const box=document.querySelector('.box.'+c)||(function(){const all=document.querySelectorAll('.box');const m={iaas:0,paas:1,saas:2,faas:3};return all[m[c]];})();
+ box.classList.add(ok?"ok":"bad");setTimeout(()=>box.classList.remove("ok","bad"),450);
+ if(ok){G.ok++;G.combo=(G.combo||0)+1;const xp=10+Math.min(G.combo,10);gainXp(xp);G.xpRound+=xp;
+   document.getElementById("hudXp").textContent="+"+G.xpRound+" XP";
+   const chip=document.getElementById("sortItem");chip.style.background="linear-gradient(120deg,#18a35a,#2fd07f)";
+   setTimeout(()=>{chip.style.background="";},250);
+ }else{G.bad++;G.combo=0;S.stats.bad++;}
+ S.stats[ok?"ok":"bad"]++;save();
+ G.i++;paintSort();
+}
+function endSort(){
+ clearInterval(G.t);
+ if(G.ok>=10)grant("sort10");
+ const msg=G.ok>=10?"🏆 Excelente categorização!":G.ok>=7?"👍 Bom trabalho!":"📖 Revise a aba de comparação dos modelos.";
+ app.innerHTML=`<div class="card center"><h1>🏷️ Fim da Classificação</h1>
+  <div class="score" style="font-size:2.4rem;font-weight:800;color:var(--azul-esc);margin:10px 0">${G.ok} ✅ · ${G.bad} ❌</div>
+  <p class="sub">${msg} · +${G.xpRound} XP</p>
+  <div class="grid2" style="max-width:420px;margin:16px auto">
+   <button class="btn" onclick="startSort()">🔄 De novo</button>
+   <button class="btn sec" onclick="go('home')">◀ Início</button></div></div>`;
+}
+
+/* ================= V/F RELÂMPAGO ================= */
+function startTF(){
+ G={mode:"tf",list:shuffle(TF).slice(0,10),i:0,ok:0,bad:0,xpRound:0,t:null,timeLeft:10};
+ app.innerHTML=`<div class="card"><div class="hud"><div>🕵️ Mitos da Nuvem</div><div id="tfCnt">1/10</div><div id="hudXp">+0 XP</div></div>
+  <p class="sub">Leia a afirmação e julgue rapidamente (10 segundos!).</p>
+  <div class="q-text" id="tfText"></div>
+  <div class="timer"><i id="tfbar" style="width:100%"></i></div>
+  <div class="grid2" style="max-width:380px">
+   <button class="btn" style="background:linear-gradient(120deg,#18a35a,#2fd07f)" onclick="tfAnswer(true)">✔ Verdadeiro</button>
+   <button class="btn warn" onclick="tfAnswer(false)">✘ Falso</button></div>
+  <div id="fb"></div></div>`;
+ paintTF();
+}
+function paintTF(){
+ if(G.i>=G.list.length)return endTF();
+ document.getElementById("tfCnt").textContent=(G.i+1)+"/"+G.list.length;
+ document.getElementById("tfText").textContent="“"+G.list[G.i].s+"”";
+ const b=document.getElementById("tfbar");b.style.width="100%";b.classList.remove("low");
+}
+function tfAnswer(v){
+ clearInterval(G.t);
+ const q=G.list[G.i],ok=v===q.a;
+ const bar=document.getElementById("tfbar");if(bar)bar.style.width="0%";
+ if(ok){G.ok++;G.combo=(G.combo||0)+1;const xp=10+Math.min(G.combo,10);gainXp(xp);G.xpRound+=xp;
+   document.getElementById("hudXp").textContent="+"+G.xpRound+" XP";
+   document.getElementById("fb").innerHTML='<div class="expl"><b>✅ Verdade correta! +'+xp+' XP</b> '+q.ex+'</div>';}
+ else{G.bad++;G.combo=0;S.stats.bad++;
+   document.getElementById("fb").innerHTML='<div class="expl"><b>❌ Errado!</b> '+q.ex+'</div>';}
+ S.stats[ok?"ok":"bad"]++;save();
+ document.getElementById("fb").innerHTML+='<div style="margin-top:12px"><button class="btn" onclick="tfNext()">Próxima ▶</button></div>';
+}
+function tfNext(){G.i++;clearInterval(G.t);if(G.i>=G.list.length)return endTF();paintTF();armTF();}
+function armTF(){G.timeLeft=10;G.t=setInterval(()=>{G.timeLeft--;const b=document.getElementById("tfbar");
+ if(b){b.style.width=Math.max(0,G.timeLeft/10*100)+"%";if(G.timeLeft<=4)b.classList.add("low");}
+ if(G.timeLeft<=0){clearInterval(G.t);tfAnswer(!G.list[G.i].a);}},1000);}
+/* override startTF para ligar timer */
+const _startTF=startTF;startTF=function(){_startTF();armTF();};
+function endTF(){
+ clearInterval(G.t);
+ if(G.ok>=9)grant("myth");
+ app.innerHTML=`<div class="card center"><h1>🕵️ Resultado dos Mitos</h1>
+  <div class="score" style="font-size:2.4rem;font-weight:800;color:var(--azul-esc);margin:10px 0">${G.ok}/10</div>
+  <p class="sub">${G.ok>=9?"🏆 Você desmascarou os mitos da nuvem!":"Dica: releia a seção “Nuvem vs. Autônomo”."} · +${G.xpRound} XP</p>
+  <div class="grid2" style="max-width:420px;margin:16px auto">
+   <button class="btn" onclick="go('tf')">🔄 De novo</button>
+   <button class="btn sec" onclick="go('home')">◀ Início</button></div></div>`;
+}
+
+/* ================= MATCH ================= */
+function startMatch(){
+ G={mode:"match",pairs:shuffle(MATCH.map(p=>({k:p[0],v:p[1],id:Math.random()}))),sel:null,done:0,bad:0,xpRound:0};
+ const terms=shuffle(G.pairs.map(p=>({t:"K",txt:p.k,id:p.id})));
+ const defs=shuffle(G.pairs.map(p=>({t:"V",txt:p.v,id:p.id})));
+ app.innerHTML=`<div class="card"><div class="hud"><div>🧩 Match de Termos</div><div id="mDone">0/9 pares</div><div id="hudXp">+0 XP</div></div>
+  <p class="sub">Clique em um TERMO e depois na DEFINIÇÃO correspondente (e vice-versa). Zero erros = conquista!</p>
+  <div class="match-grid"><div id="colK"></div><div id="colV"></div></div></div>`;
+ document.getElementById("colK").innerHTML=terms.map(x=>`<div class="mcell" data-id="${x.id}" data-col="K" onclick="mclick(this)"><b>${x.txt}</b></div>`).join("");
+ document.getElementById("colV").innerHTML=defs.map(x=>`<div class="mcell" data-id="${x.id}" data-col="V" onclick="mclick(this)">${x.txt}</div>`).join("");
+}
+function mclick(el){
+ if(el.classList.contains("ok"))return;
+ const id=el.dataset.id;
+ if(!G.sel){G.sel=el;el.classList.add("sel");return;}
+ if(G.sel===el){el.classList.remove("sel");G.sel=null;return;}
+ if(G.sel.dataset.id===id&&G.sel.dataset.col!==el.dataset.col){
+   G.sel.classList.remove("sel");G.sel.classList.add("ok");el.classList.add("ok");
+   G.done++;G.combo=(G.combo||0)+1;const xp=12+Math.min(G.combo*2,12);gainXp(xp);G.xpRound+=xp;
+   document.getElementById("mDone").textContent=G.done+"/9 pares";
+   document.getElementById("hudXp").textContent="+"+G.xpRound+" XP";
+   G.sel=null;S.stats.ok++;save();
+   if(G.done>=MATCH.length){
+     if(G.bad===0)grant("match");
+     setTimeout(()=>{app.innerHTML=`<div class="card center"><h1>🧩 Vocabulário Completo!</h1>
+       <div class="score" style="font-size:2.4rem;font-weight:800;color:var(--azul-esc);margin:10px 0">${G.bad===0?"PERFEITO! 🌟":G.bad+" erros"}</div>
+       <p class="sub">+${G.xpRound} XP conquistados</p>
+       <div class="grid2" style="max-width:420px;margin:16px auto">
+        <button class="btn" onclick="go('match')">🔄 De novo</button>
+        <button class="btn sec" onclick="go('home')">◀ Início</button></div></div>`;},500);
+   }
+ }else{
+   G.bad++;S.stats.bad++;save();
+   const b=G.sel;G.sel=null;
+   el.classList.add("bad");b.classList.remove("sel");b.classList.add("bad");
+   setTimeout(()=>{el.classList.remove("bad");b.classList.remove("bad");},400);
+ }
+}
+
+/* ================= RESET ================= */
+function resetGame(){
+ if(!confirm("Zerar todo o progresso (XP, estrelas e conquistas)?"))return;
+ S={xp:0,best:0,stars:{},achs:{},stats:{ok:0,bad:0}};save();paintProfile();
+ if(screen==="home")viewHome();else go("home");
+ toast("🔄 Progresso reiniciado!");
+}
+
+paintProfile();go("home");
+</script>
+</body>
+</html>
