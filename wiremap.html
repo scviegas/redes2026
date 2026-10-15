@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NETRECON·LAB — Simulador guiado de nmap + Wireshark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#0a0d0b; --surface:#0f1411; --surface2:#131a16;
+  --line:#1d2922; --line2:#2b3c32;
+  --ink:#d9e8dc; --dim:#7d9486; --faint:#54695d;
+  --acc:#7be495; --amber:#e6c069; --red:#ef8073;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:13px;overflow:hidden;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(123,228,149,.045) 1px,transparent 1px);background-size:26px 26px}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 90% at 50% 0%,transparent 55%,rgba(0,0,0,.5))}
+::selection{background:rgba(123,228,149,.25)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px;border:2px solid var(--surface)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- topo ---------- */
+#top{height:52px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--surface);position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:9px;font:700 15px 'Chakra Petch',sans-serif;letter-spacing:.1em}
+.brand svg{width:18px;height:18px;color:var(--acc)}
+.brand b{color:var(--acc)}
+.brand em{font:500 9px 'Chakra Petch',sans-serif;font-style:normal;letter-spacing:.18em;color:var(--faint);border:1px solid var(--line2);padding:3px 8px;border-radius:3px;margin-left:4px}
+.tright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:4px;padding:5px 9px;font-size:10.5px;color:var(--dim)}
+.chip svg{width:12px;height:12px;color:var(--faint)}
+#doneChip{border-color:rgba(123,228,149,.5);color:var(--acc)}
+#doneChip svg{color:var(--acc)}
+.prog{display:flex;gap:3px}
+.seg{width:14px;height:5px;background:var(--line);border-radius:1px}
+.seg.on{background:var(--acc)}
+
+/* ---------- estrutura ---------- */
+main{flex:1;display:flex;flex-direction:column;gap:10px;padding:10px 12px;min-height:0;position:relative;z-index:1}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel.pulse{animation:ppulse 1.1s ease 2}
+@keyframes ppulse{50%{border-color:var(--acc);box-shadow:inset 0 0 0 1px rgba(123,228,149,.5)}}
+.panel-h{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font:600 10px 'Chakra Petch',sans-serif;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;flex:none}
+.panel-h b{color:var(--acc);font-weight:700}
+.ph-dim{color:var(--faint);font-weight:500;letter-spacing:.1em}
+.led{width:8px;height:8px;border-radius:50%;background:var(--line2);margin-left:auto;flex:none}
+.led.on{background:var(--acc);box-shadow:0 0 8px rgba(123,228,149,.8);animation:blink 1.3s infinite}
+.led.hold{background:var(--amber);box-shadow:0 0 8px rgba(230,192,105,.6)}
+@keyframes blink{50%{opacity:.35}}
+.cols{flex:1;display:grid;grid-template-columns:318px minmax(0,1fr) 492px;gap:10px;min-height:0}
+
+/* ---------- mapa de descoberta ---------- */
+#nmCount{margin-left:auto;color:var(--acc)}
+.nm-row{display:flex;gap:8px;padding:10px 12px;overflow-x:auto}
+.slot{flex:1;min-width:120px;border:1px dashed var(--line2);border-radius:5px;padding:8px 10px;transition:border-color .3s,background .3s}
+.slot .nm{font:600 9.5px 'Chakra Petch',sans-serif;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .ip{font-size:12px;color:var(--faint);margin-top:2px}
+.slot.unk .ip{letter-spacing:2px}
+.slot .mac{font-size:9px;color:var(--faint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .ips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.pchip{font-size:9px;padding:1px 5px;border:1px solid var(--line2);border-radius:3px;color:var(--amber)}
+.slot.up{border-style:solid;border-color:rgba(123,228,149,.45);background:rgba(123,228,149,.04)}
+.slot.up .nm{color:var(--acc)}.slot.up .ip{color:var(--ink)}
+.slot.me{border-style:solid;border-color:rgba(230,192,105,.45);background:rgba(230,192,105,.04)}
+.slot.me .nm{color:var(--amber)}
+.slot.dead{border-style:dashed;border-color:var(--line)}
+@keyframes rev{0%{transform:translateY(5px);opacity:.2}60%{border-color:var(--acc)}100%{transform:none;opacity:1}}
+.slot.flash{animation:rev .5s ease}
+
+/* ---------- guia ---------- */
+#msList{flex:1;overflow-y:auto}
+.ms{border-bottom:1px solid var(--line)}
+.ms.active{background:rgba(123,228,149,.03);box-shadow:inset 2px 0 0 var(--acc)}
+.ms-h{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none}
+.ms-num{font:600 10.5px 'Chakra Petch',sans-serif;color:var(--faint)}
+.ms.active .ms-num{color:var(--acc)}
+.ms-t{flex:1;font:600 12px 'Chakra Petch',sans-serif;letter-spacing:.03em}
+.ms.locked{opacity:.42}.ms.locked .ms-t{color:var(--dim)}
+.ms.done .ms-t{color:var(--dim)}
+.st-ic{color:var(--faint);display:flex}
+.ms.done .st-ic{color:var(--acc)}.ms.active .st-ic{color:var(--acc)}
+.st-ic svg{width:14px;height:14px}
+.ms-b{display:none;padding:0 14px 16px 36px}
+.ms.active .ms-b,.ms.done.open .ms-b{display:block}
+.theory{font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:10px}
+.theory code,.task code,.hint code{color:var(--acc);background:rgba(123,228,149,.08);padding:0 4px;border-radius:3px;font-size:10.5px}
+.task{border-left:2px solid var(--acc);background:rgba(123,228,149,.05);padding:8px 10px;font-size:11.5px;line-height:1.55;margin-bottom:10px}
+.task .lbl{display:block;font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.16em;color:var(--acc);margin-bottom:4px}
+.cmdrow{display:flex;align-items:center;gap:6px;background:#080b09;border:1px solid var(--line);border-radius:4px;padding:6px 8px;margin-bottom:10px}
+.cmdrow code{flex:1;font-size:11.5px;color:var(--acc);white-space:nowrap;overflow-x:auto;scrollbar-width:none;cursor:pointer}
+.cmdrow code.blurred{filter:blur(5px);user-select:none}
+.hbtn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--faint);font:600 9.5px 'Chakra Petch',sans-serif;letter-spacing:.12em;cursor:pointer;padding:4px 0;text-transform:uppercase}
+.hbtn:hover{color:var(--amber)}
+.hbtn svg{width:12px;height:12px}
+.hint{display:none;font-size:11px;color:var(--dim);line-height:1.55;border-top:1px dashed var(--line2);margin-top:8px;padding-top:8px}
+.hint.show{display:block}
+
+/* ---------- botões ---------- */
+.btn{font:600 10px 'Chakra Petch',sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:8px 12px;background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:4px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover:not(:disabled){color:var(--acc);border-color:rgba(123,228,149,.5)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#08130b}
+.btn.pri:hover:not(:disabled){background:#93f0ab;color:#08130b}
+.btn.amb{border-color:rgba(230,192,105,.4);color:var(--amber)}
+.btn.amb:hover:not(:disabled){border-color:var(--amber)}
+.btn svg{width:13px;height:13px}
+.btn.big{padding:11px 18px;font-size:11px;width:100%;justify-content:center}
+.mini{width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--line2);border-radius:4px;color:var(--dim);cursor:pointer}
+.mini:hover{color:var(--acc);border-color:rgba(123,228,149,.5)}
+.mini svg{width:13px;height:13px}
+
+/* ---------- console ---------- */
+.term{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
+.term::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+#termOut{flex:1;overflow-y:auto;padding:12px 14px;font-size:12.5px;line-height:1.62}
+.tl{white-space:pre-wrap;word-break:break-word}
+.tl .p{color:var(--acc);font-weight:600}
+.t-dim{color:var(--dim)}.t-err{color:var(--red)}.t-ok{color:var(--acc)}.t-amb{color:var(--amber)}.t-h{color:#f2f7f3;font-weight:600}
+.term-in{display:flex;align-items:center;gap:9px;border-top:1px solid var(--line);padding:9px 14px;flex:none}
+.term-in .p{color:var(--acc);font-weight:600;font-size:12.5px;flex:none}
+.term-in .p.dim{color:var(--faint)}
+#termIn{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font:500 12.5px 'IBM Plex Mono',monospace;caret-color:var(--acc)}
+#termIn::placeholder{color:var(--faint)}
+
+/* ---------- captura ---------- */
+.cap-tools{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px;flex:none}
+.ct-row{display:flex;gap:8px;align-items:center}
+.selif{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:4px;padding:0 8px;color:var(--dim)}
+.selif svg{width:13px;height:13px}
+.selif select{background:transparent;border:none;color:var(--ink);font:500 11px 'IBM Plex Mono',monospace;padding:7px 2px;outline:none}
+.selif select option{background:var(--surface)}
+.fltwrap{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:4px;padding:0 10px;transition:border-color .15s}
+.fltwrap svg{width:13px;height:13px;color:var(--faint);flex:none}
+.fltwrap input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--ink);font:500 11.5px 'IBM Plex Mono',monospace;padding:7px 0;caret-color:var(--acc)}
+.fltwrap.val{border-color:rgba(123,228,149,.6)}
+.fltwrap.inv{border-color:rgba(239,128,115,.7)}
+.genlbl{font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.12em;color:var(--faint)}
+.cap-status{padding:5px 12px;font-size:10.5px;color:var(--faint);border-bottom:1px solid var(--line);flex:none}
+.pk-list{flex:1.25;min-height:110px;overflow:auto}
+.row{display:grid;grid-template-columns:42px 58px 90px 90px 60px 44px minmax(0,1fr);gap:6px;padding:2px 10px;font-size:11px;align-items:center;white-space:nowrap;cursor:pointer}
+.row>*{overflow:hidden;text-overflow:ellipsis}
+.row.head{position:sticky;top:0;background:var(--surface2);color:var(--faint);font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.1em;cursor:default;border-bottom:1px solid var(--line);padding:6px 10px;z-index:2}
+.row:not(.head):hover{background:rgba(123,228,149,.06)}
+.row.sel{background:rgba(123,228,149,.12);box-shadow:inset 2px 0 0 var(--acc)}
+.c-acc{color:var(--acc)}.c-amb{color:var(--amber)}.c-ink{color:#cfe3d6}.c-dim{color:var(--dim)}
+.pk-detail{height:31%;min-height:110px;display:flex;flex-direction:column;border-top:1px solid var(--line);flex:none}
+.pk-hex{height:24%;min-height:88px;display:flex;flex-direction:column;border-top:1px solid var(--line);flex:none}
+.sub-h{font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.14em;color:var(--faint);padding:6px 12px;border-bottom:1px solid var(--line);background:var(--surface2);flex:none}
+.pd-body{flex:1;overflow:auto;padding:6px 0}
+.empty{display:flex;height:100%;min-height:60px;align-items:center;justify-content:center;color:var(--faint);font-size:11px;padding:16px;text-align:center}
+.crednote{margin:6px 12px 2px;border:1px solid rgba(230,192,105,.5);background:rgba(230,192,105,.07);color:var(--amber);font-size:10.5px;padding:6px 10px;border-radius:4px;line-height:1.5}
+.tn{padding:1px 12px}
+.tn-h{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11.5px;padding:2px 0}
+.tn-h:hover{color:var(--acc)}
+.tn-h.cred span{color:var(--amber)}
+.tn-h svg{width:12px;height:12px;color:var(--faint);flex:none;transition:transform .15s}
+.tn.closed .tn-h svg{transform:rotate(-90deg)}
+.tn.closed .tn-f{display:none}
+.tn-f{padding:1px 0 4px 22px}
+.tf{font-size:11px;line-height:1.7;word-break:break-all}
+.tf span{color:var(--faint)}
+.tf b{font-weight:500}
+.tf b.amb{color:var(--amber)}
+.hx{white-space:pre;font-size:11px;line-height:1.65;color:var(--dim);padding:0 12px}
+.hx .off{color:var(--faint)}
+.hx i{font-style:normal;background:rgba(123,228,149,.22);color:#e9fff1;border-radius:1px}
+
+/* ---------- overlays ---------- */
+.ov{position:fixed;inset:0;background:rgba(4,7,5,.82);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
+.hid{display:none!important}
+.sheet{width:min(620px,94vw);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:26px 28px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.boot{position:relative}
+.corner{position:absolute;width:14px;height:14px;border-color:var(--acc);border-style:solid;border-width:0}
+.c1{top:10px;left:10px;border-top-width:2px;border-left-width:2px}
+.c2{bottom:10px;right:10px;border-bottom-width:2px;border-right-width:2px}
+.b-tag{font:600 10px 'Chakra Petch',sans-serif;letter-spacing:.22em;color:var(--faint)}
+.boot h1{font:700 24px 'Chakra Petch',sans-serif;line-height:1.25;margin:10px 0 14px}
+.boot h1 span{color:var(--acc)}
+.b-lead{font-size:12.5px;color:var(--dim);line-height:1.7;margin-bottom:18px}
+.b-lead b{color:var(--ink)}
+.rules{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.rules li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:11px 13px}
+.rules svg{width:16px;height:16px;color:var(--acc);flex:none;margin-top:2px}
+.rules b{display:block;font:600 11px 'Chakra Petch',sans-serif;letter-spacing:.06em;margin-bottom:2px}
+.rules li span{font-size:11.5px;color:var(--dim);line-height:1.5}
+#bootForm label{display:block;font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.16em;color:var(--faint);margin-bottom:8px}
+#aName{width:100%;background:#080b09;border:1px solid var(--line2);border-radius:4px;color:var(--ink);font:500 13px 'IBM Plex Mono',monospace;padding:10px 12px;outline:none;margin-bottom:14px;caret-color:var(--acc)}
+#aName:focus{border-color:rgba(123,228,149,.5)}
+.stream,.rep{width:min(680px,94vw);padding:0}
+.sh-h{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+.st-t{font:700 12px 'Chakra Petch',sans-serif;letter-spacing:.14em;color:var(--amber)}
+.st-s{font-size:11px;color:var(--dim);margin-top:3px}
+.legend{display:flex;gap:14px;padding:8px 18px;border-bottom:1px solid var(--line);font-size:10px;color:var(--faint)}
+.lg.me{color:var(--acc)}.lg.srv{color:var(--dim)}
+.st-body{max-height:46vh;overflow:auto;padding:12px 18px;font-size:11.5px;line-height:1.55}
+.stl{white-space:pre-wrap;word-break:break-all;padding:1px 0}
+.stl b{font-weight:500;font-size:9.5px;min-width:34px;display:inline-block;color:var(--faint)}
+.stl.me{color:var(--acc)}.stl.srv{color:var(--dim)}
+.rp-h{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.rp-h b{font:700 13px 'Chakra Petch',sans-serif;letter-spacing:.14em}
+.rp-b{padding:18px 20px}
+.rstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.rstats>div{border:1px solid var(--line);border-radius:5px;padding:10px;text-align:center}
+.rstats b{display:block;font:700 17px 'Chakra Petch',sans-serif;color:var(--acc)}
+.rstats span{font-size:9.5px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.rp-b h3{font:600 11px 'Chakra Petch',sans-serif;letter-spacing:.16em;color:var(--dim);margin:18px 0 10px;text-transform:uppercase}
+table.inv{width:100%;border-collapse:collapse;font-size:11px}
+table.inv th{text-align:left;font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.1em;color:var(--faint);padding:6px 8px;border-bottom:1px solid var(--line2)}
+table.inv td{padding:6px 8px;border-bottom:1px solid var(--line);color:var(--dim)}
+table.inv td:first-child{color:var(--ink)}
+.find{border:1px solid var(--line);border-left-width:3px;border-radius:5px;padding:10px 12px;margin-bottom:8px}
+.find.s1{border-left-color:var(--red)}.find.s2{border-left-color:var(--amber)}
+.find.s3{border-left-color:#b09a5f}.find.s4{border-left-color:var(--acc)}
+.sev{font:700 9px 'Chakra Petch',sans-serif;letter-spacing:.12em;padding:2px 7px;border-radius:3px;margin-right:8px}
+.find.s1 .sev{background:rgba(239,128,115,.15);color:var(--red)}
+.find.s2 .sev{background:rgba(230,192,105,.15);color:var(--amber)}
+.find.s3 .sev{background:rgba(176,154,95,.15);color:#b09a5f}
+.find.s4 .sev{background:rgba(123,228,149,.12);color:var(--acc)}
+.f-h{display:flex;align-items:center;margin-bottom:5px}
+.f-h b{font:600 12px 'Chakra Petch',sans-serif}
+.find p{font-size:11.5px;color:var(--dim);line-height:1.55}
+.find p.rec{color:var(--ink);margin-top:4px;display:flex;gap:6px;align-items:flex-start}
+.find p.rec svg{width:12px;height:12px;color:var(--acc);flex:none;margin-top:2px}
+.lessons{padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:11.5px;color:var(--dim);line-height:1.6}
+.lessons li::marker{color:var(--acc)}
+.rp-f{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--line)}
+
+/* ---------- toasts ---------- */
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:90}
+.toast{background:var(--surface2);border:1px solid var(--line2);border-left:3px solid var(--acc);padding:10px 14px;min-width:280px;max-width:380px;border-radius:4px;animation:tin .25s;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.toast.warn{border-left-color:var(--amber)}
+.toast.err{border-left-color:var(--red)}
+.toast .tt{font:600 10.5px 'Chakra Petch',sans-serif;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.toast.warn .tt{color:var(--amber)}.toast.err .tt{color:var(--red)}
+.toast .tm{font-size:11.5px;color:var(--dim);line-height:1.5}
+.toast .tm b,.toast .tm code{color:var(--ink);font-weight:500}
+.toast.out{opacity:0;transform:translateX(20px);transition:.3s}
+@keyframes tin{from{transform:translateX(20px);opacity:0}}
+
+@media (max-width:1380px){.cols{grid-template-columns:280px minmax(0,1fr) 430px}}
+@media (max-width:1120px){
+  body{overflow:auto}
+  .cols{display:flex;flex-direction:column}
+  .cols>.panel:first-child{max-height:430px}
+  .cols>.panel:nth-child(2) .term{height:430px}
+  #capPanel{height:660px}
+  .rstats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ BRIEFING ÉTICO ============ -->
+<div class="ov" id="bootOv">
+  <div class="sheet boot">
+    <div class="corner c1"></div><div class="corner c2"></div>
+    <div class="b-tag">LABORATÓRIO ORION · TREINAMENTO DE RECONHECIMENTO DE REDE</div>
+    <h1>Antes de começar:<br><span>as regras do laboratório</span></h1>
+    <p class="b-lead">Você assume o posto de analista júnior da equipe de segurança da ACME (fictícia). Sua missão: mapear a rede interna com <b>nmap</b>, ouvir o tráfego com um <b>Wireshark simulado</b> e transformar evidências em relatório. Este ambiente é <b>100% simulado</b> — roda inteiro no seu navegador, sem gerar nenhum pacote real e sem contatar nenhum sistema real.</p>
+    <ul class="rules">
+      <li><i data-lucide="file-check"></i><div><b>Autorização explícita</b><span>Varreduras reais só com permissão por escrito do responsável pela rede. Sem isso, é crime — independente da intenção.</span></div></li>
+      <li><i data-lucide="map-pin"></i><div><b>Dentro do escopo</b><span>Aqui, o único alvo autorizado é o segmento 10.10.20.0/24. Mantenha-se dentro dele.</span></div></li>
+      <li><i data-lucide="clipboard-list"></i><div><b>Documente tudo</b><span>O valor do reconhecimento está no relatório, não no dump de pacotes.</span></div></li>
+    </ul>
+    <form id="bootForm">
+      <label>ASSINATURA DO ANALISTA</label>
+      <input id="aName" maxlength="14" placeholder="seu nome (define seu prompt no console)" autocomplete="off"/>
+      <button class="btn pri big" type="submit"><i data-lucide="key-round"></i> ASSINAR E ENTRAR NO LABORATÓRIO</button>
+    </form>
+  </div>
+</div>
+
+<header id="top">
+  <div class="brand"><i data-lucide="radar"></i><span>NETRECON<b>·LAB</b></span><em>SIMULADOR DIDÁTICO · REDE ISOLADA</em></div>
+  <div class="tright">
+    <div class="chip"><i data-lucide="shield-check"></i> 10.10.20.0/24</div>
+    <div class="chip"><i data-lucide="timer"></i> <span id="clockV">00:00</span></div>
+    <div class="prog" id="prog"></div>
+    <div class="chip"><i data-lucide="user"></i> <span id="who">analista</span></div>
+    <div class="chip hid" id="doneChip"><i data-lucide="award"></i> CONCLUÍDO</div>
+  </div>
+</header>
+
+<main>
+  <!-- mapa de descoberta -->
+  <section class="panel">
+    <div class="panel-h"><b>00</b> MAPA DE DESCOBERTA <span class="ph-dim">SEGMENTO 10.10.20.0/24</span><span id="nmCount">HOSTS ATIVOS 0/5</span></div>
+    <div class="nm-row" id="nmRow"></div>
+  </section>
+
+  <div class="cols">
+    <!-- guia -->
+    <aside class="panel">
+      <div class="panel-h"><b>01</b> GUIA DE MISSÕES <span class="ph-dim" id="msPhase">MISSÃO 01/09</span></div>
+      <div id="msList"></div>
+    </aside>
+
+    <!-- console -->
+    <section class="panel">
+      <div class="panel-h"><b>02</b> CONSOLE <span class="ph-dim">nmap 7.94 (simulado)</span></div>
+      <div class="term">
+        <div id="termOut"></div>
+        <div class="term-in"><span class="p" id="prompt">analista@lab:~$</span><input id="termIn" spellcheck="false" autocomplete="off" placeholder="digite um comando — 'help' lista tudo"/></div>
+      </div>
+    </section>
+
+    <!-- captura -->
+    <aside class="panel" id="capPanel">
+      <div class="panel-h"><b>03</b> CAPTURA DE PACOTES <span class="ph-dim">WIRESHARK (SIMULADO)</span><span class="led" id="capLed"></span><span class="ph-dim" id="capState">PARADA</span></div>
+      <div class="cap-tools">
+        <div class="ct-row">
+          <div class="selif"><i data-lucide="network"></i><select id="iface"><option>eth0</option><option>lo</option><option>wlan0</option></select></div>
+          <button class="btn pri" id="btnCap"><i data-lucide="play"></i><span>Iniciar</span></button>
+          <button class="btn" id="btnClear"><i data-lucide="rotate-ccw"></i><span>Reiniciar</span></button>
+          <button class="btn" id="btnFollow" disabled><i data-lucide="scroll-text"></i><span>Seguir stream</span></button>
+        </div>
+        <div class="ct-row">
+          <div class="fltwrap" id="fltWrap"><i data-lucide="filter"></i><input id="flt" placeholder="filtro de exibição — ex.: ip.addr == 10.10.20.22 && ftp"/></div>
+        </div>
+        <div class="ct-row">
+          <span class="genlbl">GERAR TRÁFEGO DO ALVO:</span>
+          <button class="btn amb" id="btnFtp"><i data-lucide="log-in"></i><span>Sessão FTP</span></button>
+          <button class="btn amb" id="btnWeb"><i data-lucide="globe"></i><span>Login web</span></button>
+        </div>
+      </div>
+      <div class="cap-status" id="capStatus">Pacotes: 0 · Exibidos: 0 · Interface: eth0 · PARADA</div>
+      <div class="pk-list" id="pkList"></div>
+      <div class="pk-detail">
+        <div class="sub-h">DETALHES DO PROTOCOLO</div>
+        <div class="pd-body" id="pkDetailBody"><div class="empty">clique em um pacote na lista para inspecionar</div></div>
+      </div>
+      <div class="pk-hex">
+        <div class="sub-h">BYTES DO FRAME</div>
+        <div class="pd-body" id="hexBody"><div class="empty">o hexdump do frame selecionado aparece aqui</div></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div id="toasts"></div>
+
+<!-- stream modal -->
+<div class="ov hid" id="streamOv">
+  <div class="sheet stream">
+    <div class="sh-h">
+      <div><div class="st-t" id="stTitle">SEGUIR TCP STREAM</div><div class="st-s" id="stSub"></div></div>
+      <button class="mini" id="stClose"><i data-lucide="x"></i></button>
+    </div>
+    <div class="legend"><span class="lg me">C→S cliente (você)</span><span class="lg srv">S←C servidor</span></div>
+    <div class="st-body" id="stBody"></div>
+  </div>
+</div>
+
+<!-- relatório -->
+<div class="ov hid" id="repOv">
+  <div class="sheet rep">
+    <div class="rp-h"><b>RELATÓRIO DE ENCERRAMENTO — LAB ORION</b><button class="mini" id="repClose"><i data-lucide="x"></i></button></div>
+    <div class="rp-b" id="repBody"></div>
+    <div class="rp-f">
+      <button class="btn" id="repRestart"><i data-lucide="rotate-ccw"></i> Reiniciar laboratório</button>
+      <button class="btn pri" id="repClose2"><i data-lucide="check"></i> Encerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =================== util =================== */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const icons=()=>window.lucide&&lucide.createIcons();
+const nowStr=()=>new Date().toLocaleString('pt-BR');
+function toast(tt,tm,type='ok'){
+  const t=document.createElement('div');t.className='toast '+type;
+  t.innerHTML=`<div class="tt">${esc(tt)}</div><div class="tm">${tm}</div>`;
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),320)},5600);
+}
+function openOv(s){$(s).classList.remove('hid')}
+function closeOv(s){$(s).classList.add('hid')}
+
+/* =================== cenário =================== */
+const ME='10.10.20.7', MAC_ME='02:1c:7a:00:00:07';
+const FTP_USER='backup-op', FTP_PASS='B4ckup#2024', WEB_USER='webadmin', WEB_PASS='W3b@net24!';
+const HOSTS={
+  '10.10.20.1' :{n:'edge-gw'    ,mac:'02:1c:7a:00:00:01',v:'LocalLab Systems',os:'Linux 5.10 (embedded)',ports:[{p:22,s:'ssh',v:'OpenSSH 8.9p1',top:1},{p:80,s:'http',v:'BusyBox httpd 1.19',top:1}]},
+  '10.10.20.10':{n:'nas-backup' ,mac:'02:1c:7a:00:00:0a',v:'Synology Inc.'   ,os:'Synology DSM 7.1 (Linux 5.10)',ports:[{p:445,s:'microsoft-ds',v:'Samba smbd 4.13',top:1},{p:5001,s:'ssl',v:'Synology DSM https',top:0}]},
+  '10.10.20.15':{n:'web01'      ,mac:'02:1c:7a:00:00:0f',v:'LocalLab Systems',os:'Linux 5.15 (Ubuntu 22.04)',ports:[{p:22,s:'ssh',v:'OpenSSH 8.9p1 Ubuntu',top:1},{p:80,s:'http',v:'nginx 1.24.0',top:1},{p:443,s:'ssl/http',v:'nginx 1.24.0 (TLS 1.3)',top:1}]},
+  '10.10.20.22':{n:'filesrv'    ,mac:'02:1c:7a:00:00:16',v:'LocalLab Systems',os:'Linux 5.4 (Debian 11)',ports:[{p:21,s:'ftp',v:'vsftpd 2.3.4',top:1},{p:22,s:'ssh',v:'OpenSSH 8.4p1 Debian',top:1}]},
+  '10.10.20.30':{n:'ws-recepcao',mac:'02:1c:7a:00:00:1e',v:'Dell Inc.'       ,os:'Microsoft Windows 10 19045',ports:[{p:445,s:'microsoft-ds',v:'Windows 10 microsoft-ds',top:1},{p:3389,s:'ms-wbt-server',v:'Microsoft Terminal Services',top:1}]},
+};
+const HOSTNAMES={'edge-gw':'10.10.20.1','nas-backup':'10.10.20.10','web01':'10.10.20.15','filesrv':'10.10.20.22','ws-recepcao':'10.10.20.30',
+  'edge-gw.lab.local':'10.10.20.1','nas-backup.lab.local':'10.10.20.10','web01.lab.local':'10.10.20.15','filesrv.lab.local':'10.10.20.22','ws-recepcao.lab.local':'10.10.20.30'};
+const SVC={21:'ftp',22:'ssh',23:'telnet',25:'smtp',53:'domain',80:'http',110:'pop3',143:'imap',443:'https',445:'microsoft-ds',3389:'ms-wbt-server',5001:'commplex-link'};
+
+const state={user:'analista',step:0,stats:{cmds:0,t0:null}};
+const F={}; // fatos acumulados pelas missões
+
+/* =================== missões =================== */
+const MISSIONS=[
+ {t:'Reconhecimento — descubra quem está vivo',
+  th:'Toda avaliação começa mapeando a superfície. O <b>ping scan</b> (<code>-sn</code>) envia sondas leves (ICMP/ARP) para descobrir hosts ativos <i>sem</i> escanear portas — rápido, discreto e sempre o primeiro passo.',
+  task:'Descubra todos os hosts ativos no segmento <code>10.10.20.0/24</code> usando o console (painel 02).',
+  cmd:'nmap -sn 10.10.20.0/24',
+  hint:'-sn significa "scan ping". Sem ele, o nmap também varreria portas em cada host — mais lento e muito mais barulhento.',
+  toast:{tt:'MISSÃO 01 CONCLUÍDA',tm:'5 hosts ativos mapeados — o <b>mapa de descoberta</b> acima do console foi atualizado.'},
+  check:()=>F.pingScan},
+ {t:'Varredura de serviços no alvo suspeito',
+  th:'O hostname <b>filesrv</b> merece atenção: servidores de arquivos carregam dados valiosos. Com <code>-sV</code>, o nmap conversa com cada porta aberta e lê banners para identificar serviço e <b>versão</b> — e versões antigas são convites.',
+  task:'Identifique serviços e versões em <code>10.10.20.22</code> (filesrv).',
+  cmd:'nmap -sV 10.10.20.22',
+  hint:'Sem -p, o nmap testa as 1.000 portas mais comuns. Use -p- para varrer todas as 65.535.',
+  toast:{tt:'MISSÃO 02 CONCLUÍDA',tm:'<b>vsftpd 2.3.4</b> identificado na porta 21 — versão antiga, com histórico conhecido de vulnerabilidades. Anote.'},
+  check:()=>F.svFilesrv},
+ {t:'Fingerprint de sistema operacional',
+  th:'<code>-O</code> analisa padrões das respostas TCP/IP — TTL, janela, opções de cabeçalho — para inferir o sistema do alvo. Serviço + versão + SO = perfil quase completo do host, sem tocar em nada.',
+  task:'Detecte o sistema operacional de filesrv.',
+  cmd:'nmap -O 10.10.20.22',
+  hint:'-A faz tudo de uma vez: -sV + -O + scripts padrão. Combinar flags é prática comum de quem já tem prática.',
+  toast:{tt:'MISSÃO 03 CONCLUÍDA',tm:'filesrv roda <b>Linux 5.4 (Debian 11)</b>. Perfil do alvo completo — hora de escutar a rede.'},
+  check:()=>F.osFilesrv},
+ {t:'Escute a rede — captura passiva',
+  th:'Diferente do nmap, que envia sondas, o Wireshark apenas <b>escuta</b>: registra cada frame que cruza a interface sem emitir nenhum pacote. É a captura passiva — máxima informação, zero ruído gerado.',
+  task:'No painel <b>03 · CAPTURA</b>: clique em <b>INICIAR</b> (interface eth0), dispare a <b>Sessão FTP</b> nos geradores de tráfego e aplique o filtro <code>ftp</code>.',
+  hint:'Filtros de exibição têm sintaxe própria: o nome de um protocolo puro (ftp) já funciona. Pressione Enter para aplicar.',
+  toast:{tt:'MISSÃO 04 CONCLUÍDA',tm:'Captura ativa e filtro <code>ftp</code> aplicado. Agora leia a conversa do alvo.'},
+  check:()=>F.captureStarted&&F.filterFtp},
+ {t:'Credenciais em texto claro',
+  th:'O FTP é um protocolo dos anos 80: <b>tudo</b> — incluindo usuário e senha — trafega sem criptografia. Qualquer pessoa no mesmo segmento com um sniffer lê as credenciais como um livro aberto.',
+  task:'Na lista de pacotes, clique no pacote <b>USER</b> ou <b>PASS</b> e leia a credencial no painel de detalhes.',
+  hint:'Procure "Request: USER ..." na coluna INFO. Os detalhes abrem logo abaixo da lista.',
+  toast:{tt:'ACHADO — CREDENCIAL EXPOSTA',tm:'<code>backup-op : B4ckup#2024</code> trafegando em texto claro. Este é o tipo de evidência que muda orçamentos.',type:'warn'},
+  check:()=>F.ftpCred},
+ {t:'HTTP sem TLS: a ilusão de segurança',
+  th:'Login por HTTP puro expõe o header <code>Authorization: Basic</code> — que é apenas <b>Base64</b>. Codificação não é criptografia: qualquer sniffer reverte em milissegundos.',
+  task:'Dispare o <b>Login web</b> nos geradores de tráfego, filtre <code>http</code>, clique no pacote com header <b>Authorization</b> e veja o campo decodificado nos detalhes.',
+  hint:'O pacote POST /login carrega o header "Authorization: Basic ...". Clique nele para abrir os detalhes.',
+  toast:{tt:'ACHADO — SENHA WEB EXPOSTA',tm:'<code>webadmin : W3b@net24!</code> "protegida" apenas por Base64.',type:'warn'},
+  check:()=>F.httpAuth},
+ {t:'Siga a conversa — Follow TCP Stream',
+  th:'Pacote por pacote, a conversa aparece fragmentada. O Wireshark <b>reconstrói a sessão TCP inteira</b> em texto legível — a mesma visão que um atacante no segmento teria (e que a defesa precisa ter também).',
+  task:'Com um pacote da sessão FTP selecionado, clique em <b>SEGUIR STREAM</b> na barra da captura.',
+  hint:'Toda sessão TCP da captura recebe um número de stream — a reconstrução reordena os pacotes automaticamente.',
+  toast:{tt:'MISSÃO 07 CONCLUÍDA',tm:'A sessão FTP reconstruída prova: qualquer sniffer no segmento lê a conversa inteira.'},
+  check:()=>F.stream},
+ {t:'Filtro cirúrgico',
+  th:'Em capturas reais, com milhões de pacotes, <b>filtrar é sobreviver</b>. Expressões compostas combinam condições com <code>&amp;&amp;</code> e <code>||</code> — e <code>ip.addr</code> casa com origem <i>ou</i> destino.',
+  task:'Aplique um filtro que isole todo o tráfego de/para o alvo filesrv — por exemplo: <code>ip.addr == 10.10.20.22 &amp;&amp; ftp</code>.',
+  cmd:'ip.addr == 10.10.20.22 && ftp', to:'filter',
+  hint:'Digite na barra de filtro e pressione Enter. A borda fica verde quando a sintaxe é válida.',
+  toast:{tt:'MISSÃO 08 CONCLUÍDA',tm:'Filtro cirúrgico aplicado. Em produção, é isso que separa sinal de ruído.'},
+  check:()=>F.filterFilesrv},
+ {t:'Relatório — onde está o valor real',
+  th:'Reconhecimento sem relatório é hobby; com relatório, é segurança. O entregável do analista não é o dump de pacotes — é a <b>evidência transformada em ação</b>.',
+  task:'Gere o relatório de encerramento com todos os achados desta operação.',
+  ui:'report',
+  hint:'O relatório consolida hosts, serviços e vulnerabilidades observadas durante toda a sessão.',
+  check:()=>F.report},
+];
+
+function completeStep(){
+  const m=MISSIONS[state.step];
+  if(m.toast)toast(m.toast.tt,m.toast.tm,m.toast.type||'ok');
+  state.step++;
+  if(state.step>=MISSIONS.length){$('#doneChip').classList.remove('hid');}
+}
+function checkAll(){
+  let again=true;
+  while(again&&state.step<MISSIONS.length){
+    const m=MISSIONS[state.step];
+    if(!m.check||m.check()){completeStep();}else again=false;
+  }
+  renderGuide();updateProg();
+}
+function updateProg(){
+  $('#prog').innerHTML=MISSIONS.map((_,i)=>`<span class="seg ${i<state.step?'on':''}"></span>`).join('');
+}
+function renderGuide(){
+  $('#msPhase').textContent=`MISSÃO ${String(Math.min(state.step+1,9)).padStart(2,'0')}/09`;
+  $('#msList').innerHTML=MISSIONS.map((m,i)=>{
+    const st=i<state.step?'done':i===state.step?'active':'locked';
+    const ic=st==='done'?'check':st==='active'?'target':'lock';
+    let body='';
+    if(st!=='locked'){
+      body=`<div class="ms-b">
+        <p class="theory">${m.th}</p>
+        <div class="task"><span class="lbl">SUA TAREFA</span>${m.task}</div>
+        ${m.cmd?`<div class="cmdrow"><code class="blurred" data-cmd="${i}">${esc(m.cmd)}</code><button class="mini" title="revelar solução" data-reveal="${i}"><i data-lucide="eye"></i></button><button class="mini" title="inserir no ${m.to==='filter'?'filtro':'console'}" data-insert="${i}"><i data-lucide="corner-down-left"></i></button></div>`:''}
+        ${m.ui==='report'?`<button class="btn pri" id="btnReport" style="margin-bottom:10px"><i data-lucide="file-text"></i> GERAR RELATÓRIO DE ENCERRAMENTO</button>`:''}
+        <button class="hbtn" data-hint="${i}"><i data-lucide="lightbulb"></i> ver dica</button>
+        <div class="hint" id="hint-${i}">${m.hint}</div>
+      </div>`;
+    }
+    return `<div class="ms ${st}" data-ms="${i}">
+      <div class="ms-h"><span class="ms-num">${String(i+1).padStart(2,'0')}</span><span class="ms-t">${m.t}</span><span class="st-ic"><i data-lucide="${ic}"></i></span></div>
+      ${body}
+    </div>`;
+  }).join('');
+  icons();
+  const a=$('#msList .ms.active');a&&a.scrollIntoView({block:'nearest'});
+}
+
+/* =================== mapa de descoberta =================== */
+const nmMap={};
+function buildNetmap(){
+  $('#nmRow').innerHTML=`<div class="slot me"><div class="nm">VOCÊ · ANALISTA</div><div class="ip">10.10.20.7</div><div class="mac">${MAC_ME.toUpperCase()} · eth0 sniffer</div><div class="ips"></div></div>`+
+    Array.from({length:7},(_,i)=>`<div class="slot unk" id="slot-${i}"><div class="nm">HOST ?</div><div class="ip">· · ·</div><div class="mac">—</div><div class="ips"></div></div>`).join('');
+}
+function nmReveal(ip){
+  if(nmMap[ip]!==undefined){const s=$('#slot-'+nmMap[ip]);s.classList.remove('flash');void s.offsetWidth;s.classList.add('flash');return;}
+  const idx=Object.keys(nmMap).length;if(idx>=7)return;
+  nmMap[ip]=idx;const s=$('#slot-'+idx),h=HOSTS[ip];
+  s.classList.remove('unk');s.classList.add('up','flash');
+  s.innerHTML=`<div class="nm">${h.n}</div><div class="ip">${ip}</div><div class="mac">${h.mac.toUpperCase()} · ${h.v}</div><div class="ips"></div>`;
+  $('#nmCount').textContent=`HOSTS ATIVOS ${Object.keys(nmMap).length}/5`;
+}
+function nmPortsFrom(ip,ports){
+  const s=$('#slot-'+nmMap[ip]);if(!s)return;
+  s.querySelector('.ips').innerHTML=ports.map(p=>`<span class="pchip">${p.p} ${p.s.split(/[ /]/)[0]}</span>`).join('');
+}
+function nmDead(){
+  $$('.slot.unk').forEach(s=>{s.classList.add('dead');s.innerHTML='<div class="nm">SEM RESPOSTA</div><div class="ip">—</div><div class="mac">—</div><div class="ips"></div>'});
+}
+
+/* =================== console =================== */
+const OUT=$('#termOut');
+let hist=[],hIdx=0,busy=false;
+function tline(h,c=''){const d=document.createElement('div');d.className='tl '+c;d.innerHTML=h;OUT.appendChild(d);OUT.scrollTop=1e9}
+const pStr=()=>`${state.user}@lab:~$`;
+async function typeRun(fn){
+  busy=true;$('#termIn').readOnly=true;$('#prompt').classList.add('dim');
+  try{await fn()}finally{
+    busy=false;$('#termIn').readOnly=false;$('#prompt').classList.remove('dim');$('#termIn').focus();
+  }
+}
+function helpOut(){
+  tline('comandos do laboratório:','t-h');
+  [['nmap <opções> <alvo>','varredura de rede (simulada)'],
+   ['wireshark','destaca o painel de captura (03)'],
+   ['man nmap','manual rápido das flags'],
+   ['ip a','configurações de rede do analista'],
+   ['whoami','quem você é nesta operação'],
+   ['report','relatório de encerramento (ao fim)'],
+   ['clear','limpa o console']].forEach(([c,d])=>tline(`  <span class="t-ok">${c.padEnd(22)}</span><span class="t-dim">${d}</span>`));
+  tline('alvos autorizados: <span class="t-ok">10.10.20.0/24</span> — apenas este laboratório.','t-dim');
+}
+function manOut(){
+  tline('NMAP(1) — manual reduzido do laboratório','t-h');
+  [['-sn','ping scan: descobre hosts ativos sem varrer portas'],
+   ['-sV','identifica serviço e versão das portas abertas'],
+   ['-O','fingerprint de sistema operacional'],
+   ['-A','tudo junto: -sV + -O + scripts padrão'],
+   ['-p-','varre todas as 65.535 portas (padrão: 1.000 mais comuns)'],
+   ['-p <spec>','portas específicas: -p 21,80,443 ou -p 1-1024'],
+   ['ex.','nmap -sV -O 10.10.20.22']].forEach(([c,d])=>tline(`  <span class="t-ok">${c.padEnd(12)}</span><span class="t-dim">${d}</span>`));
+}
+function ipOut(){
+  tline('eth0: flags=4163&lt;UP,BROADCAST,RUNNING,<span class="t-amb">PROMISC</span>&gt;  mtu 1500');
+  tline('      inet <span class="t-ok">10.10.20.7</span>  netmask 255.255.255.0  broadcast 10.10.20.255');
+  tline(`      ether ${MAC_ME.toUpperCase()}  txqueuelen 1000  (Ethernet)`);
+  tline('lo:   flags=73&lt;UP,LOOPBACK,RUNNING&gt;  mtu 65536','t-dim');
+  tline('      inet 127.0.0.1  netmask 255.0.0.0','t-dim');
+}
+function resolveTarget(t){
+  if(t.startsWith('10.10.20.')&&/\/\d+$/.test(t))return 'cidr';
+  if(HOSTS[t])return t;
+  if(HOSTNAMES[t])return HOSTNAMES[t];
+  if(/^10\.10\.20\.\d{1,3}$/.test(t))return t;
+  if(/^10\.10\./.test(t))return 'outside';
+  return 'unresolved';
+}
+async function nmapExec(args){
+  if(!args){
+    tline('Usage: nmap [tipo de varredura] [opções] {alvo}','t-dim');
+    tline('exemplos no laboratório:','t-dim');
+    tline('  nmap -sn 10.10.20.0/24','t-ok');tline('  nmap -sV 10.10.20.22','t-ok');
+    tline('  nmap -O 10.10.20.22   ·   nmap -A 10.10.20.15   ·   nmap -p- 10.10.20.22','t-ok');
+    return;
+  }
+  const toks=args.split(/\s+/),fl=new Set();let pSpec=null,target=null;
+  for(let i=0;i<toks.length;i++){const t=toks[i];
+    if(t==='-p'){const nx=toks[i+1];if(nx&&!nx.startsWith('-')){pSpec=nx;i++}else pSpec='-'}
+    else if(t.startsWith('-p')&&t.length>2){pSpec=t.slice(2)}
+    else if(t.startsWith('-'))fl.add(t);
+    else target=t;
+  }
+  if(!target){tline('WARNING: nenhum alvo especificado, então 0 hosts escaneados.','t-err');tline('exemplo: nmap -sn 10.10.20.0/24','t-dim');return}
+  const tg=resolveTarget(target);
+  tline('Starting Nmap 7.94 ( https://nmap.org ) at '+nowStr(),'t-dim');
+  await sleep(380);
+  if(fl.has('-sn')||fl.has('-sP')){await pingScan(tg);return;}
+  if(tg==='cidr'){
+    tline('WARNING: varredura de portas em um /24 inteiro sem -sn é lenta e ruidosa;','t-err');
+    tline('para descoberta, comece com <span class="t-ok">-sn</span>. Executando descoberta…','t-dim');
+    await sleep(300);await pingScan('cidr');return;
+  }
+  if(tg==='outside'||tg==='unresolved'){
+    if(tg==='unresolved'){tline(`Failed to resolve "${esc(target)}".`,'t-err');return}
+    tline('Note: Host seems down. If it is really up but blocking our ping probes, try -Pn','t-dim');
+    tline('Nmap done: 1 IP address (0 hosts up) scanned in 2.10 seconds','t-dim');
+    toast('FORA DO ESCOPO','Este laboratório só contém a rede <b>10.10.20.0/24</b>. Varreduras reais fora do escopo autorizado são a regra nº 1 que <b>não</b> se quebra.','err');
+    return;
+  }
+  await portScan(tg,fl,pSpec);
+}
+async function pingScan(tg){
+  const ips=tg==='cidr'?Object.keys(HOSTS):[tg];
+  let up=0;
+  for(const ip of ips){
+    const h=HOSTS[ip];
+    if(h){
+      up++;
+      tline(`Nmap scan report for <b>${h.n}.lab.local</b> (${ip})`,'t-h');await sleep(210);
+      tline(`Host is up (0.000${Math.floor(rnd(40,95))}s latency).`,'t-dim');
+      tline(`MAC Address: ${h.mac.toUpperCase()} (${h.v})`,'t-dim');
+      nmReveal(ip);await sleep(260);
+    }else if(tg!=='cidr'){
+      tline(`Note: Host seems down (${ip}).`,'t-dim');await sleep(300);
+    }
+  }
+  if(tg==='cidr'){
+    nmDead();
+    tline(`Nmap done: 256 IP addresses (${up} hosts up) scanned in ${rnd(2.8,4.2).toFixed(2)} seconds`,'t-dim');
+    F.pingScan=true;
+  }else{
+    tline(`Nmap done: 1 IP address (${up} host${up===1?'':'s'} up) scanned in 0.85 seconds`,'t-dim');
+  }
+  checkAll();
+}
+function specList(spec){
+  const out=[];
+  (spec||'').split(',').forEach(part=>{
+    const m=part.match(/^(\d+)-(\d+)$/);
+    if(m){for(let i=+m[1];i<=+m[2]&&out.length<70000;i++)out.push(i)}
+    else if(/^\d+$/.test(part))out.push(+part);
+  });
+  return out;
+}
+async function portScan(ip,fl,pSpec){
+  const h=HOSTS[ip];
+  if(!h){
+    tline(`Nmap scan report for ${ip}`,'t-h');await sleep(420);
+    tline('Note: Host seems down. If it is really up but blocking our ping probes, try -Pn','t-dim');
+    tline('Nmap done: 1 IP address (0 hosts up) scanned in 3.02 seconds','t-dim');
+    toast('HOST INATIVO','Nenhum host responde nesse endereço. Consulte o mapa de descoberta para os IPs revelados.','err');
+    return;
+  }
+  const sV=fl.has('-sV')||fl.has('-A'), oS=fl.has('-O')||fl.has('-A');
+  const all=pSpec==='-'||pSpec==='1-65535'||pSpec==='0-65535';
+  let ports;
+  if(!pSpec)ports=h.ports.filter(p=>p.top);
+  else if(all)ports=h.ports.slice();
+  else{const list=specList(pSpec);ports=h.ports.filter(p=>list.includes(p.p));}
+  tline(`Nmap scan report for <b>${h.n}.lab.local</b> (${ip})`,'t-h');await sleep(300);
+  tline('Host is up (0.00071s latency).','t-dim');await sleep(200);
+  if(!pSpec){tline(`Not shown: ${1000-h.ports.filter(p=>p.top).length} closed tcp ports (reset)`,'t-dim');await sleep(180);}
+  else if(!all){
+    const list=specList(pSpec);
+    if(list.length<=8){list.forEach(pt=>{if(!h.ports.some(p=>p.p===pt))tline(`${(pt+'/tcp').padEnd(10)}closed ${SVC[pt]||'unknown'}`,'t-dim')})}
+    else tline(`Not shown: ${list.length-ports.length} closed tcp ports (reset)`,'t-dim');
+  }
+  tline(`PORT      STATE  SERVICE${sV?'          VERSION':''}`,'t-h');
+  for(const p of ports){
+    const svc=(p.s+'          ').slice(0,sV?16:14);
+    tline(`<span class="t-ok">${(p.p+'/tcp').padEnd(10)}</span>${'open'.padEnd(7)}${svc}${sV?'<span class="t-amb">'+esc(p.v)+'</span>':''}`);
+    await sleep(240);
+  }
+  if(sV){tline('Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel','t-dim');await sleep(160);}
+  if(oS){
+    await sleep(240);
+    tline('Device type: general purpose','t-h');
+    tline('Running: Linux 5.X','t-h');
+    tline(`OS details: ${h.os}`,'t-amb');
+  }
+  tline(`Nmap done: 1 IP address (1 host up) scanned in ${rnd(1.2,3.4).toFixed(2)} seconds`,'t-dim');
+  if(nmMap[ip]===undefined)nmReveal(ip);
+  nmPortsFrom(ip,ports);
+  if(ip==='10.10.20.22'){if(sV)F.svFilesrv=true;if(oS)F.osFilesrv=true;}
+  checkAll();
+}
+async function exec(raw){
+  const tk=raw.split(/\s+/),c=tk[0].toLowerCase(),args=raw.slice(c.length).trim();
+  switch(c){
+    case 'help':helpOut();break;
+    case 'clear':OUT.innerHTML='';break;
+    case 'nmap':await nmapExec(args);break;
+    case 'wireshark':case 'shark':
+      tline('o Wireshark simulado vive no painel <b>03 · CAPTURA</b>, à direita.','t-dim');
+      $('#capPanel').classList.remove('pulse');void $('#capPanel').offsetWidth;$('#capPanel').classList.add('pulse');break;
+    case 'whoami':tline(state.user+' — analista de segurança em treinamento (laboratório simulado)');break;
+    case 'ip':case 'ifconfig':ipOut();break;
+    case 'man':args.includes('nmap')?manOut():tline('página não encontrada. tente: man nmap','t-dim');break;
+    case 'report':(state.step>=8||F.report)?openReport():tline('relatório indisponível: conclua as missões primeiro.','t-dim');break;
+    case 'exit':tline('sem saída: este laboratório vive inteiro no seu navegador.','t-dim');break;
+    default:
+      tline(`bash: ${esc(c)}: command not found`,'t-err');
+      tline('comandos disponíveis: help · nmap · wireshark · man nmap · ip a · whoami · report · clear','t-dim');
+  }
+}
+
+/* =================== engine de captura =================== */
+const cap={on:false,paused:false,pkts:[],no:0,t0:0,filter:'',sel:null,stream:0,noiseTimer:null};
+let ipId=0x1c20;
+const macB=m=>m.split(':').map(x=>parseInt(x,16));
+const ipB=ip=>ip.split('.').map(Number);
+const p16=(b,v)=>b.push((v>>8)&255,v&255);
+const p32=(b,v)=>b.push((v>>>24)&255,(v>>16)&255,(v>>8)&255,v&255);
+const enc=s=>[...new TextEncoder().encode(s)];
+const flagByte=f=>{let x=0;const m={FIN:1,SYN:2,RST:4,PSH:8,ACK:16,URG:32};f.forEach(k=>x|=m[k]);return x};
+
+function frameIP(o){
+  const b=[],sm=o.srcMac||MAC_ME,dm=o.dstMac;
+  b.push(...macB(dm),...macB(sm));p16(b,0x0800);
+  const ipStart=b.length,l4=o.l4,payload=o.payload||[];
+  const tot=20+l4.length+payload.length;
+  b.push(0x45,0);p16(b,tot);p16(b,(ipId=(ipId+1)&0xffff));b.push(0x40,64,l4.proto);p16(b,0);
+  b.push(...ipB(o.src),...ipB(o.dst));
+  const l4Start=b.length;b.push(...l4);
+  const payStart=b.length;b.push(...payload);
+  return {...o,bytes:new Uint8Array(b),ranges:{ip:[ipStart,20],l4:[l4Start,l4.length],app:[payStart,payload.length]}};
+}
+function tcpH(sp,dp,flags,seq,ack){const t=[];p16(t,sp);p16(t,dp);p32(t,seq);p32(t,ack);t.push(0x50,flagByte(flags));p16(t,64240);p16(t,0);p16(t,0);t.proto=6;return t}
+function udpH(sp,dp,payLen){const u=[];p16(u,sp);p16(u,dp);p16(u,8+payLen);p16(u,0);u.proto=17;return u}
+function mkTcpPkt(o){
+  const payload=o.payload||(o.payloadText?enc(o.payloadText):[]);
+  const l4=tcpH(o.sp,o.dp,o.flags||[],o.seq||1,o.ack||1);
+  const p=frameIP({...o,l4,payload});
+  p.sp=o.sp;p.dp=o.dp;p.tcpFlags=o.flags||[];
+  return p;
+}
+function mkUdpPkt(o){
+  const payload=o.payload||[];
+  const l4=udpH(o.sp,o.dp,payload.length);
+  const p=frameIP({...o,l4,payload});
+  p.sp=o.sp;p.dp=o.dp;return p;
+}
+function buildTree(p){
+  const T=[];
+  T.push({l:`Frame ${p.no}: ${p.bytes.length} bytes on wire`,r:[0,p.bytes.length],f:[['Frame length',`${p.bytes.length} bytes capturados`],['Protocols in frame',p.pif||'eth:ethertype:ip'],['Interface','eth0']]});
+  T.push({l:'Ethernet II',r:[0,14],f:[['Destination',p.macD],['Source',p.macS],['Type',p.etype==='arp'?'ARP (0x0806)':'IPv4 (0x0800)']]});
+  if(p.etype!=='arp'){
+    T.push({l:'Internet Protocol Version 4',r:p.ranges.ip,f:[['Version','4'],['Header length','20 bytes'],['Total Length',String(p.ranges.ip[1]+p.ranges.l4[1]+p.ranges.app[1])],['TTL','64'],['Protocol',p.set.includes('tcp')?'TCP (6)':p.set.includes('udp')?'UDP (17)':'ICMP (1)'],['Source Address',p.src],['Destination Address',p.dst]]});
+    if(p.set.includes('tcp'))T.push({l:`Transmission Control Protocol, Src Port: ${p.sp}, Dst Port: ${p.dp}`,r:p.ranges.l4,f:[['Source Port',String(p.sp)],['Destination Port',String(p.dp)],['Stream Index',String(p.streamId)],['TCP Flags',(p.tcpFlags||[]).join(', ')||'ACK'],['Window Size','64240']]});
+    else if(p.set.includes('udp'))T.push({l:'User Datagram Protocol, Src Port: '+p.sp+', Dst Port: '+p.dp,r:p.ranges.l4,f:[['Source Port',String(p.sp)],['Destination Port',String(p.dp)],['Length',String(p.ranges.l4[1]+p.ranges.app[1])],['Checksum','0x0000']]});
+  }
+  if(p.appTree)T.push({l:p.appTree.l,r:p.ranges.app,f:p.appTree.f,cred:p.appTree.cred});
+  return T;
+}
+function addPacket(p){
+  if(cap.pkts.length>=900)cap.pkts.shift();
+  p.no=++cap.no;
+  p.t=cap.on?(performance.now()-cap.t0)/1000:0;
+  p.len=p.bytes.length;
+  p.macS=(p.srcMac||MAC_ME).toUpperCase();
+  p.macD=(p.dstMac||'').toUpperCase();
+  p.tree=buildTree(p);
+  cap.pkts.push(p);
+  if(passFilter(p))appendRow(p);
+  updateCapStatus();
+}
+
+/* geradores de pacotes */
+function mkArpReq(sender,target){
+  const b=[];
+  b.push(...macB('ff:ff:ff:ff:ff:ff'),...macB(MAC_ME));p16(b,0x0806);
+  b.push(0,1,8,0,6,4,0,1);
+  b.push(...macB(MAC_ME),...ipB(sender),0,0,0,0,0,0,...ipB(target));
+  return {src:sender,dst:target,proto:'ARP',set:['arp'],etype:'arp',streamId:-1,srcMac:MAC_ME,dstMac:'ff:ff:ff:ff:ff:ff',
+    info:`Who has ${target}? Tell ${sender}`,bytes:new Uint8Array(b),
+    ranges:{ip:[0,0],l4:[0,0],app:[14,28]},
+    appTree:{l:'Address Resolution Protocol',f:[['Opcode','request (1)'],['Sender MAC',MAC_ME.toUpperCase()],['Sender IP',sender],['Target MAC','00:00:00:00:00:00'],['Target IP',target]]}};
+}
+function dnsPay(name,id,resp,ip){
+  const b=[];p16(b,id);b.push(resp?0x81:0x01,resp?0x80:0x00);p16(b,1);p16(b,resp?1:0);p16(b,0);p16(b,0);
+  name.split('.').forEach(l=>{b.push(l.length);for(const c of l)b.push(c.charCodeAt(0))});b.push(0);
+  p16(b,1);p16(b,1);
+  if(resp){b.push(0xc0,0x0c);p16(b,1);p16(b,1);p32(b,300);p16(b,4);b.push(...ipB(ip));}
+  return b;
+}
+const DOMAINS=['ntp.lab.local','updates.lab.local','printer10.lab.local','repo.interno','time.acme.br'];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const pickIP=()=>Math.random()<.7?'10.10.20.1':'10.10.20.15';
+function mkDnsQ(name){
+  const id=Math.floor(rnd(0,65535));
+  return mkUdpPkt({src:ME,dst:'10.10.20.1',sp:Math.floor(rnd(40000,60000)),dp:53,payload:dnsPay(name,id,false),proto:'DNS',set:['udp','dns'],pif:'eth:ethertype:ip:udp:dns',streamId:-1,
+    info:`Standard query 0x${id.toString(16)} A ${name}`,
+    appTree:{l:'Domain Name System (query)',f:[['Transaction ID','0x'+id.toString(16)],['Flags','0x0100 Standard query'],['Questions','1'],['Queried name',name],['Type','A (1)']]}});
+}
+function mkDnsR(name,ip){
+  const id=Math.floor(rnd(0,65535));
+  return mkUdpPkt({src:'10.10.20.1',dst:ME,sp:53,dp:Math.floor(rnd(40000,60000)),srcMac:HOSTS['10.10.20.1'].mac,dstMac:MAC_ME,payload:dnsPay(name,id,true,ip),proto:'DNS',set:['udp','dns'],pif:'eth:ethertype:ip:udp:dns',streamId:-1,
+    info:`Standard query response 0x${id.toString(16)} A ${name} A ${ip}`,
+    appTree:{l:'Domain Name System (response)',f:[['Transaction ID','0x'+id.toString(16)],['Flags','0x8180 Standard query response, Recursion available'],['Answers','1'],['Answer name',name],['Answer Type','A (1)'],['Answer Address',ip]]}});
+}
+function mkTlsApp(){
+  const ip=pickIP();
+  const payload=[0x17,0x03,0x03,0x00,0x18,...Array.from({length:24},()=>Math.floor(rnd(0,256)))];
+  return mkTcpPkt({src:ME,dst:ip,sp:Math.floor(rnd(41000,49000)),dp:443,dstMac:HOSTS[ip].mac,flags:['PSH','ACK'],seq:Math.floor(rnd(1e6,9e6)),ack:Math.floor(rnd(1e6,9e6)),payload,proto:'TLSv1.3',set:['tcp','tls'],pif:'eth:ethertype:ip:tcp:tls',info:'Application Data',streamId:-1,
+    appTree:{l:'Transport Layer Security',f:[['Content Type','Application Data (23)'],['Version','TLS 1.3'],['Length','24 bytes']]}});
+}
+function mkSshKA(){
+  return mkTcpPkt({src:'10.10.20.22',dst:ME,sp:22,dp:Math.floor(rnd(40000,50000)),srcMac:HOSTS['10.10.20.22'].mac,dstMac:MAC_ME,flags:['PSH','ACK'],seq:Math.floor(rnd(1e6,9e6)),ack:Math.floor(rnd(1e6,9e6)),payload:[94,183,52,160,0,0,0,4],proto:'SSH',set:['tcp','ssh'],pif:'eth:ethertype:ip:tcp:ssh',info:'Client: Encrypted packet (len=8)',streamId:-1,
+    appTree:{l:'SSH Protocol',f:[['Packet Type','Encrypted data'],['Length','8 bytes']]}});
+}
+function mkNtp(){
+  const payload=new Array(48).fill(0);payload[0]=0x23;
+  return mkUdpPkt({src:ME,dst:'10.10.20.1',sp:Math.floor(rnd(30000,50000)),dp:123,payload,proto:'NTP',set:['udp','ntp'],pif:'eth:ethertype:ip:udp:ntp',info:'NTP Version 4, client',streamId:-1,
+    appTree:{l:'Network Time Protocol',f:[['Version','4'],['Mode','3 (client)'],['Stratum','0']]},
+    });
+}
+function mkIcmp(){
+  const l4=[8,0,0,0,0,1,0,1];l4.proto=1;
+  return frameIP({src:ME,dst:'10.10.20.1',dstMac:HOSTS['10.10.20.1'].mac,l4,payload:enc('abcdefghijklmnopqrstuvwabcdefghi'),proto:'ICMP',set:['icmp'],pif:'eth:ethertype:ip:icmp',info:'Echo (ping) request  10.10.20.7 → 10.10.20.1  id=0x0001 seq=1/256',streamId:-1,
+    appTree:{l:'Internet Control Message Protocol',f:[['Type','8 (Echo (ping) request)'],['Code','0'],['Checksum','0x0000'],['Identifier','0x0001'],['Sequence (BE)','1'],['Data (32 bytes)','abcdefghijklmnopqrstuvwabcdefghi']]}});
+}
+function genNoise(){
+  const r=Math.random();
+  if(r<.16)addPacket(mkArpReq(ME,'10.10.20.1'));
+  else if(r<.44){const d=pick(DOMAINS);addPacket(mkDnsQ(d));addPacket(mkDnsR(d,pickIP()));}
+  else if(r<.72)addPacket(mkTlsApp());
+  else if(r<.86)addPacket(mkSshKA());
+  else if(r<.94)addPacket(mkNtp());
+  else addPacket(mkIcmp());
+}
+function scheduleNoise(){
+  clearTimeout(cap.noiseTimer);
+  if(!cap.on||cap.paused)return;
+  cap.noiseTimer=setTimeout(()=>{genNoise();scheduleNoise()},rnd(700,1600));
+}
+
+/* sessões do alvo */
+function ftpApp(line,isResp,cred){
+  let f;
+  if(isResp)f=[['Response code',line.slice(0,3)],['Response text',line.slice(4)]];
+  else if(/^(USER|PASS)/.test(line))f=[['FTP Command',line.slice(0,4).trim()],[line.startsWith('PASS')?'Password':'Username',line.slice(5)],...(cred?[['Credencial em texto claro','visível para qualquer sniffer no segmento',1]]:[])];
+  else f=[['FTP Command',line]];
+  return {l:'File Transfer Protocol (FTP)',f,cred:!!cred};
+}
+async function genFtpSession(){
+  const sId=++cap.stream,S='10.10.20.22',sp=Math.floor(rnd(49000,55000));
+  let sc=Math.floor(rnd(1e6,9e6)),ss=Math.floor(rnd(1e6,9e6));
+  const hs=(o)=>addPacket(mkTcpPkt({...o,proto:'TCP',set:['tcp'],pif:'eth:ethertype:ip:tcp',streamId:sId}));
+  hs({src:ME,dst:S,sp,dp:21,dstMac:HOSTS[S].mac,flags:['SYN'],seq:sc,ack:0,info:`${sp} → 21 [SYN] Seq=0 Win=64240 Len=0 MSS=1460`});await sleep(rnd(140,280));
+  hs({src:S,dst:ME,sp:21,dp:sp,srcMac:HOSTS[S].mac,dstMac:MAC_ME,flags:['SYN','ACK'],seq:ss,ack:sc+1,info:`21 → ${sp} [SYN, ACK] Seq=0 Ack=1 Win=64240 Len=0 MSS=1460`});await sleep(rnd(100,220));
+  hs({src:ME,dst:S,sp,dp:21,dstMac:HOSTS[S].mac,flags:['ACK'],seq:sc+1,ack:ss+1,info:`${sp} → 21 [ACK] Seq=1 Ack=1 Win=64240 Len=0`});
+  sc++;ss++;await sleep(rnd(160,320));
+  const out=async(fromS,line,cred)=>{
+    const isC=!fromS,payloadText=line+'\r\n';
+    addPacket(mkTcpPkt({sp:isC?sp:21,dp:isC?21:sp,src:isC?ME:S,dst:isC?S:ME,dstMac:isC?HOSTS[S].mac:MAC_ME,srcMac:isC?MAC_ME:HOSTS[S].mac,
+      flags:['PSH','ACK'],set:['tcp','ftp'],pif:'eth:ethertype:ip:tcp:ftp',proto:'FTP',streamId:sId,payloadText,
+      seq:isC?sc:ss,ack:isC?ss:sc,info:(isC?'Request: ':'Response: ')+line,appTree:ftpApp(line,!isC,cred)}));
+    if(isC)sc+=payloadText.length;else ss+=payloadText.length;
+  };
+  await out(false,'220 filesrv FTP server (vsftpd 2.3.4) ready.');await sleep(rnd(200,420));
+  await out(true,'USER backup-op',1);await sleep(rnd(160,360));
+  await out(false,'331 Please specify the password.');await sleep(rnd(280,520));
+  await out(true,'PASS '+FTP_PASS,1);await sleep(rnd(160,360));
+  await out(false,'230 Login successful.');await sleep(rnd(200,380));
+  await out(true,'SYST');await sleep(rnd(120,260));
+  await out(false,'215 UNIX Type: L8');await sleep(rnd(220,420));
+  await out(true,'QUIT');await sleep(rnd(120,260));
+  await out(false,'221 Goodbye.');
+}
+async function genWebSession(){
+  const sId=++cap.stream,S='10.10.20.15',sp=Math.floor(rnd(49000,55000));
+  let sc=Math.floor(rnd(1e6,9e6)),ss=Math.floor(rnd(1e6,9e6));
+  const hs=(o)=>addPacket(mkTcpPkt({...o,proto:'TCP',set:['tcp'],pif:'eth:ethertype:ip:tcp',streamId:sId}));
+  hs({src:ME,dst:S,sp,dp:80,dstMac:HOSTS[S].mac,flags:['SYN'],seq:sc,ack:0,info:`${sp} → 80 [SYN] Seq=0 Win=64240 Len=0 MSS=1460`});await sleep(rnd(140,280));
+  hs({src:S,dst:ME,sp:80,dp:sp,srcMac:HOSTS[S].mac,dstMac:MAC_ME,flags:['SYN','ACK'],seq:ss,ack:sc+1,info:`80 → ${sp} [SYN, ACK] Seq=0 Ack=1 Win=64240 Len=0 MSS=1460`});await sleep(rnd(100,220));
+  hs({src:ME,dst:S,sp,dp:80,dstMac:HOSTS[S].mac,flags:['ACK'],seq:sc+1,ack:ss+1,info:`${sp} → 80 [ACK] Seq=1 Ack=1 Win=64240 Len=0`});
+  sc++;ss++;await sleep(rnd(160,340));
+  const httpOut=async(fromS,payloadText,info,appTree,httpAuth)=>{
+    const isC=!fromS;
+    addPacket(mkTcpPkt({sp:isC?sp:80,dp:isC?80:sp,src:isC?ME:S,dst:isC?S:ME,dstMac:isC?HOSTS[S].mac:MAC_ME,srcMac:isC?MAC_ME:HOSTS[S].mac,
+      flags:['PSH','ACK'],set:['tcp','http'],pif:'eth:ethertype:ip:tcp:http',proto:'HTTP',streamId:sId,payloadText,httpAuth,
+      seq:isC?sc:ss,ack:isC?ss:sc,info,appTree}));
+    if(isC)sc+=payloadText.length;else ss+=payloadText.length;
+  };
+  const UA='Mozilla/5.0 (X11; Linux x86_64) AnalistaLab/1.0';
+  await httpOut(false,['GET / HTTP/1.1','Host: web01.lab.local','User-Agent: '+UA,'Accept: text/html','',''].join('\r\n'),'GET / HTTP/1.1',
+    {l:'Hypertext Transfer Protocol',f:[['Request Method','GET'],['Request URI','/'],['Request Version','HTTP/1.1'],['Host','web01.lab.local'],['User-Agent',UA],['Connection','keep-alive']]});
+  await sleep(rnd(220,420));
+  await httpOut(true,['HTTP/1.1 200 OK','Server: nginx/1.24.0','Content-Type: text/html; charset=utf-8','',''].join('\r\n'),'HTTP/1.1 200 OK  (text/html)',
+    {l:'Hypertext Transfer Protocol',f:[['Response Version','HTTP/1.1'],['Status Code','200'],['Response Phrase','OK'],['Server','nginx/1.24.0'],['Content-Type','text/html; charset=utf-8']]});
+  await sleep(rnd(260,480));
+  const b64=btoa(WEB_USER+':'+WEB_PASS);
+  await httpOut(false,['POST /login HTTP/1.1','Host: web01.lab.local','Authorization: Basic '+b64,'User-Agent: '+UA,'Content-Type: application/x-www-form-urlencoded','Content-Length: 0','',''].join('\r\n'),'POST /login HTTP/1.1',
+    {l:'Hypertext Transfer Protocol',f:[['Request Method','POST'],['Request URI','/login'],['Request Version','HTTP/1.1'],['Host','web01.lab.local'],['Authorization','Basic '+b64],['Credencial decodificada (Base64)',WEB_USER+' : '+WEB_PASS,1],['User-Agent',UA]],cred:true},true);
+  await sleep(rnd(180,380));
+  await httpOut(true,['HTTP/1.1 302 Found','Location: /dashboard','Server: nginx/1.24.0','',''].join('\r\n'),'HTTP/1.1 302 Found  (text/html)',
+    {l:'Hypertext Transfer Protocol',f:[['Response Version','HTTP/1.1'],['Status Code','302'],['Response Phrase','Found'],['Location','/dashboard'],['Server','nginx/1.24.0']]});
+}
+
+/* =================== render da captura =================== */
+const PCOL={TCP:'c-acc',FTP:'c-amb',HTTP:'c-amb',DNS:'c-ink',ARP:'c-dim',TLS:'c-dim',SSH:'c-ink',NTP:'c-dim',ICMP:'c-dim'};
+const listEl=$('#pkList');
+ $('#pkList').innerHTML='<div class="row head"><span>NO.</span><span>TEMPO</span><span>ORIGEM</span><span>DESTINO</span><span>PROTO</span><span>TAM</span><span>INFO</span></div>';
+function rowCells(p){
+  const k=PCOL[p.proto.split('v')[0]]||'c-dim';
+  return `<span>${p.no}</span><span>${p.t.toFixed(3)}</span><span>${esc(p.src)}</span><span>${esc(p.dst)}</span><span class="${k}">${p.proto}</span><span>${p.len}</span><span>${esc(p.info)}</span>`;
+}
+function appendRow(p){
+  const el=document.createElement('div');
+  el.className='row'+(cap.sel===p?' sel':'');el.dataset.no=p.no;
+  el.innerHTML=rowCells(p);
+  const nearBottom=listEl.scrollHeight-listEl.scrollTop-listEl.clientHeight<80;
+  listEl.appendChild(el);
+  if(nearBottom)listEl.scrollTop=listEl.scrollHeight;
+}
+function passFilter(p){
+  if(!cap.filter)return true;
+  try{return evalFilter(cap.filter,p)}catch(e){return false}
+}
+function updateCapStatus(){
+  const shown=cap.pkts.reduce((a,p)=>a+(passFilter(p)?1:0),0);
+  $('#capStatus').textContent=`Pacotes: ${cap.pkts.length} · Exibidos: ${shown} · Interface: ${$('#iface').value} · ${cap.on?(cap.paused?'PAUSADA':'CAPTURANDO'):'PARADA'}`;
+}
+function renderList(){
+  const rows=cap.pkts.filter(passFilter).map(p=>`<div class="row${cap.sel===p?' sel':''}" data-no="${p.no}">${rowCells(p)}</div>`).join('');
+  listEl.innerHTML='<div class="row head"><span>NO.</span><span>TEMPO</span><span>ORIGEM</span><span>DESTINO</span><span>PROTO</span><span>TAM</span><span>INFO</span></div>'+rows;
+  listEl.scrollTop=listEl.scrollHeight;
+  updateCapStatus();
+}
+function renderHex(p,range){
+  const b=p.bytes;let html='';
+  for(let o=0;o<b.length;o+=16){
+    let hex='',asc='';
+    for(let i=0;i<16;i++){
+      const idx=o+i;
+      if(idx<b.length){
+        const inR=range&&idx>=range[0]&&idx<range[0]+range[1];
+        const h=b[idx].toString(16).padStart(2,'0');
+        const ch=(b[idx]>=32&&b[idx]<127)?String.fromCharCode(b[idx]):'·';
+        hex+=(inR?`<i>${h}</i>`:h)+(i===7?'  ':' ');
+        asc+=inR?`<i>${esc(ch)}</i>`:esc(ch);
+      }else{hex+='   ';asc+=' ';}
+    }
+    html+=`<div class="hx"><span class="off">${o.toString(16).padStart(4,'0')}</span>  ${hex} <span class="off">${asc}</span></div>`;
+  }
+  $('#hexBody').innerHTML=html;
+}
+function renderDetail(p){
+  const note=p.appTree&&p.appTree.cred?`<div class="crednote">CREDENCIAL EM TEXTO CLARO — evidência registrada para o relatório final.</div>`:'';
+  $('#pkDetailBody').innerHTML=note+p.tree.map((n,i)=>
+    `<div class="tn${n.cred?' credh':''}" data-r="${n.r?n.r[0]+','+n.r[1]:''}">
+      <div class="tn-h${n.cred?' cred':''}"><i data-lucide="chevron-down"></i><span>${esc(n.l)}</span></div>
+      <div class="tn-f">${n.f.map(f=>`<div class="tf"><span>${esc(f[0])}:</span> <b class="${f[2]?'amb':''}">${esc(f[1])}</b></div>`).join('')}</div>
+    </div>`).join('');
+  icons();
+  $('#pkDetailBody').querySelectorAll('.tn').forEach(tn=>{
+    tn.addEventListener('click',()=>{
+      const r=(tn.dataset.r||'').split(',').map(Number);
+      if(r.length===2&&r[1]>0)renderHex(p,r);else renderHex(p,[0,p.bytes.length]);
+      if(event&&event.target.closest('.tn-h'))tn.classList.toggle('closed');
+    });
+  });
+}
+function selectPkt(p){
+  cap.sel=p;
+  $$('#pkList .row.sel').forEach(r=>r.classList.remove('sel'));
+  const r=$(`#pkList .row[data-no="${p.no}"]`);if(r){r.classList.add('sel');r.scrollIntoView({block:'nearest'});}
+  renderDetail(p);
+  renderHex(p,p.ranges.app[1]>0?p.ranges.app:[0,p.bytes.length]);
+  $('#btnFollow').disabled=!p.set.includes('tcp');
+  if(p.set.includes('ftp')&&/USER |PASS /.test(p.info)){F.ftpCred=true;checkAll();}
+  if(p.httpAuth){F.httpAuth=true;checkAll();}
+}
+listEl.addEventListener('click',e=>{
+  const r=e.target.closest('.row');
+  if(!r||r.classList.contains('head'))return;
+  const p=cap.pkts.find(q=>q.no==r.dataset.no);
+  if(p)selectPkt(p);
+});
+
+/* =================== filtros =================== */
+const DIRECT=['tcp','udp','ftp','http','dns','arp','tls','ssh','ntp','icmp'];
+const SAMPLE={src:ME,dst:'10.10.20.22',set:['tcp','udp','ftp','http','dns','arp','tls','ssh','ntp','icmp'],sp:1234,dp:80,streamId:0};
+function pred(pr,p){
+  if(!pr)return true;
+  const P=pr.toLowerCase();
+  if(DIRECT.includes(P))return p.set.includes(P);
+  const m=pr.match(/^\s*(ip\.addr|ip\.src|ip\.dst|tcp\.port|udp\.port|tcp\.stream)\s*(==|!=)\s*"?([^"\s]+)"?\s*$/i);
+  if(!m)throw 0;
+  const k=m[1].toLowerCase(),op=m[2],val=m[3];
+  let res;
+  switch(k){
+    case 'ip.addr':res=(p.src===val||p.dst===val);break;
+    case 'ip.src':res=p.src===val;break;
+    case 'ip.dst':res=p.dst===val;break;
+    case 'tcp.port':res=p.set.includes('tcp')&&(p.sp==+val||p.dp==+val);break;
+    case 'udp.port':res=p.set.includes('udp')&&(p.sp==+val||p.dp==+val);break;
+    case 'tcp.stream':res=p.streamId==+val;break;
+  }
+  return op==='!='?!res:res;
+}
+function evalFilter(expr,p){
+  if(!expr||!expr.trim())return true;
+  return expr.split('||').map(s=>s.trim()).some(g=>g.split('&&').map(s=>s.trim()).every(pr=>pred(pr,p)));
+}
+ $('#flt').addEventListener('input',()=>{
+  const v=$('#flt').value.trim(),w=$('#fltWrap');
+  if(!v){w.classList.remove('inv','val');return}
+  let ok=true;try{evalFilter(v,SAMPLE)}catch(e){ok=false}
+  w.classList.toggle('inv',!ok);w.classList.toggle('val',ok);
+});
+ $('#flt').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const v=$('#flt').value.trim();
+  if(v){
+    let ok=true;try{evalFilter(v,SAMPLE)}catch(err){ok=false}
+    if(!ok){toast('FILTRO INVÁLIDO','Expressão não reconhecida. Ex.: <code>ftp</code>, <code>ip.addr == 10.10.20.22</code>, <code>tcp.port == 21</code>, combinando com <code>&amp;&amp;</code> / <code>||</code>.','err');return}
+    cap.filter=v;
+    if(/\bftp\b/i.test(v))F.filterFtp=true;
+    if(/10\.10\.20\.22/.test(v))F.filterFilesrv=true;
+  }else cap.filter='';
+  renderList();checkAll();
+});
+
+/* =================== controles da captura =================== */
+function setCapUI(){
+  const led=$('#capLed'),st=$('#capState'),b=$('#btnCap');
+  if(!cap.on){led.className='led';st.textContent='PARADA';b.innerHTML='<i data-lucide="play"></i><span>Iniciar</span>';}
+  else if(cap.paused){led.className='led hold';st.textContent='PAUSADA';b.innerHTML='<i data-lucide="play"></i><span>Retomar</span>';}
+  else{led.className='led on';st.textContent='CAPTURANDO';b.innerHTML='<i data-lucide="pause"></i><span>Pausar</span>';}
+  icons();updateCapStatus();
+}
+ $('#btnCap').addEventListener('click',()=>{
+  if(!cap.on){
+    cap.on=true;cap.paused=false;cap.t0=performance.now();
+    F.captureStarted=true;
+    setCapUI();scheduleNoise();
+    toast('CAPTURA INICIADA','Interface <b>eth0</b> em modo promíscuo (simulado). Use os geradores de tráfego para reproduzir a atividade do alvo.');
+  }else{
+    cap.paused=!cap.paused;
+    if(cap.paused){clearTimeout(cap.noiseTimer);toast('CAPTURA PAUSADA','A escuta continua, mas nenhum pacote novo entra na lista.','warn');}
+    else scheduleNoise();
+    setCapUI();
+  }
+});
+ $('#btnClear').addEventListener('click',()=>{
+  cap.pkts=[];cap.sel=null;
+  listEl.innerHTML='<div class="row head"><span>NO.</span><span>TEMPO</span><span>ORIGEM</span><span>DESTINO</span><span>PROTO</span><span>TAM</span><span>INFO</span></div>';
+  $('#pkDetailBody').innerHTML='<div class="empty">clique em um pacote na lista para inspecionar</div>';
+  $('#hexBody').innerHTML='<div class="empty">o hexdump do frame selecionado aparece aqui</div>';
+  $('#btnFollow').disabled=true;
+  updateCapStatus();
+  toast('CAPTURA REINICIADA','Lista e inspeção limpas — o contador de frames continua.','warn');
+});
+ $('#iface').addEventListener('change',()=>{
+  if($('#iface').value!=='eth0')toast('INTERFACE SEM TRÁFEGO','Neste laboratório, apenas <b>eth0</b> recebe tráfego do segmento.','warn');
+  updateCapStatus();
+});
+async function guarded(gen,btn){
+  if(!cap.on||cap.paused){toast('CAPTURA INATIVA','Inicie (ou retome) a captura antes de gerar tráfego do alvo.','err');return}
+  btn.disabled=true;
+  try{await gen()}finally{btn.disabled=false}
+}
+ $('#btnFtp').addEventListener('click',e=>guarded(genFtpSession,e.currentTarget));
+ $('#btnWeb').addEventListener('click',e=>guarded(genWebSession,e.currentTarget));
+
+/* =================== follow stream =================== */
+function followStream(){
+  const p=cap.sel;
+  if(!p||!p.set.includes('tcp')){toast('NADA PARA SEGUIR','Selecione um pacote TCP na lista antes de seguir o stream.','err');return}
+  const grp=cap.pkts.filter(q=>q.streamId===p.streamId&&q.set.includes('tcp'));
+  const protoName=grp.some(q=>q.set.includes('ftp'))?'FTP':grp.some(q=>q.set.includes('http'))?'HTTP':'TCP';
+  $('#stTitle').textContent=`SEGUIR TCP STREAM ${p.streamId} — ${protoName}`;
+  $('#stSub').textContent=`${grp[0].src}:${grp[0].sp} ↔ ${grp[0].dst}:${grp[0].dp} · ${grp.length} pacotes`;
+  $('#stBody').innerHTML=grp.filter(q=>q.payloadText).map(q=>
+    `<div class="stl ${q.src===ME?'me':'srv'}"><b>${q.src===ME?'C→S':'S←C'}</b>${esc(q.payloadText)}</div>`).join('')||'<div class="empty">stream sem payload de texto</div>';
+  openOv('#streamOv');
+  if(!F.stream){F.stream=true;checkAll();}
+}
+ $('#btnFollow').addEventListener('click',followStream);
+ $('#stClose').addEventListener('click',()=>closeOv('#streamOv'));
+ $('#repClose').addEventListener('click',()=>closeOv('#repOv'));
+ $('#repClose2').addEventListener('click',()=>closeOv('#repOv'));
+ $('#repRestart').addEventListener('click',()=>location.reload());
+ $$('.ov').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov&&ov.id!=='bootOv')ov.classList.add('hid')}));
+
+/* =================== relatório =================== */
+const FINDINGS=[
+ {cls:'s1',sev:'CRÍTICO',t:'Credenciais FTP em texto claro',d:'Usuário e senha (backup-op) capturados sem criptografia em 10.10.20.22, porta 21/tcp (vsftpd 2.3.4).',r:'Substituir FTP por SFTP/FTPS e rotacionar imediatamente a credencial exposta.'},
+ {cls:'s2',sev:'ALTO',t:'Autenticação web sem TLS',d:'Login com HTTP Basic (apenas Base64) em 10.10.20.15, porta 80/tcp.',r:'Forçar HTTPS com HSTS e trocar Basic por sessões com cookies seguros.'},
+ {cls:'s3',sev:'MÉDIO',t:'Serviço legado exposto',d:'vsftpd 2.3.4 em produção — versão antiga com histórico conhecido de vulnerabilidades.',r:'Atualizar ou desativar o serviço; restringir o acesso por firewall.'},
+ {cls:'s3',sev:'MÉDIO',t:'Portas administrativas abertas',d:'445 e 3389 acessíveis na workstation ws-recepcao (10.10.20.30).',r:'Restringir a VPN/jump host e habilitar bloqueio por falha de autenticação.'},
+ {cls:'s4',sev:'BAIXO',t:'Superfície internamente mapeável',d:'Cinco hosts responderam a sondas ICMP/ARP sem qualquer filtragem no segmento.',r:'Segmentar a rede e limitar respostas a sondas para dificultar reconhecimento interno.'},
+];
+function openReport(){
+  const secs=Math.floor((Date.now()-state.stats.t0)/1000);
+  const dur=String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
+  const inv=Object.entries(HOSTS).map(([ip,h])=>
+    `<tr><td>${ip}</td><td>${h.n}</td><td>${h.ports.map(p=>p.p+'/'+p.s.split(/[ /]/)[0]).join(', ')}</td><td>${esc(h.os)}</td></tr>`).join('');
+  $('#repBody').innerHTML=`
+    <div class="rstats">
+      <div><b>${dur}</b><span>duração</span></div>
+      <div><b>${state.stats.cmds}</b><span>comandos</span></div>
+      <div><b>${cap.no}</b><span>frames capturados</span></div>
+      <div><b>5</b><span>hosts mapeados</span></div>
+    </div>
+    <h3>Inventário descoberto</h3>
+    <table class="inv"><tr><th>IP</th><th>HOST</th><th>PORTAS/SERVIÇOS</th><th>SISTEMA</th></tr>${inv}</table>
+    <h3>Achados</h3>
+    ${FINDINGS.map(f=>`<div class="find ${f.cls}"><div class="f-h"><span class="sev">${f.sev}</span><b>${f.t}</b></div><p>${f.d}</p><p class="rec"><i data-lucide="wrench"></i><span>${f.r}</span></p></div>`).join('')}
+    <h3>O que esta operação demonstrou</h3>
+    <ul class="lessons">
+      <li>Reconhecimento é silencioso: <code>-sn</code>, <code>-sV</code> e <code>-O</code> revelaram a superfície inteira sem disparar alarmes.</li>
+      <li>Credenciais em texto claro (FTP) e "protegidas" só por Base64 (HTTP Basic) são capturadas por qualquer sniffer no segmento.</li>
+      <li>O Wireshark reconstrói sessões completas — a mesma lente do atacante é a melhor ferramenta de auditoria da defesa.</li>
+    </ul>`;
+  openOv('#repOv');icons();
+  if(!F.report){F.report=true;checkAll();toast('TREINAMENTO CONCLUÍDO','Todas as 9 missões concluídas. O relatório é o entregável — agora ele é seu.');}
+}
+
+/* =================== interação do guia =================== */
+ $('#msList').addEventListener('click',e=>{
+  const rev=e.target.closest('[data-reveal]');
+  if(rev){const c=$(`[data-cmd="${rev.dataset.reveal}"]`);c.classList.toggle('blurred');return;}
+  const code=e.target.closest('code[data-cmd]');
+  if(code){code.classList.toggle('blurred');return;}
+  const ins=e.target.closest('[data-insert]');
+  if(ins){
+    const m=MISSIONS[+ins.dataset.insert];
+    if(m.to==='filter'){$('#flt').value=m.cmd;$('#flt').dispatchEvent(new Event('input'));$('#flt').focus();}
+    else{$('#termIn').value=m.cmd;$('#termIn').focus();}
+    return;
+  }
+  const h=e.target.closest('[data-hint]');
+  if(h){$(`#hint-${h.dataset.hint}`).classList.toggle('show');return;}
+  if(e.target.closest('#btnReport')){openReport();return;}
+  const mh=e.target.closest('.ms-h');
+  if(mh){const ms=mh.parentElement;if(ms.classList.contains('done'))ms.classList.toggle('open');}
+});
+
+/* =================== terminal: input =================== */
+ $('#termIn').addEventListener('keydown',async e=>{
+  if(e.key==='ArrowUp'){if(hIdx>0){hIdx--;e.target.value=hist[hIdx]||''}e.preventDefault();return;}
+  if(e.key==='ArrowDown'){if(hIdx<hist.length){hIdx++;e.target.value=hist[hIdx]||''}e.preventDefault();return;}
+  if(e.key!=='Enter'||busy)return;
+  const raw=e.target.value.trim();
+  e.target.value='';
+  if(!raw)return;
+  tline(`<span class="p">${esc(pStr())}</span> ${esc(raw)}`);
+  hist.push(raw);hIdx=hist.length;
+  state.stats.cmds++;
+  await typeRun(()=>exec(raw));
+});
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='l'&&document.activeElement===$('#termIn')){e.preventDefault();OUT.innerHTML='';}
+});
+document.querySelector('.term').addEventListener('click',()=>{if(!window.getSelection().toString())$('#termIn').focus()});
+
+/* =================== sessão / boot =================== */
+function startClock(){
+  setInterval(()=>{
+    const s=Math.max(0,Math.floor((Date.now()-state.stats.t0)/1000));
+    $('#clockV').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  },1000);
+}
+ $('#bootForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const n=$('#aName').value.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'');
+  state.user=n||'analista';
+  $('#who').textContent=state.user;
+  $('#prompt').textContent=pStr();
+  closeOv('#bootOv');
+  state.stats.t0=Date.now();startClock();
+  tline('<span class="t-ok">NETRECON·LAB</span> <span class="t-dim">— simulador guiado de reconhecimento de rede (nmap 7.94 · wireshark 4.2, ambos simulados)</span>');
+  tline('<span class="t-dim">Ambiente 100% local e isolado: nenhum pacote real deixa o seu navegador.</span>');
+  tline('<span class="t-dim">Digite</span> <span class="t-ok">help</span> <span class="t-dim">para comandos · siga o</span> <span class="t-ok">GUIA DE MISSÕES</span> <span class="t-dim">no painel 01, à esquerda.</span>');
+  tline('&nbsp;');
+  renderGuide();updateProg();
+  $('#termIn').focus();
+});
+
+/* init */
+buildNetmap();
+renderGuide();
+updateProg();
+icons();
+</script>
+</body>
+</html>
