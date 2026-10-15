@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>HANDSHAKE//LAB — forja gamificada de WebSockets em Python</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --bg:#0a0c10; --sur:#0e1218; --sur2:#121722; --line:#1d2430; --line2:#2a3340;
+  --ink:#dfe7ee; --dim:#6b7684; --faint:#3d4654;
+  --amb:#ffb454; --cyn:#56c8dd; --grn:#7ee08a; --red:#ff6b6b; --mag:#d381f0;
+  --amber-dim:rgba(255,180,84,.14); --cyan-dim:rgba(86,200,221,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:400 13px/1.6 'JetBrains Mono',monospace;overflow:hidden;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(255,180,84,.05) 1px,transparent 1px);background-size:28px 28px}
+::selection{background:rgba(255,180,84,.28)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px;border:2px solid var(--sur)}
+::-webkit-scrollbar-track{background:transparent}
+button{font-family:inherit}
+
+/* ---------- header ---------- */
+#hdr{height:54px;flex:none;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--sur);position:relative;z-index:5}
+.logo{display:flex;align-items:baseline;gap:2px;font:700 16px 'Space Grotesk',sans-serif;letter-spacing:.06em}
+.logo b{color:var(--amb)}
+.logo .cur{color:var(--amb);animation:blk 1.1s steps(1) infinite}
+@keyframes blk{50%{opacity:0}}
+.logo em{font:500 8.5px 'Space Grotesk',sans-serif;font-style:normal;letter-spacing:.22em;color:var(--faint);margin-left:12px;text-transform:uppercase}
+.hright{margin-left:auto;display:flex;align-items:center;gap:12px}
+.hchip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-size:11px;color:var(--dim)}
+.hchip svg{width:13px;height:13px}
+.hchip .streak-n{color:var(--amb);font-weight:700}
+.hchip .xp-n{color:var(--ink);font-weight:700}
+.lvlbox{display:flex;flex-direction:column;gap:3px;min-width:170px}
+.lvlbox .lt{display:flex;justify-content:space-between;font:600 9px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.lvlbox .lt b{color:var(--amb)}
+.lvlbox .lt span{color:var(--faint)}
+.lvlbar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.lvlbar i{display:block;height:100%;background:var(--amb);border-radius:2px;transition:width .5s ease}
+.icbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);border-radius:4px;color:var(--dim);cursor:pointer}
+.icbtn:hover{color:var(--amb);border-color:var(--line2)}
+.icbtn svg{width:14px;height:14px}
+
+/* ---------- layout ---------- */
+#grid{flex:1;display:grid;grid-template-columns:252px minmax(0,1fr) 470px;gap:10px;padding:10px;min-height:0;position:relative;z-index:1}
+.col{background:var(--sur);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.colh{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font:600 9.5px 'Space Grotesk',sans-serif;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+.colh b{color:var(--amb)}
+
+/* ---------- trilha ---------- */
+#trail{flex:1;overflow-y:auto;padding:14px 12px}
+.tr{display:flex;gap:12px;cursor:pointer;padding:7px 6px;border-radius:5px;position:relative}
+.tr:hover{background:var(--sur2)}
+.tr .dot{flex:none;width:11px;height:11px;border-radius:50%;border:2px solid var(--faint);margin-top:4px;background:var(--bg);position:relative;z-index:1}
+.tr::before{content:'';position:absolute;left:11.5px;top:0;bottom:0;width:2px;background:var(--line)}
+.tr:first-child::before{top:14px}.tr:last-child::before{bottom:auto;height:14px}
+.tr.done .dot{border-color:var(--amb);background:var(--amb)}
+.tr.cur .dot{border-color:var(--amb);background:var(--bg);box-shadow:0 0 0 3px var(--amber-dim);animation:pdot 1.4s infinite}
+@keyframes pdot{50%{box-shadow:0 0 0 6px rgba(255,180,84,.06)}}
+.tr.lock{opacity:.38;cursor:default}
+.tr.lock:hover{background:none}
+.tr .tx b{display:block;font:600 10px 'Space Grotesk',sans-serif;letter-spacing:.1em;color:var(--faint)}
+.tr.cur .tx b,.tr.done .tx b{color:var(--amb)}
+.tr .tx span{font-size:11.5px;color:var(--dim)}
+.tr.cur .tx span{color:var(--ink)}
+.tr .tag{display:inline-block;font:600 8px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:var(--faint);border:1px solid var(--line);border-radius:3px;padding:1px 5px;margin-top:3px;text-transform:uppercase}
+
+/* ---------- palco central ---------- */
+#stage{overflow-y:auto;padding:0}
+.mshead{padding:18px 22px 0}
+.kick{display:flex;align-items:center;gap:10px;font:600 9.5px 'Space Grotesk',sans-serif;letter-spacing:.2em;color:var(--amb);text-transform:uppercase}
+.kick .xpchip{color:var(--dim);border:1px solid var(--line2);border-radius:3px;padding:2px 7px;letter-spacing:.1em}
+.kick .xpchip b{color:var(--amb)}
+h2.mst{font:700 24px 'Space Grotesk',sans-serif;letter-spacing:.01em;margin:6px 0 0;color:var(--ink)}
+.theory{margin:14px 22px 0;font-size:12.5px;color:var(--dim);line-height:1.75}
+.theory code,.goal code,.verdict code,.hintbox code{color:var(--amb);background:var(--amber-dim);padding:0 5px;border-radius:3px;font-size:11.5px}
+.theory b,.goal b{color:var(--ink);font-weight:500}
+.goal{margin:14px 22px;border:1px solid var(--line2);border-left:3px solid var(--amb);background:var(--sur2);border-radius:4px;padding:10px 14px;font-size:12.5px;color:var(--ink);line-height:1.7}
+.goal .gl{display:block;font:600 9px 'Space Grotesk',sans-serif;letter-spacing:.2em;color:var(--amb);margin-bottom:4px}
+#builder{margin:0 22px;min-height:120px}
+.actions{display:flex;gap:10px;align-items:center;padding:16px 22px 8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;font:600 10.5px 'Space Grotesk',sans-serif;letter-spacing:.14em;text-transform:uppercase;padding:10px 16px;border-radius:4px;border:1px solid var(--line2);background:none;color:var(--dim);cursor:pointer;transition:.15s}
+.btn:hover:not(:disabled){color:var(--amb);border-color:rgba(255,180,84,.5)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.pri{background:var(--amb);border-color:var(--amb);color:#141009}
+.btn.pri:hover:not(:disabled){background:#ffc678;color:#141009}
+.btn svg{width:14px;height:14px}
+.hintbox{display:none;margin:0 22px 16px;border:1px dashed var(--line2);border-radius:4px;padding:10px 14px;font-size:12px;color:var(--dim);line-height:1.7}
+.hintbox.show{display:block}
+.hintbox .hl{font:600 9px 'Space Grotesk',sans-serif;letter-spacing:.2em;color:var(--cyn);display:block;margin-bottom:3px}
+.verdict{margin:4px 22px 18px;border-radius:5px;padding:13px 16px;font-size:12.5px;line-height:1.7;display:none}
+.verdict.show{display:block}
+.verdict.ok{border:1px solid rgba(126,224,138,.4);background:rgba(126,224,138,.06);color:var(--ink)}
+.verdict.bad{border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.06)}
+.verdict .vt{display:flex;align-items:center;gap:8px;font:700 12px 'Space Grotesk',sans-serif;letter-spacing:.08em;margin-bottom:5px}
+.verdict.ok .vt{color:var(--grn)}.verdict.bad .vt{color:var(--red)}
+.verdict svg{width:15px;height:15px;flex:none}
+.verdict .vbonus{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.vbonus span{font:600 9.5px 'Space Grotesk',sans-serif;letter-spacing:.1em;color:var(--amb);border:1px solid rgba(255,180,84,.4);border-radius:3px;padding:3px 8px}
+.verdict .vnext{margin-top:12px}
+.verdict p{color:var(--dim)}
+.verdict.ok p{color:var(--ink)}
+
+/* ---------- editor de código ---------- */
+.codeblock{background:#0a0d12;border:1px solid var(--line);border-radius:5px;padding:12px 14px;font-size:12.5px;line-height:1.9;white-space:pre-wrap;color:#c9d6e2;overflow-x:auto}
+.codeblock .fx{color:var(--dim)}
+.codeblock input.gap{background:rgba(255,180,84,.05);border:none;border-bottom:2px solid rgba(255,180,84,.55);color:var(--amb);font:500 12.5px 'JetBrains Mono',monospace;padding:1px 4px;outline:none;text-align:center}
+.codeblock input.gap:focus{border-bottom-color:var(--amb);background:rgba(255,180,84,.1)}
+.codeblock input.gap.ok{border-bottom-color:var(--grn);color:var(--grn)}
+.codeblock input.gap.bad{border-bottom-color:var(--red);color:var(--red)}
+.codeblock .lbl{color:var(--faint);font-size:10.5px}
+.ob-slots{display:flex;flex-direction:column;gap:6px;min-height:60px;margin-bottom:14px}
+.ob-line,.op-line{display:flex;align-items:center;gap:10px;background:#0a0d12;border:1px solid var(--line);border-radius:4px;padding:7px 10px;font-size:12.5px;white-space:pre;color:#c9d6e2}
+.ob-line .pos{flex:none;width:20px;height:20px;border:1px solid var(--line2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--faint)}
+.ob-line .bt{flex:none;display:flex;gap:4px;margin-left:auto}
+.ob-line .bt button{width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);border-radius:3px;color:var(--faint);cursor:pointer}
+.ob-line .bt button:hover{color:var(--amb);border-color:var(--line2)}
+.ob-line .bt svg{width:11px;height:11px}
+.ob-line.err{border-color:var(--red);animation:shk .35s}
+@keyframes shk{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.ob-empty{border:1px dashed var(--line2);border-radius:4px;padding:14px;text-align:center;color:var(--faint);font-size:11.5px}
+.op-line{cursor:pointer;border-style:dashed}
+.op-line:hover{border-color:rgba(255,180,84,.5);color:var(--amb)}
+.opool-l{font:600 9px 'Space Grotesk',sans-serif;letter-spacing:.18em;color:var(--faint);text-transform:uppercase;margin:2px 0 7px}
+.fixline{display:block}
+.fixline.click{cursor:pointer;border-left:3px solid transparent}
+.fixline.click:hover{border-left-color:var(--amb);background:rgba(255,180,84,.04)}
+.fixline.found{border-left-color:var(--grn);background:rgba(126,224,138,.05)}
+.fixline.found .fx-new{color:var(--grn)}
+.fixopts{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0 4px 26px}
+.fopt{font-size:11.5px;padding:4px 10px;border:1px solid var(--line2);border-radius:3px;color:var(--dim);cursor:pointer;background:var(--sur2);white-space:pre}
+.fopt:hover{color:var(--ink);border-color:var(--amb)}
+.fixcount{font:600 9.5px 'Space Grotesk',sans-serif;letter-spacing:.14em;color:var(--cyn);margin-bottom:8px;text-transform:uppercase}
+/* frame builder */
+.fb{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.fb-ctl{display:flex;flex-direction:column;gap:11px}
+.frow{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim)}
+.frow label{min-width:96px;color:var(--dim)}
+.tgl{display:inline-flex;gap:0;border:1px solid var(--line2);border-radius:4px;overflow:hidden}
+.tgl button{padding:5px 12px;background:none;border:none;color:var(--faint);cursor:pointer;font:500 11.5px 'JetBrains Mono',monospace}
+.tgl button.on{background:var(--amber-dim);color:var(--amb)}
+.frow select{background:var(--sur2);border:1px solid var(--line2);border-radius:4px;color:var(--ink);font:500 12px 'JetBrains Mono',monospace;padding:5px 8px;outline:none}
+.frow input[type=text]{flex:1;min-width:0;background:#0a0d12;border:1px solid var(--line2);border-radius:4px;color:var(--ink);font:500 12.5px 'JetBrains Mono',monospace;padding:6px 10px;outline:none}
+.frow input[type=text]:focus{border-color:rgba(255,180,84,.5)}
+.minib{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--line2);border-radius:4px;color:var(--dim);cursor:pointer;font:500 10.5px 'JetBrains Mono',monospace;padding:6px 10px}
+.minib:hover{color:var(--cyn);border-color:var(--cyn)}
+.minib svg{width:12px;height:12px}
+.frow .note{font-size:10.5px;color:var(--faint)}
+.fb-out{display:flex;flex-direction:column;gap:10px}
+.bitrow{display:flex;gap:3px;align-items:flex-end;flex-wrap:wrap}
+.bitcell{width:26px;text-align:center}
+.bitcell .bv{display:block;border:1px solid var(--line2);border-radius:3px;padding:5px 0;font:700 12px 'JetBrains Mono',monospace;color:var(--faint);background:#0a0d12}
+.bitcell .bl{display:block;font:600 7.5px 'Space Grotesk',sans-serif;letter-spacing:.06em;color:var(--faint);margin-top:3px;text-transform:uppercase}
+.bitcell.c-fin .bv{color:var(--amb);border-color:rgba(255,180,84,.5)}
+.bitcell.c-op .bv{color:var(--cyn);border-color:rgba(86,200,221,.5)}
+.bitcell.c-mask .bv{color:var(--mag);border-color:rgba(211,129,240,.5)}
+.bitcell.c-len .bv{color:var(--grn);border-color:rgba(126,224,138,.45)}
+.bitsep{width:1px;align-self:stretch;background:var(--line2);margin:0 5px}
+.hexrow{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.hxc{border:1px solid var(--line2);border-radius:3px;padding:5px 7px;font:700 12px 'JetBrains Mono',monospace;color:var(--dim);background:#0a0d12}
+.hxc small{display:block;font:600 7.5px 'Space Grotesk',sans-serif;letter-spacing:.08em;color:var(--faint);margin-top:2px;text-transform:uppercase}
+.fmeta{font-size:11px;color:var(--dim);line-height:1.7}
+.fmeta b{color:var(--ink);font-weight:500}
+/* quiz */
+.qbox{display:flex;flex-direction:column;gap:12px}
+.qtop{font:600 9.5px 'Space Grotesk',sans-serif;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+.qq{font:600 16px 'Space Grotesk',sans-serif;color:var(--ink);line-height:1.5}
+.qalts{display:flex;flex-direction:column;gap:8px}
+.qalt{display:flex;gap:12px;align-items:flex-start;text-align:left;background:#0a0d12;border:1px solid var(--line);border-radius:5px;padding:11px 14px;color:var(--dim);font-size:12.5px;line-height:1.6;cursor:pointer;transition:.15s}
+.qalt:hover:not(.dis){border-color:rgba(255,180,84,.5);color:var(--ink)}
+.qalt .qa{flex:none;width:22px;height:22px;border:1px solid var(--line2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--faint)}
+.qalt.right{border-color:rgba(126,224,138,.55);background:rgba(126,224,138,.06);color:var(--ink)}
+.qalt.right .qa{border-color:var(--grn);color:var(--grn)}
+.qalt.wrong{border-color:rgba(255,107,107,.55);background:rgba(255,107,107,.06)}
+.qalt.wrong .qa{border-color:var(--red);color:var(--red)}
+.qalt.dis{pointer-events:none}
+.qexp{font-size:12px;color:var(--dim);line-height:1.7;border-left:2px solid var(--cyn);padding:2px 0 2px 12px}
+/* terminal */
+.term{background:#08090c;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.term-h{display:flex;align-items:center;gap:7px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:10px;color:var(--faint);letter-spacing:.1em}
+.term-h .tdot{width:8px;height:8px;border-radius:50%;background:var(--line2)}
+.term-h .tdot.on{background:var(--grn)}
+#termOut{padding:10px 14px;height:210px;overflow-y:auto;font-size:12.5px;line-height:1.7;white-space:pre-wrap}
+#termOut .tp{color:var(--amb);font-weight:700}
+#termOut .tdim{color:var(--dim)}
+#termOut .tok{color:var(--grn)}
+.term-in{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:9px 14px}
+.term-in .tp{color:var(--amb);font-weight:700;font-size:12.5px;flex:none}
+#termIn{flex:1;background:none;border:none;outline:none;color:var(--ink);font:500 12.5px 'JetBrains Mono',monospace;caret-color:var(--amb)}
+
+/* ---------- sim da rede ---------- */
+#simcol{overflow:hidden}
+#simcol .simbody{flex:1;display:flex;flex-direction:column;min-height:0}
+#cvwrap{flex:none;height:246px;position:relative;border-bottom:1px solid var(--line);background:#0b0e13}
+#netCv{position:absolute;inset:0;width:100%;height:100%}
+#simstate{margin-left:auto;color:var(--faint);font-size:10px;letter-spacing:.1em}
+#inspector{flex:none;max-height:208px;overflow-y:auto;border-bottom:1px solid var(--line);padding:10px 14px;background:var(--sur2)}
+.insp-empty{color:var(--faint);font-size:11.5px;text-align:center;padding:14px 6px}
+.insp-t{font:700 10px 'Space Grotesk',sans-serif;letter-spacing:.16em;color:var(--amb);margin-bottom:7px;text-transform:uppercase}
+.insp-t.cy{color:var(--cyn)}.insp-t.gr{color:var(--grn)}.insp-t.mg{color:var(--mag)}
+.kv{display:flex;gap:10px;font-size:11.5px;line-height:1.8}
+.kv .k{color:var(--faint);min-width:150px;flex:none}
+.kv .v{color:#c9d6e2;word-break:break-all}
+.kv .v.hl{color:var(--amb)}
+.kv .v.gr{color:var(--grn)}
+.shab{margin-top:8px;border-top:1px dashed var(--line2);padding-top:7px;font-size:10.5px;line-height:1.8;color:var(--dim)}
+.shab b{color:var(--cyn);font-weight:500}
+.hexcards{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.dec{margin-top:7px;font-size:10.5px;color:var(--dim);line-height:1.7}
+.dec b{color:var(--ink);font-weight:500}
+#netLog{flex:1;min-height:90px;overflow-y:auto;padding:9px 14px;font-size:11.5px;line-height:1.75}
+.nl{display:flex;gap:9px}
+.nl .t{color:var(--faint);flex:none;min-width:58px}
+.nl .w{flex:none;min-width:52px;font-weight:700}
+.nl .w.srv{color:var(--amb)}.nl .w.cli{color:var(--cyn)}.nl .w.net{color:var(--dim)}.nl .w.http{color:var(--mag)}.nl .w.ws{color:var(--grn)}.nl .w.py{color:#e8edf2}
+.nl .m{color:var(--dim);word-break:break-word}
+.nlsep{color:var(--faint);text-align:center;font-size:10px;letter-spacing:.2em;padding:5px 0;text-transform:uppercase}
+
+/* ---------- toasts / overlay ---------- */
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:90}
+.toast{background:var(--sur2);border:1px solid var(--line2);border-left:3px solid var(--amb);padding:10px 14px;min-width:270px;max-width:360px;border-radius:4px;animation:tin .25s;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.toast.grn{border-left-color:var(--grn)}
+.toast .tt{font:700 10.5px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
+.toast.grn .tt{color:var(--grn)}
+.toast .tm{font-size:11.5px;color:var(--dim);line-height:1.5}
+.toast .tm b,.toast .tm code{color:var(--ink);font-weight:500}
+.toast.out{opacity:0;transform:translateX(20px);transition:.3s}
+@keyframes tin{from{transform:translateX(20px);opacity:0}}
+.ov{position:fixed;inset:0;background:rgba(5,7,10,.85);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px}
+.hid{display:none!important}
+.winsheet{width:min(560px,94vw);max-height:90vh;overflow:auto;background:var(--sur);border:1px solid var(--line2);border-radius:8px;padding:30px 32px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.wtag{font:600 10px 'Space Grotesk',sans-serif;letter-spacing:.24em;color:var(--amb);text-transform:uppercase}
+.winsheet h1{font:700 30px 'Space Grotesk',sans-serif;margin:8px 0 6px}
+.winsheet h1 span{color:var(--amb)}
+.wlead{color:var(--dim);font-size:12.5px;line-height:1.7;margin-bottom:18px}
+.wstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+.wstats>div{border:1px solid var(--line);border-radius:5px;padding:11px 6px;text-align:center}
+.wstats b{display:block;font:700 18px 'Space Grotesk',sans-serif;color:var(--amb)}
+.wstats span{font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+.wskills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.wskills span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--cyn);border:1px solid rgba(86,200,221,.35);border-radius:3px;padding:4px 9px}
+.wskills svg{width:12px;height:12px}
+.wbtns{display:flex;gap:10px;justify-content:flex-end}
+
+@media (max-width:1220px){
+  body{overflow:auto}
+  #grid{display:flex;flex-direction:column;height:auto}
+  #trail{display:flex;overflow-x:auto;padding:10px}
+  .tr{flex:none;width:190px}.tr::before{display:none}
+  #simcol{height:640px}
+  .fb{grid-template-columns:1fr}
+  .lvlbox{min-width:120px}
+}
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="logo">HANDSHAKE<b>//LAB</b><span class="cur">▮</span><em>forja de websockets · python</em></div>
+  <div class="hright">
+    <div class="hchip" title="sequência de acertos sem dica nem erro"><i data-lucide="flame"></i><span class="streak-n" id="hdrStreak">0</span><span>streak</span></div>
+    <div class="hchip"><i data-lucide="zap"></i><span class="xp-n" id="hdrXp">0</span><span>XP</span></div>
+    <div class="lvlbox"><div class="lt"><b id="hdrLvl">Aprendiz de Sockets</b><span id="hdrLvlN">NÍVEL 1</span></div><div class="lvlbar"><i id="hdrBar" style="width:0%"></i></div></div>
+    <button class="icbtn" id="btnSound" title="som"><i data-lucide="volume-2"></i></button>
+  </div>
+</header>
+
+<div id="grid">
+  <aside class="col">
+    <div class="colh"><i data-lucide="route" style="width:13px;height:13px"></i> TRILHA DE FORJA</div>
+    <div id="trail"></div>
+  </aside>
+
+  <section class="col" id="stage">
+    <div class="mshead">
+      <div class="kick"><span id="msKicker">MISSÃO 01/10</span><span class="xpchip" id="msXp">+<b>100</b> XP</span></div>
+      <h2 class="mst" id="msTitle">—</h2>
+    </div>
+    <div class="theory" id="msTheory"></div>
+    <div class="goal"><span class="gl">SUA TAREFA</span><span id="msGoal"></span></div>
+    <div id="builder"></div>
+    <div class="actions" id="actions"></div>
+    <div class="hintbox" id="hintBox"></div>
+    <div class="verdict" id="verdict"></div>
+  </section>
+
+  <aside class="col" id="simcol">
+    <div class="colh"><i data-lucide="cpu" style="width:13px;height:13px"></i> MÁQUINA VIRTUAL · REDE LOCAL <span id="simstate">idle</span></div>
+    <div class="simbody">
+      <div id="cvwrap"><canvas id="netCv"></canvas></div>
+      <div id="inspector"><div class="insp-empty">os pacotes que cruzarem a rede aparecem aqui — clique em validar para executar seu código</div></div>
+      <div id="netLog"></div>
+    </div>
+  </aside>
+</div>
+
+<div id="toasts"></div>
+
+<div class="ov hid" id="winOv">
+  <div class="winsheet">
+    <div class="wtag">RFC 6455 · DOMINADO</div>
+    <h1>HANDSHAKE <span>COMPLETO</span></h1>
+    <p class="wlead">Você forjou, do zero, um servidor de chat em Python: descobriu hosts de código, sobreviveu à caça aos bugs, dissecou frames binários e viu tudo trafegar — byte por byte — na rede simulada.</p>
+    <div class="wstats" id="wstats"></div>
+    <div class="wskills">
+      <span><i data-lucide="terminal"></i> asyncio + websockets</span>
+      <span><i data-lucide="key-round"></i> handshake HTTP→101 (SHA-1)</span>
+      <span><i data-lucide="binary"></i> framing RFC 6455 + máscara</span>
+      <span><i data-lucide="radio"></i> broadcast</span>
+      <span><i data-lucide="activity"></i> ping/pong keepalive</span>
+    </div>
+    <div class="wbtns">
+      <button class="btn" id="btnWipe"><i data-lucide="rotate-ccw"></i> Recomeçar do zero</button>
+      <button class="btn pri" id="btnStay"><i data-lucide="hammer"></i> Continuar no lab</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =============== utils =============== */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const icons=()=>window.lucide&&lucide.createIcons();
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const b64=b=>btoa(String.fromCharCode(...b));
+const randBytes=n=>Array.from({length:n},()=>Math.floor(Math.random()*256));
+const utf8=s=>[...new TextEncoder().encode(s)];
+const hx=b=>b.toString(16).padStart(2,'0').toUpperCase();
+
+function toast(tt,tm,cls=''){
+  const t=document.createElement('div');t.className='toast '+cls;
+  t.innerHTML=`<div class="tt">${esc(tt)}</div><div class="tm">${tm}</div>`;
+  $('#toasts').appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),320)},4200);
+}
+
+/* =============== som =============== */
+let AC=null,soundOn=true;
+function beep(f,d=.08,type='square',g=.05){
+  if(!soundOn)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(),v=AC.createGain();
+    o.type=type;o.frequency.value=f;v.gain.value=g;
+    o.connect(v);v.connect(AC.destination);
+    v.gain.setValueAtTime(g,AC.currentTime);
+    v.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);
+    o.start();o.stop(AC.currentTime+d+.02);
+  }catch(e){}
+}
+const okBeep=()=>{beep(880,.07);setTimeout(()=>beep(1318,.1),80)};
+const errBeep=()=>beep(150,.16,'sawtooth',.04);
+const winBeep=()=>[660,880,1108,1318].forEach((f,i)=>setTimeout(()=>beep(f,.13),i*95));
+ $('#btnSound').addEventListener('click',()=>{
+  soundOn=!soundOn;S.sound=soundOn;store.save();
+  $('#btnSound').innerHTML=`<i data-lucide="${soundOn?'volume-2':'volume-x'}"></i>`;icons();
+  if(soundOn)beep(880,.07);
+});
+
+/* =============== SHA-1 puro (Sec-WebSocket-Accept real) =============== */
+function sha1Bytes(msg){
+  const bytes=[...new TextEncoder().encode(msg)],len=bytes.length,bitLen=len*8;
+  const d=bytes.concat([0x80]);while(d.length%64!==56)d.push(0);
+  d.push(0,0,0,0,(bitLen>>>24)&255,(bitLen>>>16)&255,(bitLen>>>8)&255,bitLen&255);
+  const w0=[];for(let i=0;i<d.length;i+=4)w0.push(((d[i]<<24)|(d[i+1]<<16)|(d[i+2]<<8)|d[i+3])>>>0);
+  let h=[0x67452301,0xEFCDAB89,0x98BADCFE,0x10325476,0xC3D2E1F0];
+  const K=[0x5A827999,0x6ED9EBA1,0x8F1BBCDC,0xCA62C1D6];
+  for(let i=0;i<w0.length;i+=16){
+    const w=w0.slice(i,i+16);
+    for(let t=16;t<80;t++){const n=w[t-3]^w[t-8]^w[t-14]^w[t-16];w.push(((n<<1)|(n>>>31))>>>0)}
+    let a=h[0],b=h[1],c=h[2],dd=h[3],e=h[4];
+    for(let t=0;t<80;t++){
+      let f,k;
+      if(t<20){f=(b&c)|((~b)&dd);k=K[0]}
+      else if(t<40){f=b^c^dd;k=K[1]}
+      else if(t<60){f=(b&c)|(b&dd)|(c&dd);k=K[2]}
+      else{f=b^c^dd;k=K[3]}
+      const tmp=(((a<<5)|(a>>>27))+f+e+k+w[t])>>>0;
+      e=dd;dd=c;c=((b<<30)|(b>>>2))>>>0;b=a;a=tmp;
+    }
+    h=[(h[0]+a)>>>0,(h[1]+b)>>>0,(h[2]+c)>>>0,(h[3]+dd)>>>0,(h[4]+e)>>>0];
+  }
+  const out=[];
+  h.forEach(x=>out.push((x>>>24)&255,(x>>>16)&255,(x>>>8)&255,x&255));
+  return out;
+}
+const WS_GUID='258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+function wsAccept(key){return b64(sha1Bytes(key+WS_GUID))}
+function sha1Hex(s){return sha1Bytes(s).map(hx).join('')}
+
+/* =============== estado / persistência =============== */
+const store={
+  load(){try{return JSON.parse(localStorage.getItem('handshake-lab-v1'))||{}}catch(e){return{}}},
+  save(){try{localStorage.setItem('handshake-lab-v1',JSON.stringify({xp:S.xp,done:S.done,sound:S.sound}))}catch(e){}}
+};
+const S={xp:0,done:[],sound:true,errors:0,oks:0,t0:Date.now(),installed:false};
+Object.assign(S,{xp:store.load().xp||0,done:store.load().done||[],sound:store.load().sound!==false});
+soundOn=S.sound;
+
+const LEVELS=[
+  {xp:0,n:'Aprendiz de Sockets'},{xp:200,n:'Ascendente do asyncio'},{xp:450,n:'Domador de Handshakes'},
+  {xp:750,n:'Mascador de Frames'},{xp:1100,n:'Senhor do Broadcast'},{xp:1500,n:'Lenda do Loop'}
+];
+let streak=0;
+function levelOf(xp){let l=0;LEVELS.forEach((L,i)=>{if(xp>=L.xp)l=i});return l}
+function renderHdr(){
+  const lv=levelOf(S.xp),nx=LEVELS[lv+1];
+  $('#hdrXp').textContent=S.xp;
+  $('#hdrLvl').textContent=LEVELS[lv].n;
+  $('#hdrLvlN').textContent='NÍVEL '+(lv+1);
+  $('#hdrStreak').textContent=streak;
+  $('#hdrBar').style.width=nx?Math.min(100,((S.xp-LEVELS[lv].xp)/(nx.xp-LEVELS[lv].xp))*100)+'%':'100%';
+}
+function gainXP(n){
+  const before=levelOf(S.xp);
+  S.xp+=n;renderHdr();store.save();
+  const after=levelOf(S.xp);
+  if(after>before){winBeep();toast('SUBIU DE NÍVEL','Você agora é <b>'+LEVELS[after].n+'</b> — nível '+(after+1)+'.','grn')}
+}
+
+/* =============== motor da rede (canvas) =============== */
+const C={amb:'#ffb454',cyn:'#56c8dd',grn:'#7ee08a',red:'#ff6b6b',dim:'#5b6472',mag:'#d381f0',ink:'#e8edf2'};
+const cv=$('#netCv'),ctx=cv.getContext('2d');
+const net={nodes:[],pulses:[],t0:0,rainP:[],W:0,H:0};
+const NW=158,NH=58;
+const nodeById=id=>net.nodes.find(n=>n.id===id);
+function relayout(){
+  const W=net.W||600,H=net.H||246;
+  const srv=nodeById('srv');
+  if(srv){srv.x=W*0.24;srv.y=H/2}
+  const clis=net.nodes.filter(n=>n.id!=='srv'&&n.id!=='pkg');
+  const ys=clis.length===1?[H/2]:clis.length===2?[H*0.3,H*0.7]:[H*0.2,H*0.5,H*0.8];
+  clis.forEach((n,i)=>{n.x=W*0.76;n.y=ys[i]});
+  const pkg=nodeById('pkg');
+  if(pkg){pkg.x=W*0.68;pkg.y=H/2}
+}
+function addNode(id,label,color,sub,state){
+  if(nodeById(id))return nodeById(id);
+  const n={id,label,color,sub:sub||'',state:state||'—',badge:null,flash:0,x:0,y:0};
+  net.nodes.push(n);relayout();return n;
+}
+function rmNode(id){net.nodes=net.nodes.filter(n=>n.id!==id);relayout()}
+function nState(id,t){const n=nodeById(id);if(n)n.state=t}
+function nBadge(id,t){const n=nodeById(id);if(n)n.badge={txt:t,ts:performance.now()}}
+function resetNet(title){
+  net.nodes=[];net.pulses=[];net.t0=performance.now();
+  $('#inspector').innerHTML='<div class="insp-empty">aguardando pacotes…</div>';
+  if(title)$('#netLog').innerHTML=`<div class="nlsep">— ${esc(title)} —</div>`;
+  updSimState('executando');
+}
+function updSimState(t){$('#simstate').textContent=t}
+function netLog(w,m,cls){
+  const el=$('#netLog');
+  const t=((performance.now()-net.t0)/1000).toFixed(2);
+  const d=document.createElement('div');d.className='nl';
+  d.innerHTML=`<span class="t">t+${t}s</span><span class="w ${cls}">${esc(w)}</span><span class="m">${m}</span>`;
+  el.appendChild(d);
+  while(el.children.length>140)el.removeChild(el.firstChild);
+  el.scrollTop=el.scrollHeight;
+}
+function kvRows(rows){
+  return rows.map(r=>`<div class="kv"><span class="k">${esc(r[0])}</span><span class="v ${r[2]||''}">${esc(r[1])}</span></div>`).join('');
+}
+function inspect(o){
+  $('#inspector').innerHTML=`<div class="insp-t ${o.cls||''}">${esc(o.title)}</div>${o.html||''}`;
+  $('#inspector').scrollTop=0;
+}
+function pulse(from,to,opts){
+  return new Promise(res=>{
+    net.pulses.push({from,to,label:opts.label||'',color:opts.color||C.amb,dur:opts.dur||520,t:0,inspect:opts.inspect,onEnd:()=>{
+      const n=nodeById(to);if(n)n.flash=performance.now();
+      if(opts.inspect)inspect(opts.inspect);
+      beep(opts.beep||520,.04,'square',.025);
+      res();
+    }});
+  });
+}
+function ptOnCurve(p0,c,p1,t){
+  const u=1-t;
+  return {x:u*u*p0.x+2*u*t*c.x+t*t*p1.x,y:u*u*p0.y+2*u*t*c.y+t*t*p1.y};
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function drawNode(n,now){
+  const x=n.x-NW/2,y=n.y-NH/2;
+  const flash=Math.max(0,1-(now-n.flash)/350);
+  ctx.lineWidth=1.5;ctx.strokeStyle=n.color;
+  ctx.fillStyle='#0e1319';rr(x,y,NW,NH,6);ctx.fill();ctx.stroke();
+  if(flash>0){ctx.strokeStyle='rgba(255,255,255,'+(flash*.5)+')';rr(x,y,NW,NH,6);ctx.stroke()}
+  ctx.fillStyle=n.color;ctx.font='700 11px "Space Grotesk"';ctx.textAlign='left';
+  ctx.fillText(n.label,x+12,y+22);
+  if(n.sub){ctx.font='500 9px "JetBrains Mono"';ctx.fillStyle=C.dim;ctx.fillText(n.sub,x+12,y+35)}
+  const on=/OPEN|LISTEN|PRONTO|UP/.test(n.state);
+  const lx=x+NW-16,ly=y+15;
+  ctx.beginPath();ctx.arc(lx,ly,3.5,0,7);
+  ctx.fillStyle=on?C.grn:C.dim;ctx.fill();
+  if(on){ctx.beginPath();ctx.arc(lx,ly,6.5,0,7);ctx.fillStyle='rgba(126,224,138,.15)';ctx.fill()}
+  ctx.font='500 8.5px "JetBrains Mono"';ctx.fillStyle=on?C.grn:C.dim;
+  ctx.fillText(n.state,x+12,y+48);
+  if(n.badge){
+    const age=(now-n.badge.ts)/1000;
+    if(age<3){
+      ctx.globalAlpha=Math.max(0,1-age/3);
+      ctx.font='600 10px "JetBrains Mono"';ctx.textAlign='center';
+      ctx.fillStyle='#0a0c10';ctx.fillText(n.badge.txt,n.x+1,n.y-NH/2-9+1);
+      ctx.fillStyle=n.color;ctx.fillText(n.badge.txt,n.x,n.y-NH/2-9-1);
+      ctx.globalAlpha=1;ctx.textAlign='left';
+    }else n.badge=null;
+  }
+}
+function draw(now){
+  const r=cv.parentElement.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  if(cv.width!==Math.round(r.width*dpr)||cv.height!==Math.round(r.height*dpr)){cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  net.W=r.width;net.H=r.height;
+  ctx.clearRect(0,0,net.W,net.H);
+  const srv=nodeById('srv');
+  net.nodes.forEach(n=>{
+    if(n.id==='srv'||n.id==='pkg'||!srv)return;
+    const x1=srv.x+NW/2,y1=srv.y,x2=n.x-NW/2,y2=n.y,mx=(x1+x2)/2;
+    ctx.strokeStyle='#1d2430';ctx.lineWidth=1.5;ctx.beginPath();
+    ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,(y1+y2)/2+30,x2,y2);ctx.stroke();
+  });
+  for(let i=net.pulses.length-1;i>=0;i--){
+    const p=net.pulses[i],a=nodeById(p.from),b=nodeById(p.to);
+    if(!a||!b){net.pulses.splice(i,1);p.onEnd&&p.onEnd();continue}
+    p.t+=1/60/(p.dur/1000);
+    const tt=Math.min(1,p.t);
+    const e=tt<.5?4*tt*tt*tt:1-Math.pow(-2*tt+2,3)/2;
+    const x1=a.x+NW/2,y1=a.y,x2=b.x-NW/2,y2=b.y,mx=(x1+x2)/2;
+    const pt=ptOnCurve({x:x1,y:y1},{x:mx,y:(y1+y2)/2+30},{x:x2,y:y2},e);
+    for(let k=4;k>=1;k--){
+      const bt=Math.max(0,e-k*.03);
+      const q=ptOnCurve({x:x1,y:y1},{x:mx,y:(y1+y2)/2+30},{x:x2,y:y2},bt);
+      ctx.globalAlpha=.5-k*.1;ctx.beginPath();ctx.arc(q.x,q.y,2.4,0,7);ctx.fillStyle=p.color;ctx.fill();
+    }
+    ctx.globalAlpha=1;ctx.beginPath();ctx.arc(pt.x,pt.y,3.6,0,7);ctx.fillStyle=p.color;ctx.fill();
+    if(p.label){
+      ctx.font='600 10px "JetBrains Mono"';ctx.textAlign='center';
+      ctx.fillStyle='#0a0c10';ctx.fillText(p.label,pt.x+1,pt.y-9+1);
+      ctx.fillStyle=p.color;ctx.fillText(p.label,pt.x,pt.y-9-1);
+      ctx.textAlign='left';
+    }
+    if(tt>=1){net.pulses.splice(i,1);p.onEnd&&p.onEnd()}
+  }
+  for(let i=net.rainP.length-1;i>=0;i--){
+    const p=net.rainP[i];p.y+=p.v;p.v+=.06;
+    ctx.globalAlpha=Math.max(0,1-(net.H-p.y)/60);
+    ctx.font='700 11px "JetBrains Mono"';ctx.fillStyle=p.c;ctx.fillText(p.ch,p.x,p.y);
+    ctx.globalAlpha=1;
+    if(p.y>net.H+20)net.rainP.splice(i,1);
+  }
+  net.nodes.forEach(n=>drawNode(n,now));
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+function rainBytes(){
+  const chars='0123456789ABCDEF';
+  for(let i=0;i<80;i++)net.rainP.push({x:Math.random()*(net.W||600),y:-20-Math.random()*300,v:1.5+Math.random()*2.5,ch:chars[Math.floor(Math.random()*16)],c:Math.random()<.5?C.amb:C.cyn});
+}
+
+/* =============== frames WS (máscara real) =============== */
+function buildFrame({fin=true,op=1,mask=false,payload='',maskKey,rsv=[0,0,0]}){
+  const pay=utf8(payload),key=maskKey||randBytes(4);
+  const b0=((fin?1:0)<<7)|(rsv[0]<<6)|(rsv[1]<<5)|(rsv[2]<<4)|(op&0xf);
+  const b1=((mask?1:0)<<7)|(pay.length&0x7f);
+  const body=mask?pay.map((b,i)=>b^key[i%4]):pay;
+  return {bytes:new Uint8Array([b0,b1,...(mask?key:[]),...body]),pay,key,mask,op,fin,rsv};
+}
+function frameInspect(f,text,fromClient){
+  const b=f.bytes,masked=f.mask;
+  const regions=masked?[{i0:0,i1:1,c:C.amb,l:'header'},{i0:2,i1:5,c:C.cyn,l:'mask key'},{i0:6,i1:b.length-1,c:C.grn,l:'payload ⊕'}]
+                      :[{i0:0,i1:1,c:C.amb,l:'header'},{i0:2,i1:b.length-1,c:C.grn,l:'payload'}];
+  const cards=b.map((v,i)=>{const r=regions.find(r=>i>=r.i0&&i<=r.i1);
+    return `<span class="hxc" style="color:${r?r.c:C.dim};border-color:${r?r.c:'#2a3340'}">${hx(v)}<small>${r?r.l:''}</small></span>`}).join('');
+  const opn={1:'texto (0x1)',2:'binário (0x2)',8:'close (0x8)',9:'ping (0x9)',10:'pong (0xA)'}[f.op]||('0x'+f.op.toString(16));
+  return {title:'WS FRAME — '+(masked?'CLIENTE → SERVIDOR (mascarado)':'SERVIDOR → CLIENTE (sem máscara)'),cls:masked?'mg':'cy',
+    html:kvRows([['FIN',f.fin?'1':'0'],['RSV1·2·3',f.rsv.join('·')],['opcode',opn],['MASK',masked?'1 — obrigatória do lado do cliente':'0 — servidores não mascaram',masked?'gr':'hl'],
+      ['payload len',String(f.pay.length)],['payload decodificado','“'+text+'”','gr']])+
+    `<div class="hexcards">${cards}</div>`+
+    (masked?`<div class="dec">máscara XOR: payload[i] ⊕ key[i mod 4] — key = ${f.key.map(hx).join(' ')}</div>`:'')};
+}
+async function doHandshake(cid,fast){
+  const key=b64(new Uint8Array(randBytes(16))),acc=wsAccept(key),dg=sha1Hex(key+WS_GUID);
+  const who=cid==='cli'?'CLI·A':cid==='cli2'?'CLI·B':'CLI·C';
+  if(fast){
+    await pulse(cid,'srv',{label:'GET /ws ↑ upgrade',color:C.amb,dur:480,beep:600});
+    await pulse('srv',cid,{label:'101 · accept ✓',color:C.grn,dur:460,beep:760});
+  }else{
+    netLog('NET','TCP: abrindo conexão para localhost:8765','net');
+    await pulse(cid,'srv',{label:'SYN',color:C.dim,dur:360,beep:300});
+    await pulse('srv',cid,{label:'SYN·ACK',color:C.dim,dur:330,beep:340});
+    await pulse(cid,'srv',{label:'ACK',color:C.dim,dur:290,beep:380});
+    await pulse(cid,'srv',{label:'GET /ws',color:C.amb,dur:560,beep:600,inspect:{
+      title:'HTTP UPGRADE — pedido do cliente',cls:'',
+      html:kvRows([['método / caminho','GET /ws HTTP/1.1'],['Upgrade','websocket'],['Connection','Upgrade'],['Host','localhost:8765'],['Sec-WebSocket-Key',key,'hl'],['Sec-WebSocket-Version','13']])}});
+    await pulse('srv',cid,{label:'101 SWITCHING',color:C.grn,dur:560,beep:820,inspect:{
+      title:'HTTP/1.1 101 — o servidor fala WebSocket',cls:'gr',
+      html:kvRows([['status','101 Switching Protocols','gr'],['Upgrade','websocket'],['Connection','Upgrade'],['Sec-WebSocket-Accept',acc,'hl']])+
+      `<div class="shab">verificação ao vivo:<br>key = <b>${key}</b><br>SHA-1(key + GUID) = <b>${dg}</b><br>base64(digest) = <b>${acc}</b> ✓</div>`}});
+  }
+  nState(cid,'OPEN');nBadge(cid,'ws aberto ✓');
+  const open=net.nodes.filter(n=>n.id!=='srv'&&n.id!=='pkg').length;
+  nState('srv','OPEN · '+open+' conex.');
+  netLog('WS','handshake concluído — conexão <b>'+who+'</b> aberta (RFC 6455)','ws');
+}
+async function frameSend(from,to,text,masked){
+  const f=buildFrame({fin:true,op:1,mask:masked,payload:text});
+  const lbl=(masked?'frame·mask ':'frame ')+`“${text}”`;
+  await pulse(from,to,{label:lbl,color:masked?C.mag:C.cyn,dur:640,beep:700,inspect:frameInspect(f,text,masked)});
+  return f;
+}
+async function closeSeq(cid){
+  await pulse(cid,'srv',{label:'CLOSE 1000',color:C.red,dur:480,beep:280});
+  await pulse('srv',cid,{label:'CLOSE 1000',color:C.red,dur:440,beep:260});
+  nState(cid,'CLOSED');nBadge(cid,'fechado');
+}
+
+/* =============== roteiros de execução por missão =============== */
+const RUNS={
+  async install(){
+    resetNet('missão 1 · instalando a biblioteca');
+    addNode('srv','SERVIDOR',C.amb,'—','AGUARDANDO');
+    netLog('PY','python 3.11.4 · venv ativa','py');
+    await wait(300);
+    addNode('pkg','pip',C.cyn,'websockets 12.0','DOWNLOAD');
+    netLog('NET','baixando websockets-12.0 (130 kB)…','net');
+    await wait(500);
+    await pulse('pkg','srv',{label:'websockets 12.0',color:C.cyn,dur:800,beep:640});
+    rmNode('pkg');
+    nBadge('srv','websockets ✓ instalada');nState('srv','PRONTO');
+    netLog('SRV','módulo <b>websockets</b> disponível no import','srv');
+    await wait(400);
+  },
+  async skeleton(){
+    resetNet('missão 2 · o esqueleto do servidor');
+    addNode('srv','SERVIDOR',C.amb,':8765','BOOTANDO');
+    netLog('PY','import asyncio  ✓','py');await wait(350);
+    netLog('PY','import websockets  ✓','py');await wait(350);
+    netLog('NET','bind 0.0.0.0:8765 — socket em escuta','net');
+    nState('srv','LISTENING');
+    nBadge('srv','ws://localhost:8765');
+    await wait(400);
+    netLog('SRV','await asyncio.Future() — o servidor fica de pé para sempre','srv');
+    netLog('SRV','aguardando a primeira conexão…','srv');
+  },
+  async firstmsg(){
+    resetNet('missão 3 · handler conversa com o cliente');
+    addNode('srv','SERVIDOR',C.amb,':8765','LISTENING');
+    addNode('cli','CLIENTE',C.cyn,'async def hello','CONECTANDO');
+    await wait(300);
+    await doHandshake('cli');
+    netLog('CLI','enviando: “Ada”','cli');
+    await frameSend('cli','srv','Ada',true);
+    nBadge('srv','recv() → “Ada”');
+    netLog('SRV','recv() retornou a string “Ada” — awaited, claro','srv');
+    await wait(400);
+    netLog('SRV','send(greeting) → “Olá, Ada!”','srv');
+    await frameSend('srv','cli','Olá, Ada!',false);
+    nBadge('cli','recv() → “Olá, Ada!”');
+    await wait(400);
+    await closeSeq('cli');nState('srv','OPEN · 0 conex.');
+    netLog('WS','conexão encerrada com elegância (close 1000)','ws');
+  },
+  async handshake(){
+    resetNet('missão 4 · o handshake secreto');
+    addNode('srv','SERVIDOR',C.amb,':8765','LISTENING');
+    addNode('cli','CLIENTE',C.cyn,'ws client','—');
+    await doHandshake('cli');
+    await wait(300);
+    netLog('NET','a partir daqui o mesmo TCP carrega frames — nada de novo por baixo dos panos','net');
+  },
+  async client(){
+    resetNet('missão 5 · o cliente entra em cena');
+    addNode('srv','SERVIDOR',C.amb,':8765','LISTENING');
+    netLog('SRV','servidor de pé — esperando alguém chamar','srv');
+    await wait(300);
+    addNode('cli','CLIENTE',C.cyn,'ws://localhost:8765','CONECTANDO');
+    await doHandshake('cli');
+    netLog('CLI','async with: contexto aberto — fechamento garantido','cli');
+    netLog('CLI','await ws.send("Ada")','cli');
+    await frameSend('cli','srv','Ada',true);
+    await wait(350);
+    netLog('CLI','resposta = await ws.recv()','cli');
+    await frameSend('srv','cli','Olá, Ada!',false);
+    nBadge('cli','print → “Olá, Ada!”');
+    netLog('PY','servidor disse: Olá, Ada!','py');
+    await wait(400);
+    await closeSeq('cli');nState('srv','OPEN · 0 conex.');
+  },
+  async echo(){
+    resetNet('missão 6 · echo server — agora sem bugs');
+    addNode('srv','SERVIDOR',C.amb,':8765','LISTENING');
+    addNode('cli','CLIENTE',C.cyn,'ws://localhost:8765','—');
+    await wait(250);
+    await doHandshake('cli');
+    const msgs=['ping!','eco… você me ouve?','última!'];
+    for(const m of msgs){
+      netLog('CLI','send: “'+m+'”','cli');
+      await frameSend('cli','srv',m,true);
+      nBadge('srv','echo → “'+m+'”');
+      await frameSend('srv','cli',m,false);
+      netLog('SRV','async for → ecoando “'+m+'”','srv');
+      await wait(280);
+    }
+    await closeSeq('cli');nState('srv','OPEN · 0 conex.');
+    netLog('SRV','async for terminou: o handler saiu limpo','srv');
+  },
+  async frame(){
+    const f=cur.builtFrame||buildFrame({mask:true,payload:'HELLO'});
+    resetNet('missão 7 · seu frame na rede');
+    addNode('srv','SERVIDOR',C.amb,':8765','LISTENING');
+    addNode('cli','CLIENTE',C.cyn,'ws://localhost:8765','—');
+    await wait(250);
+    await doHandshake('cli');
+    netLog('CLI','enviando o frame que VOCÊ montou, byte a byte','cli');
+    await pulse('cli','srv',{label:'frame “HELLO” · '+f.bytes.length+'B',color:C.mag,dur:800,beep:700,inspect:frameInspect(f,'HELLO',true)});
+    nBadge('srv','decode: opcode 1 · mask ✓');
+    netLog('SRV','frame recebido — unmasking XOR → “HELLO”','srv');
+    await wait(450);
+    netLog('SRV','respondendo SEM máscara (servidores nunca mascaram)','srv');
+    await frameSend('srv','cli','HELLO',false);
+    nBadge('cli','recv → “HELLO”');
+    await wait(350);
+    await closeSeq('cli');nState('srv','OPEN · 0 conex.');
+  },
+  async broadcast(){
+    resetNet('missão 8 · broadcast — um para todos');
+    addNode('srv','SERVIDOR',C.amb,':8765','LISTENING');
+    addNode('cli','CLIENTE · A',C.cyn,'equipe','—');
+    await doHandshake('cli');
+    addNode('cli2','CLIENTE · B',C.cyn,'equipe','—');
+    await doHandshake('cli2',true);
+    addNode('cli3','CLIENTE · C',C.cyn,'equipe','—');
+    await doHandshake('cli3',true);
+    netLog('SRV','CONNECTIONS = set() → 3 conexões registradas','srv');
+    await wait(350);
+    netLog('CLI','A envia: “oi, pessoal!”','cli');
+    await frameSend('cli','srv','oi, pessoal!',true);
+    await wait(250);
+    netLog('SRV','websockets.broadcast(CONNECTIONS, msg) → 3 entregas','srv');
+    await pulse('srv','cli',{label:'broadcast “oi, pessoal!”',color:C.grn,dur:560,beep:760});
+    nBadge('cli','recebeu ✓');
+    await pulse('srv','cli2',{label:'broadcast “oi, pessoal!”',color:C.grn,dur:560,beep:760});
+    nBadge('cli2','recebeu ✓');
+    await pulse('srv','cli3',{label:'broadcast “oi, pessoal!”',color:C.grn,dur:560,beep:760});
+    nBadge('cli3','recebeu ✓');
+    await wait(500);
+    netLog('CLI','B sai da sala…','cli');
+    await closeSeq('cli2');
+    netLog('SRV','finally: CONNECTIONS.remove(ws) — sem vazamento','srv');
+    nState('srv','OPEN · 2 conex.');
+  },
+  async keepalive(){
+    resetNet('missão 9 · keepalive — o coração da conexão');
+    addNode('srv','SERVIDOR',C.amb,':8765 · ping 20s / timeout 10s','LISTENING');
+    addNode('cli','CLIENTE',C.cyn,'idle','—');
+    await wait(250);
+    await doHandshake('cli');
+    netLog('WS','conexão aberta e… silêncio. quem cuida dela?','ws');
+    for(let i=1;i<=4;i++){
+      await wait(650);
+      await pulse('srv','cli',{label:'PING 0x9',color:C.grn,dur:430,beep:880});
+      netLog('WS','ping_interval venceu → PING #'+i,'ws');
+      await pulse('cli','srv',{label:'PONG 0xA',color:C.cyn,dur:400,beep:980});
+      netLog('WS','PONG automático — a lib responde sozinha','ws');
+      nBadge('cli','vivo · uptime '+(i*20)+'s');
+    }
+    netLog('SRV','sem pong dentro de ping_timeout? conexão fechada. com pong? para sempre saudável.','srv');
+  },
+  async boss(){
+    resetNet('boss · sala de chat em produção');
+    addNode('srv','SERVIDOR',C.amb,':8765 · ping 20s','LISTENING');
+    netLog('SRV','asyncio.run(main()) — o chat entrou no ar','srv');
+    await wait(350);
+    addNode('cli','ADA',C.cyn,'cliente','—');
+    await doHandshake('cli');
+    addNode('cli2','LINUS',C.cyn,'cliente','—');
+    await doHandshake('cli2',true);
+    netLog('SRV','2 conexões no conjunto CONNECTIONS','srv');
+    await wait(400);
+    netLog('CLI','ADA: “oi, sou a Ada!”','cli');
+    await frameSend('cli','srv','oi, sou a Ada!',true);
+    await wait(250);
+    await pulse('srv','cli',{label:'broadcast',color:C.grn,dur:480,beep:800});
+    await pulse('srv','cli2',{label:'broadcast',color:C.grn,dur:480,beep:800});
+    nBadge('cli2','“oi, sou a Ada!”');
+    await wait(450);
+    netLog('CLI','LINUS: “prazer, Linus aqui”','cli');
+    await frameSend('cli2','srv','prazer, Linus aqui',true);
+    await wait(250);
+    await pulse('srv','cli',{label:'broadcast',color:C.grn,dur:480,beep:800});
+    nBadge('cli','“prazer, Linus aqui”');
+    await pulse('srv','cli2',{label:'broadcast',color:C.grn,dur:480,beep:800});
+    await wait(550);
+    netLog('CLI','LINUS fechou a aba','cli');
+    await closeSeq('cli2');
+    netLog('SRV','finally removeu LINUS — broadcast segue para quem ficou','srv');
+    await wait(400);
+    await pulse('srv','cli',{label:'PING 0x9',color:C.grn,dur:380,beep:880});
+    await pulse('cli','srv',{label:'PONG 0xA',color:C.cyn,dur:360,beep:980});
+    await wait(350);
+    await closeSeq('cli');
+    nState('srv','OPEN · 0 conex.');
+    nBadge('srv','shutdown limpo ✓');
+    netLog('SRV','todas as conexões encerradas — servido com asyncio.Future()','srv');
+    await wait(700);
+    rainBytes();winBeep();showWin();
+  }
+};
+
+/* =============== dados das missões =============== */
+const MISSIONS=[
+{type:'term',tag:'AMBIENTE',title:'Prepare o terreno',xp:100,run:'install',
+ theory:'Sockets WebSockets em Python vivem na biblioteca <code>websockets</code>, construída sobre o <code>asyncio</code> — a máquina de concorrência do Python. Ela não vem na stdlib: precisa ser instalada.',
+ goal:'Instale a biblioteca no terminal abaixo (digite o comando e pressione <b>Enter</b>).',
+ hint:'O gerenciador de pacotes do Python é o <code>pip</code>. O nome do pacote é exatamente <code>websockets</code> (no plural).'},
+{type:'order',tag:'SERVIDOR',title:'O esqueleto do servidor',xp:150,run:'skeleton',
+ theory:'Um servidor WebSocket é um programa <code>asyncio</code> comum. <code>websockets.serve()</code> amarra seu handler a uma porta; <code>await asyncio.Future()</code> é o jeito idiomático de dizer <b>“fique vivo para sempre”</b>.',
+ goal:'Monte o corpo do servidor na ordem correta — os imports já estão no lugar.',
+ fixed:['import asyncio','import websockets'],
+ pool:['async def handler(websocket):','    pass  # a lógica vem nas próximas missões','async def main():','    async with websockets.serve(handler, "localhost", 8765):','        await asyncio.Future()  # roda para sempre','asyncio.run(main())'],
+ why:['o handler precisa existir antes de main() citá-lo dentro de serve()','corpo do handler por enquanto só passa — as próximas missões o preenchem','depois do handler, definimos main(): quem vai servir','serve() amarra o handler à porta — é um contexto async with','Future() nunca completa: eis o servidor eterno','por último, asyncio.run() dispara o loop e chama main()'],
+ hint:'Pense em camadas: imports → handler → main() (que usa o handler) → o disparador asyncio.run no fim.'},
+{type:'fill',tag:'HANDLER',title:'Fale com o cliente',xp:150,run:'firstmsg',
+ theory:'Cada conexão cai no <code>handler</code> como um objeto <code>websocket</code>. <code>await websocket.recv()</code> dorme até uma mensagem chegar; <code>await websocket.send(...)</code> responde. Sem o <code>await</code>, você só guarda uma coroutine que nunca executa — armadilha clássica.',
+ goal:'Complete as lacunas para o handler receber um nome e responder com uma saudação.',
+ seg:['async def handler(websocket):\n    name = ',{g:'g1',ph:'await',w:7},' websocket.',{g:'g2',ph:'recv',w:5},'()  # recebe a 1ª mensagem\n    greeting = f"Olá, {name}!"\n\n    ',{g:'g3',ph:'await',w:7},' websocket.',{g:'g4',ph:'send',w:5},'(greeting)  # responde de volta\n'],
+ accept:{g1:/^await$/,g2:/^recv$/,g3:/^await$/,g4:/^send$/},
+ hint:'Dois verbos do protocolo: recv() recebe, send() envia. E os dois exigem await, porque falam com a rede.'},
+{type:'quiz',tag:'PROTOCOLO',title:'O handshake secreto',xp:200,run:'handshake',
+ theory:'Por trás de todo WebSocket existe um aperto de mão HTTP. O exemplo canônico do <b>RFC 6455</b>: key <code>dGhlIHNhbXBsZSBub25jZQ==</code> → accept <code>s3pPLMBiTxaQ9kYGzzhZRbK+xOo=</code>. No simulador à direita, o digest SHA-1 é calculado de verdade, ao vivo.',
+ goal:'Responda as 4 perguntas sobre o protocolo para destravar a demonstração do handshake completo.',
+ qs:[
+  {q:'O que exatamente transforma uma conexão HTTP comum em WebSocket?',
+   a:['Um segundo servidor aberto na porta 8765','O pedido GET com cabeçalhos Upgrade: websocket e a resposta 101 Switching Protocols','A criptografia TLS, que é obrigatória','Um cookie mágico enviado pelo servidor'],c:1,
+   e:'O handshake é HTTP puro: o cliente pede o upgrade, o servidor responde 101 — e o mesmo TCP passa a carregar frames.'},
+  {q:'Como o servidor prova, dentro do handshake, que realmente fala WebSocket?',
+   a:['Anunciando sua versão no cabeçalho Server','Assinando a key do cliente com HMAC-SHA256','Respondendo Sec-WebSocket-Accept = base64(SHA-1(key do cliente + GUID mágico))','Devolvendo a Sec-WebSocket-Key sem alteração'],c:2,
+   e:'O GUID 258EAFA5-E914-47DA-95CA-C5AB0DC85B11 é fixo do RFC. SHA-1 + base64: qualquer servidor sério calcula isso — o simulador também.'},
+  {q:'Nos frames enviados pelo CLIENTE ao servidor, o bit MASK…',
+   a:['É opcional e economiza CPU','Deve ser 1: todo frame cliente→servidor é mascarado','Só é usado em payloads binários','Serve para compactar o payload'],c:1,
+   e:'A máscara XOR (RFC 6455) existe para impedir que proxies antigos interpretem dados do cliente. Servidores NUNCA mascaram.'},
+  {q:'Os opcodes 0x9 e 0xA do protocolo servem para…',
+   a:['Texto e binário','Erros de protocolo','Ping e pong — o keepalive nativo','Extensões de compressão'],c:2,
+   e:'0x9 é PING e 0xA é PONG: o mecanismo de saúde da conexão. A lib websockets faz isso sozinha — missão 9 prova.'}],
+ hint:'A resposta da 1ª está literalmente no nome do jogo. As outras moram nos cabeçalhos Sec-WebSocket-* e no RFC 6455.'},
+{type:'order',tag:'CLIENTE',title:'O cliente entra em cena',xp:150,run:'client',
+ theory:'O cliente é o espelho do servidor: <code>websockets.connect()</code> no lugar de <code>serve()</code>, e o <code>async with</code> garante o fechamento elegante mesmo se algo explodir no meio.',
+ goal:'Monte o cliente que envia “Ada”, recebe a saudação e imprime.',
+ fixed:['import asyncio','import websockets'],
+ pool:['async def hello():','    async with websockets.connect("ws://localhost:8765") as ws:','        await ws.send("Ada")','        resposta = await ws.recv()','        print(f"servidor disse: {resposta}")','asyncio.run(hello())'],
+ why:['a função principal do cliente','connect() é o espelho de serve() — contexto async with','primeiro, enviamos','depois, esperamos a resposta: recv() pede await','mostramos o que o servidor disse','por último, disparamos com asyncio.run(hello())'],
+ hint:'Ordem natural de uma conversa: conectar → enviar → receber → mostrar → disparar.'},
+{type:'fix',tag:'DEBUG',title:'Caça aos bugs',xp:200,run:'echo',
+ theory:'Três erros clássicos de quem começa com asyncio: esquecer <code>await</code>, confundir variável com string literal e esquecer de <b>chamar</b> a função. Este echo server tem exatamente <b>3 bugs</b> escondidos.',
+ goal:'Clique nas linhas com bugs, escolha a correção certa e deixe o echo server impecável.',
+ lines:[
+  {t:'import asyncio'},{t:'import websockets'},{t:''},
+  {t:'async def echo(websocket):'},
+  {t:'    message = websocket.recv()',bug:{fix:'    message = await websocket.recv()',opts:['    message = await websocket.recv()','    message = websocket.recv().await','    message = await websocket.get()'],why:'recv() é uma coroutine: sem await você guarda a promessa da mensagem — e nunca os dados.'}},
+  {t:'    await websocket.send("message")',bug:{fix:'    await websocket.send(message)',opts:['    await websocket.send(message)','    websocket.send(message)','    await websocket.send(message.decode())'],why:'"message" entre aspas é a string literal: o eco sempre responderia a palavra message, não o conteúdo recebido.'}},
+  {t:''},{t:'async def main():'},{t:'    async with websockets.serve(echo, "localhost", 8765):'},{t:'        await asyncio.Future()'},{t:''},
+  {t:'asyncio.run(main)',bug:{fix:'asyncio.run(main())',opts:['asyncio.run(main())','await asyncio.run(main)','asyncio.run(main)'],why:'main sem parênteses é a função-objeto; asyncio.run precisa da coroutine que só nasce quando você chama main().'}}],
+ hint:'Uma linha dorme sem acordar, outra fala em vez de ouvir, e uma nunca é chamada. Conte: são 3.'},
+{type:'frame',tag:'FRAMING',title:'Anatomia de um frame',xp:200,run:'frame',
+ theory:'Um frame WS começa com 2 bytes: <code>FIN</code> + RSV + <code>opcode</code>, depois <code>MASK</code> + tamanho. Frames cliente→servidor levam 4 bytes de mask key e o payload em XOR. Opcodes: 0x1 texto · 0x2 binário · 0x8 close · 0x9 ping · 0xA pong.',
+ goal:'Monte o frame que seu cliente envia com o texto <b>HELLO</b>: o hexdump à direita se recompõe a cada bit que você tocar.',
+ hint:'Regra de ouro do RFC: FIN=1, opcode de texto, MASK=1 do lado do cliente. O payload precisa dizer exatamente HELLO.'},
+{type:'fill',tag:'BROADCAST',title:'Um para todos',xp:200,run:'broadcast',
+ theory:'Broadcast = guardar as conexões num <code>set()</code> e entregar com <code>websockets.broadcast()</code>. O <code>finally</code> garante a limpeza <i>sempre</i> — mesmo se o cliente cair no meio de uma mensagem.',
+ goal:'Complete o handler de broadcast (4 lacunas).',
+ seg:['CONNECTIONS = set()\n\nasync def handler(websocket):\n    CONNECTIONS.',{g:'g1',ph:'add(websocket)',w:16},'\n    try:\n        ',{g:'g2',ph:'async for message in websocket',w:34},':\n            websockets.',{g:'g3',ph:'broadcast',w:11},'(CONNECTIONS, message)\n    finally:\n        CONNECTIONS.',{g:'g4',ph:'remove(websocket)',w:20},'\n'],
+ accept:{g1:/^add\((websocket|ws|conn)\)$/,g2:/^async\s+for\s+message\s+in\s+websocket$/,g3:/^broadcast$/,g4:/^remove\((websocket|ws|conn)\)$/},
+ hint:'Registrar no set, iterar o que chega, espalhar com broadcast, remover no finally. Nessa ordem.'},
+{type:'fill',tag:'KEEPALIVE',title:'Coração constante',xp:150,run:'keepalive',
+ theory:'O WebSocket tem ping/pong <b>nativo</b> (opcodes 0x9/0xA). A lib <code>websockets</code> já envia pings a cada <code>ping_interval</code> (padrão 20s) e fecha a conexão se o pong não vier em <code>ping_timeout</code>. Não reinvente o heartbeat — configure.',
+ goal:'Configure o servidor para pingar a cada 20s e desistir após 10s sem resposta.',
+ seg:['async def main():\n    async with websockets.serve(\n        echo, "localhost", 8765,\n        ping_interval=',{g:'g1',ph:'20',w:4},',\n        ping_timeout=',{g:'g2',ph:'10',w:4},',\n    ):\n        await asyncio.Future()  # roda para sempre\n\nasyncio.run(main())\n'],
+ accept:{g1:/^20(\.0)?$/,g2:/^10(\.0)?$/},
+ hint:'São dois números em segundos: o intervalo entre pings e a paciência pelo pong. A meta pede 20 e 10.'},
+{type:'order',tag:'BOSS',title:'BOSS — A sala de chat',xp:300,run:'boss',
+ theory:'Tudo que você forjou se encontra aqui: registro de conexões, loop de mensagens, broadcast e limpeza garantida. O <code>main()</code> já está pronto — falta o <b>coração do chat</b>: o handler.',
+ goal:'Monte o handler completo do chat. Acertou? A sala entra no ar com dois clientes conversando ao vivo.',
+ fixed:['import asyncio','import websockets','','async def main():','    async with websockets.serve(handler, "localhost", 8765, ping_interval=20):','        await asyncio.Future()','','asyncio.run(main())'],
+ pool:['CONNECTIONS = set()','async def handler(websocket):','    CONNECTIONS.add(websocket)','    try:','        async for message in websocket:','            websockets.broadcast(CONNECTIONS, message)','    finally:','        CONNECTIONS.remove(websocket)'],
+ why:['o conjunto global que guarda toda conexão aberta','cada nova conexão cai aqui','registra a conexão — sem isso, ninguém recebe nada','try/finally: a limpeza acontece sempre, até com queda','o loop dorme até chegar mensagem de qualquer cliente','broadcast entrega a todos de uma vez','finally roda quando a conexão fecha','remove a conexão morta — sem isso, vazamento de sockets'],
+ hint:'Espelhe a missão 8 e lembre da ordem: conjunto global → handler → add → try → loop → broadcast → finally → remove.'}
+];
+
+/* =============== builders =============== */
+let cur={mi:0,attempt:0,usedHint:false,busy:false,builtFrame:null};
+
+/* ---- ORDER ---- */
+function renderOrder(m){
+  cur.order=[];cur.pool=shuffle(m.pool);
+  drawOrder();
+}
+function drawOrder(){
+  const m=MISSIONS[cur.mi];
+  let html='<div class="codeblock" style="margin-bottom:12px">'+m.fixed.map(f=>f===''?'&nbsp;':'<span class="fx">'+esc(f)+'</span>').join('\n')+'</div>';
+  html+=cur.order.length?'<div class="ob-slots">'+cur.order.map((s,i)=>
+    `<div class="ob-line" data-i="${i}"><span class="pos">${i+1}</span><span>${esc(s)}</span><span class="bt">
+      <button data-up="${i}" ${i===0?'disabled':''}><i data-lucide="chevron-up"></i></button>
+      <button data-dn="${i}" ${i===cur.order.length-1?'disabled':''}><i data-lucide="chevron-down"></i></button>
+      <button data-rm="${i}"><i data-lucide="x"></i></button></span></div>`).join('')+'</div>'
+    :'<div class="ob-empty">clique nas linhas do banco abaixo para construí-las, na ordem</div>';
+  html+='<div class="opool-l">banco de linhas — clique para adicionar</div>';
+  html+=cur.pool.length?cur.pool.map((s,i)=>`<div class="op-line" data-add="${i}">${esc(s)}</div>`).join(''):'<div class="opool-l" style="color:var(--amb)">banco vazio — valide quando estiver confiante</div>';
+  $('#builder').innerHTML=html;icons();
+  $$('#builder [data-add]').forEach(b=>b.onclick=()=>{cur.order.push(cur.pool.splice(+b.dataset.add,1)[0]);drawOrder()});
+  $$('#builder [data-up]').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=+b.dataset.up;[cur.order[i-1],cur.order[i]]=[cur.order[i],cur.order[i-1]];drawOrder()});
+  $$('#builder [data-dn]').forEach(b=>b.onclick=e=>{e.stopPropagation();const i=+b.dataset.dn;[cur.order[i+1],cur.order[i]]=[cur.order[i],cur.order[i+1]];drawOrder()});
+  $$('#builder [data-rm]').forEach(b=>b.onclick=e=>{e.stopPropagation();cur.pool.push(cur.order.splice(+b.dataset.rm,1)[0]);drawOrder()});
+}
+function checkOrder(){
+  const m=MISSIONS[cur.mi],sol=m.pool0;
+  for(let i=0;i<Math.max(sol.length,cur.order.length);i++){
+    if(cur.order[i]!==sol[i]){
+      $$('#builder .ob-line').forEach(l=>{if(+l.dataset.i===i)l.classList.add('err')});
+      const idx=sol[i]?m.pool.indexOf(sol[i]):-1;
+      return {ok:false,msg:`<p><b>Posição ${i+1} quebra a montagem.</b> A linha que pertence ali é:</p><div class="codeblock" style="margin-top:8px">${esc(sol[i]||'— (há linha em excesso)')}</div><p style="margin-top:6px">${idx>=0?esc(m.why[idx]):'remova a linha excedente'}</p>`};
+    }
+  }
+  return {ok:true};
+}
+
+/* ---- FILL ---- */
+function renderFill(m){
+  let html='<div class="codeblock">';
+  m.seg.forEach(s=>{
+    if(typeof s==='string')html+=esc(s);
+    else html+=`<input class="gap" data-g="${s.g}" placeholder="${esc(s.ph||'')}" style="width:${s.w||(s.ph?s.ph.length+2:8)}ch" autocomplete="off" spellcheck="false">`;
+  });
+  $('#builder').innerHTML=html+'</div>';
+  const inputs=$$('#builder .gap');
+  inputs.forEach((inp,i)=>inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&i<inputs.length-1)inputs[i+1].focus()}));
+  inputs[0]&&inputs[0].focus();
+}
+function checkFill(){
+  const m=MISSIONS[cur.mi];let all=true,first=null;
+  $$('#builder .gap').forEach(inp=>{
+    const v=inp.value.trim(),ok=m.accept[inp.dataset.g].test(v);
+    inp.classList.toggle('ok',ok);inp.classList.toggle('bad',!ok);
+    if(!ok){all=false;if(!first)first=inp}
+  });
+  if(!all){first&&first.focus();return {ok:false,msg:'<p>As lacunas em vermelho ainda não estão certas. Cada verbo tem seu par: quem recebe usa <code>recv</code>, quem envia usa <code>send</code> — e o asyncio exige <code>await</code> na frente.</p>'}}
+  return {ok:true};
+}
+
+/* ---- FIX ---- */
+function renderFix(m){
+  cur.fixState=m.lines.map(()=>({picked:null,open:false,shake:false}));
+  drawFix();
+}
+function drawFix(){
+  const m=MISSIONS[cur.mi];
+  const found=cur.fixState.filter((f,i)=>m.lines[i].bug&&f.picked).length;
+  let html=`<div class="fixcount">bugs corrigidos: ${found}/3 — clique numa linha suspeita</div><div class="codeblock">`;
+  html+=m.lines.map((l,i)=>{
+    const st=cur.fixState[i];
+    let inner='';
+    if(l.bug&&st.picked)inner=`<span style="text-decoration:line-through;color:var(--faint)">${esc(l.t)}</span>\n    <span class="fx-new">→ ${esc(st.picked)}</span>`;
+    else inner=esc(l.t)||'&nbsp;';
+    let opts='';
+    if(l.bug&&st.open&&!st.picked){
+      opts='<div class="fixopts">'+shuffle(l.bug.opts).map(o=>`<span class="fopt" data-l="${i}" data-o="${esc(o)}">${esc(o)}</span>`).join('')+'</div>';
+    }
+    const cls=['fixline',l.bug&&!st.picked?'click':'',l.bug&&st.picked?'found':'',st.shake?'wrong':''].join(' ');
+    return `<span class="${cls}" data-l="${i}">${inner}</span>${opts}`;
+  }).join('\n');
+  $('#builder').innerHTML=html+'</div>';
+  $$('#builder .fixline.click').forEach(el=>{
+    el.onclick=()=>{
+      const i=+el.dataset.l;
+      MISSIONS[cur.mi].lines.forEach((l,j)=>{if(j!==i)cur.fixState[j].open=false});
+      const st=cur.fixState[i];
+      if(st.picked){st.picked=null;st.open=true}
+      else{st.open=!st.open;st.shake=true;setTimeout(()=>{st.shake=false;drawFix()},400);errBeep()}
+      drawFix();
+    };
+  });
+  $$('#builder .fopt').forEach(el=>{
+    el.onclick=e=>{
+      e.stopPropagation();
+      const i=+el.dataset.l,o=el.dataset.o;
+      cur.fixState[i].picked=o;cur.fixState[i].open=false;
+      const line=MISSIONS[cur.mi].lines[i];
+      beep(o===line.bug.fix?900:200,.08);
+      drawFix();
+    };
+  });
+}
+function checkFix(){
+  const m=MISSIONS[cur.mi];
+  const unmarked=m.lines.filter((l,i)=>l.bug&&!cur.fixState[i].picked).length;
+  const wrong=m.lines.filter((l,i)=>l.bug&&cur.fixState[i].picked&&cur.fixState[i].picked!==l.bug.fix).length;
+  if(unmarked||wrong){
+    let msg='';
+    if(unmarked)msg+=`<p>Ainda há <b>${unmarked} bug(s)</b> que você não tocou. Clique nas linhas suspeitas — erros de <code>await</code>, aspas e parênteses adoram se esconder juntos.</p>`;
+    if(wrong)msg+=`<p>${wrong} correção(ões) escolhida(s) ainda não curam o bug. Reabra a linha e pense: o que o asyncio exige? O que era variável e virou literal?</p>`;
+    return {ok:false,msg};
+  }
+  return {ok:true};
+}
+
+/* ---- FRAME ---- */
+const FBS={fin:false,rsv:[0,0,0],op:0x1,mask:false,payload:'',key:randBytes(4)};
+function renderFrame(){
+  $('#builder').innerHTML=`
+  <div class="fb">
+    <div class="fb-ctl">
+      <div class="frow"><label>FIN (frame final)</label><span class="tgl" id="fbFin"><button data-v="0" class="${FBS.fin?'':'on'}">0</button><button data-v="1" class="${FBS.fin?'on':''}">1</button></span></div>
+      <div class="frow"><label>RSV1 · RSV2 · RSV3</label><span class="note">reservados p/ extensões — deixe em 0</span></div>
+      <div class="frow"><label>opcode (4 bits)</label><select id="fbOp">
+        <option value="0x0">0x0 · continuação</option><option value="0x1" selected>0x1 · texto</option>
+        <option value="0x2">0x2 · binário</option><option value="0x8">0x8 · close</option>
+        <option value="0x9">0x9 · ping</option><option value="0xA">0xA · pong</option></select></div>
+      <div class="frow"><label>MASK (máscara)</label><span class="tgl" id="fbMask"><button data-v="0" class="${FBS.mask?'':'on'}">0</button><button data-v="1" class="${FBS.mask?'on':''}">1</button></span></div>
+      <div class="frow"><label>payload (texto)</label><input type="text" id="fbPay" value="${esc(FBS.payload)}" maxlength="30" placeholder="digite o texto…"></div>
+      <div class="frow"><label>mask key (4B)</label><button class="minib" id="fbKey"><i data-lucide="dices"></i> nova key</button><span class="note" id="fbKeyV"></span></div>
+    </div>
+    <div class="fb-out">
+      <div>
+        <div class="opool-l">byte 0 — FIN · RSV · opcode</div>
+        <div class="bitrow" id="fbB0"></div>
+      </div>
+      <div>
+        <div class="opool-l">byte 1 — MASK · length (7 bits)</div>
+        <div class="bitrow" id="fbB1"></div>
+      </div>
+      <div>
+        <div class="opool-l">bytes na rede</div>
+        <div class="hexrow" id="fbHex"></div>
+      </div>
+      <div class="fmeta" id="fbMeta"></div>
+    </div>
+  </div>`;
+  icons();
+  $$('#fbFin button').forEach(b=>b.onclick=()=>{FBS.fin=b.dataset.v==='1';drawFrameToggles();drawFrameOut()});
+  $$('#fbMask button').forEach(b=>b.onclick=()=>{FBS.mask=b.dataset.v==='1';drawFrameToggles();drawFrameOut()});
+  $('#fbOp').onchange=e=>{FBS.op=parseInt(e.target.value,16);drawFrameOut()};
+  $('#fbPay').oninput=e=>{FBS.payload=e.target.value;drawFrameOut()};
+  $('#fbKey').onclick=()=>{FBS.key=randBytes(4);drawFrameOut();beep(700,.05)};
+  drawFrameToggles();drawFrameOut();
+}
+function drawFrameToggles(){
+  $$('#fbFin button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='1')===FBS.fin));
+  $$('#fbMask button').forEach(b=>b.classList.toggle('on',(b.dataset.v==='1')===FBS.mask));
+}
+function bitCell(v,cls,l){return `<span class="bitcell ${cls}"><span class="bv">${v}</span><span class="bl">${l}</span></span>`}
+function drawFrameOut(){
+  const pay=utf8(FBS.payload),len=pay.length,op=FBS.op;
+  $('#fbB0').innerHTML=bitCell(FBS.fin?1:0,'c-fin','fin')+bitCell(0,'','rsv1')+bitCell(0,'','rsv2')+bitCell(0,'','rsv3')+
+    '<span class="bitsep"></span>'+
+    [8,4,2,1].map((m,i)=>bitCell((op&m)?1:0,'c-op','op'+(3-i))).join('');
+  $('#fbB1').innerHTML=bitCell(FBS.mask?1:0,'c-mask','mask')+'<span class="bitsep"></span>'+
+    [64,32,16,8,4,2,1].map(m=>bitCell((len&m)?1:0,'c-len','')).join('');
+  const f=buildFrame({fin:FBS.fin,op,mask:FBS.mask,payload:FBS.payload,maskKey:FBS.key});
+  $('#fbHex').innerHTML=f.bytes.map((v,i)=>{
+    const isH=i<2,isK=FBS.mask&&i>=2&&i<6,isP=!isH&&!isK;
+    const c=isH?C.amb:isK?C.cyn:C.grn,l=isH?'header':isK?'mask key':'payload';
+    return `<span class="hxc" style="color:${c};border-color:${c}55">${hx(v)}<small>${l}</small></span>`;
+  }).join('');
+  $('#fbKeyV').textContent='key: '+FBS.key.map(hx).join(' ');
+  const dec=pay.map((b,i)=>String.fromCharCode(b^FBS.key[i%4])).join('');
+  $('#fbMeta').innerHTML=`total: <b>${f.bytes.length} bytes</b> · opcode: <b>0x${op.toString(16)}</b> · len: <b>${len}</b>`+
+    (FBS.mask?` · payload mascarado decodifica para: <b>“${esc(dec)}”</b>`:' · payload viaja em claro')+
+    (len>125?'<br><span style="color:var(--red)">len &gt; 125 exigiria o campo estendido de 16 bits — fora deste frame builder</span>':'');
+  cur.builtFrame=f;
+}
+function checkFrame(){
+  const pay=utf8(FBS.payload);
+  if(!FBS.fin)return{ok:false,msg:'<p><b>FIN=0?</b> Um frame final de dados precisa de FIN=1. FIN=0 só existe para fragmentar mensagens gigantes.</p>'};
+  if(FBS.op!==1)return{ok:false,msg:'<p>Texto pede <b>opcode 0x1</b>. 0x2 seria binário, 0x8 fecharia a conexão…</p>'};
+  if(!FBS.mask)return{ok:false,msg:'<p><b>MASK=0 do lado do cliente?</b> O RFC 6455 é inflexível: todo frame cliente→servidor é mascarado — é a defesa contra envenenamento de proxies. Ligue a máscara.</p>'};
+  if(FBS.payload==='')return{ok:false,msg:'<p>Payload vazio. A meta é enviar exatamente <b>HELLO</b>.</p>'};
+  if(FBS.payload!=='HELLO')return{ok:false,msg:`<p>Perto! Mas a meta desta missão é enviar exatamente <b>HELLO</b> — você mandou “${esc(FBS.payload)}”.</p>`};
+  if(pay.length>125)return{ok:false,msg:'<p>Payload longo demais para o len de 7 bits deste builder.</p>'};
+  return {ok:true};
+}
+
+/* ---- QUIZ ---- */
+function renderQuiz(){cur.qi=0;cur.qErr=0;drawQuiz()}
+function drawQuiz(){
+  const m=MISSIONS[cur.mi],q=m.qs[cur.qi],letters='ABCD';
+  $('#builder').innerHTML=`<div class="qbox">
+    <div class="qtop">PERGUNTA ${cur.qi+1} DE ${m.qs.length} · ERROS: ${cur.qErr}</div>
+    <div class="qq">${esc(q.q)}</div>
+    <div class="qalts" id="qalts">${q.a.map((a,i)=>`<button class="qalt" data-i="${i}"><span class="qa">${letters[i]}</span><span>${esc(a)}</span></button>`).join('')}</div>
+    <div id="qexp"></div>
+  </div>`;
+  $$('#qalts .qalt').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i,right=i===q.c;
+    $$('#qalts .qalt').forEach(x=>x.classList.add('dis'));
+    if(right){
+      b.classList.add('right');okBeep();
+      $('#qexp').innerHTML=`<div class="qexp">✓ ${esc(q.e)}</div>`;
+      cur.qi++;
+      setTimeout(()=>{cur.qi<m.qs.length?drawQuiz():onValidate(true)},1500);
+    }else{
+      b.classList.remove('dis');b.classList.add('wrong');errBeep();cur.qErr++;S.errors++;
+      $('#qexp').innerHTML=`<div class="qexp" style="border-color:var(--red)">✗ Não é essa. Tente de novo — leia as opções com calma.</div>`;
+      setTimeout(()=>drawQuiz(),2200);
+    }
+  });
+}
+function checkQuiz(){return cur.qi>=MISSIONS[cur.mi].qs.length?{ok:true}:{ok:false,msg:'<p>Responda todas as perguntas para concluir.</p>'}}
+
+/* ---- TERMINAL ---- */
+function renderTerm(){
+  $('#builder').innerHTML=`
+  <div class="term">
+    <div class="term-h"><span class="tdot on"></span> python 3.11.4 · venv · pip 23.2</div>
+    <div id="termOut"><span class="tdim">terminal pronto. que comando instala uma biblioteca aqui?</span>\n</div>
+    <div class="term-in"><span class="tp">analista@lab:~$</span><input id="termIn" spellcheck="false" autocomplete="off"></div>
+  </div>`;
+  const inp=$('#termIn');inp.focus();
+  inp.addEventListener('keydown',termKey);
+  document.querySelector('.term').addEventListener('click',()=>{if(!getSelection().toString())inp.focus()});
+}
+function tOut(h){const el=$('#termOut');el.innerHTML+=h+'\n';el.scrollTop=1e6}
+async function termKey(e){
+  if(e.key!=='Enter')return;
+  const raw=e.target.value.trim();e.target.value='';
+  if(!raw)return;
+  tOut(`<span class="tp">analista@lab:~$</span> ${esc(raw)}`);
+  const cmd=raw.toLowerCase();
+  if(/^(pip3?|python3? -m pip)\s+install\s+websockets(\s*==\s*[\d.]+)?$/.test(cmd)){
+    if(S.installed){tOut('<span class="tdim">Requirement already satisfied: websockets (12.0)</span>');return}
+    tOut('<span class="tdim">Collecting websockets</span>');await wait(500);
+    tOut('<span class="tdim">  Downloading websockets-12.0-cp311-cp311-manylinux_2_5_x86_64.whl (130 kB)</span>');
+    tOut('<span class="tdim">     ━━━━━━━━━━━━━━━━━━━━━━ 130.6/130.6 kB 8.2 MB/s eta 0:00:00</span>');await wait(700);
+    tOut('<span class="tdim">Installing collected packages: websockets</span>');await wait(450);
+    tOut('<span class="tok">Successfully installed websockets-12.0</span>');
+    S.installed=true;beep(880,.08);
+    await wait(600);autoValidate();
+  }
+  else if(/^pip3?\s+list$/.test(cmd)){
+    tOut('<span class="tdim">Package    Version\n---------- -------\n'+(S.installed?'websockets 12.0\n':'')+'pip        23.2</span>');
+  }
+  else if(/^python3?\s+-V$/.test(cmd))tOut('<span class="tdim">Python 3.11.4</span>');
+  else if(/^clear$/.test(cmd))$('#termOut').innerHTML='';
+  else if(/^help$/.test(cmd))tOut('<span class="tdim">tente: pip install websockets · pip list · python -V · clear</span>');
+  else tOut(`<span style="color:var(--red)">bash:</span> <span class="tdim">${esc(raw.split(' ')[0])}: command not found — digite help</span>`);
+}
+function checkTerm(){return S.installed?{ok:true}:{ok:false,msg:'<p>A biblioteca ainda não foi instalada — o terminal é o seu campo de batalha aqui.</p>'}}
+
+/* =============== fluxo de missão =============== */
+const CHECKS={order:checkOrder,fill:checkFill,fix:checkFix,frame:checkFrame,quiz:checkQuiz,term:checkTerm};
+const RENDER={order:renderOrder,fill:renderFill,fix:renderFix,frame:renderFrame,quiz:renderQuiz,term:renderTerm};
+
+function unlockedBefore(j){return j===0||S.done.includes(j-1)||S.done.some(d=>d>=j)}
+function isDone(i){return S.done.includes(i)}
+function markDone(i){if(!S.done.includes(i)){S.done.push(i);store.save()}}
+
+function renderTrail(){
+  $('#trail').innerHTML=MISSIONS.map((m,i)=>{
+    const done=isDone(i),isCur=i===cur.mi,lock=!done&&!isCur&&!unlockedBefore(i);
+    const cls=done?'done':isCur?'cur':lock?'lock':'';
+    return `<div class="tr ${cls}" data-i="${i}"><span class="dot"></span>
+      <div class="tx"><b>${String(i+1).padStart(2,'0')}</b><span>${esc(m.title)}</span><span class="tag">${esc(m.tag)}</span></div></div>`;
+  }).join('');
+  $$('#trail .tr').forEach(t=>t.onclick=()=>{
+    const i=+t.dataset.i;
+    if(t.classList.contains('lock')){errBeep();toast('BLOQUEADA','Conclua as missões anteriores para desbloquear.');return}
+    loadMission(i);
+  });
+}
+function loadMission(i){
+  cur.mi=i;cur.attempt=0;cur.usedHint=false;cur.busy=false;
+  const m=MISSIONS[i];
+  if(m.type==='order')m.pool0=m.pool.slice();
+  $('#msKicker').textContent=`MISSÃO ${String(i+1).padStart(2,'0')}/${MISSIONS.length}${isDone(i)?' · CONCLUÍDA':''}`;
+  $('#msXp').innerHTML=`+<b>${m.xp}</b> XP`;
+  $('#msTitle').textContent=m.title;
+  $('#msTheory').innerHTML=m.theory;
+  $('#msGoal').innerHTML=m.goal;
+  $('#hintBox').classList.remove('show');
+  $('#hintBox').innerHTML=`<span class="hl">DICA</span>${m.hint}`;
+  RENDER[m.type](m);
+  renderActions();renderTrail();
+  $('#verdict').className='verdict';
+  $('#stage').scrollTop=0;
+  resetNet('pronto para a missão '+(i+1));
+  addNode('srv','SERVIDOR',C.amb,':8765','AGUARDANDO');
+  netLog('SRV','ambiente preparado — valide seu código para executar na rede','srv');
+  updSimState('aguardando');
+}
+function renderActions(){
+  const done=isDone(cur.mi);
+  $('#actions').innerHTML=
+    `<button class="btn pri" id="btnVal"><i data-lucide="hammer"></i> ${done?'Executar de novo':'Validar & executar'}</button>
+     <button class="btn" id="btnHint"><i data-lucide="lightbulb"></i> Dica ${done?'':'(−25 bônus)'}</button>
+     <button class="btn" id="btnReset"><i data-lucide="rotate-ccw"></i> Refazer</button>
+     ${done&&cur.mi<MISSIONS.length-1?'<button class="btn" id="btnNext"><i data-lucide="arrow-right"></i> Próxima</button>':''}`;
+  icons();
+  $('#btnVal').onclick=()=>onValidate(false);
+  $('#btnHint').onclick=()=>{cur.usedHint=true;$('#hintBox').classList.toggle('show');beep(600,.05)};
+  $('#btnReset').onclick=()=>{const m=MISSIONS[cur.mi];RENDER[m.type](m);$('#verdict').className='verdict';cur.attempt=0;beep(440,.05)};
+  const nx=$('#btnNext');if(nx)nx.onclick=()=>loadMission(cur.mi+1);
+}
+function autoValidate(){onValidate(true)}
+async function onValidate(auto){
+  if(cur.busy)return;
+  const m=MISSIONS[cur.mi],res=CHECKS[m.type]();
+  const revisit=isDone(cur.mi);
+  if(!res.ok){
+    if(!auto){S.errors++;cur.attempt++;if(!revisit)streak=0;renderHdr()}
+    errBeep();
+    const v=$('#verdict');v.className='verdict bad show';
+    v.innerHTML=`<div class="vt"><i data-lucide="bug"></i> AINDA NÃO</div>${res.msg}`;
+    icons();
+    return;
+  }
+  cur.busy=true;const bv=$('#btnVal');if(bv)bv.disabled=true;
+  S.oks++;
+  const bonus=revisit?0:((cur.usedHint?0:25)+(cur.attempt===0?25:0));
+  if(!revisit){
+    streak++;gainXP(m.xp+bonus);
+    toast('MISSÃO CONCLUÍDA','<b>'+esc(m.title)+'</b> — +'+m.xp+' XP'+(bonus?' (+'+bonus+' de bônus)':''),'grn');
+    winBeep();
+  }else{beep(880,.08)}
+  markDone(cur.mi);
+  const v=$('#verdict');v.className='verdict ok show';
+  v.innerHTML=`<div class="vt"><i data-lucide="badge-check"></i> CÓDIGO ACEITO — EXECUTANDO NA REDE ▸</div>
+    <p>Observe o simulador à direita: seu código ganhou vida.</p>
+    ${revisit?'<p style="color:var(--dim)">revisão: sem XP desta vez</p>':
+    `<div class="vbonus">${!cur.usedHint?'<span>SEM DICA +25</span>':''}${cur.attempt===0?'<span>DE PRIMEIRA +25</span>':''}<span>TOTAL +${m.xp+bonus} XP</span></div>`}`;
+  icons();
+  renderActions();renderTrail();
+  try{await RUNS[m.run]()}catch(e){}
+  cur.busy=false;if(bv)bv.disabled=false;
+  if(!revisit){
+    const last=cur.mi===MISSIONS.length-1;
+    if(!last){
+      updSimState('concluído');
+      v.innerHTML=`<div class="vt"><i data-lucide="check-check"></i> MISSÃO ${cur.mi+1} LIMPA</div>
+        <p>A execução está no log ao lado. Quando quiser, siga em frente.</p>
+        <div class="vnext"><button class="btn pri" id="btnGoNext"><i data-lucide="arrow-right"></i> PRÓXIMA MISSÃO</button></div>`;
+      icons();
+      const g=$('#btnGoNext');if(g)g.onclick=()=>loadMission(cur.mi+1);
+    }
+  }
+}
+
+/* =============== vitória =============== */
+function showWin(){
+  const secs=Math.floor((Date.now()-S.t0)/1000);
+  const dur=String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
+  const acc=S.oks+S.errors>0?Math.round(S.oks*100/(S.oks+S.errors)):100;
+  $('#wstats').innerHTML=`
+    <div><b>${S.xp}</b><span>XP total</span></div>
+    <div><b>${levelOf(S.xp)+1}</b><span>nível · ${LEVELS[levelOf(S.xp)].n}</span></div>
+    <div><b>${acc}%</b><span>precisão</span></div>
+    <div><b>${dur}</b><span>tempo</span></div>`;
+  $('#winOv').classList.remove('hid');icons();
+}
+ $('#btnStay').onclick=()=>$('#winOv').classList.add('hid');
+ $('#btnWipe').onclick=()=>{try{localStorage.removeItem('handshake-lab-v1')}catch(e){};location.reload()};
+
+/* =============== init =============== */
+renderHdr();
+loadMission(Math.min(S.done.length,MISSIONS.length-1));
+icons();
+setTimeout(()=>toast('BEM-VINDO À FORJA','Siga a trilha à esquerda. Tudo é simulado — nenhum socket real abre. O objetivo: forjar um chat WebSockets completo em Python.','grn'),600);
+</script>
+</body>
+</html>
