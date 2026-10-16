@@ -1,0 +1,2669 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador VirtualBox + Ubuntu — Instalação e Configuração</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg-card: rgba(20, 26, 36, 0.7);
+    --bg-card-solid: #141a24;
+    --fg: #e6edf3;
+    --fg-muted: #8b949e;
+    --border: #21262d;
+    --primary: #dd4814;
+    --primary-2: #e95420;
+    --accent-blue: #0078d7;
+    --accent-amber: #f59e0b;
+    --accent-green: #22c55e;
+    --accent-purple: #a855f7;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --vb-blue: #2196f3;
+    --vb-blue-dark: #0d47a1;
+    --ubuntu-orange: #e95420;
+    --ubuntu-aubergine: #772953;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Ubuntu", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(221, 72, 20, 0.08), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(33, 150, 243, 0.06), transparent 40%);
+    background-attachment: fixed;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* Login */
+  .login-wrap { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    max-width: 460px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    height: 240px;
+    background: rgba(221, 72, 20, 0.25);
+    border-radius: 50%;
+    filter: blur(60px);
+  }
+  .login-logo {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ubuntu-orange), var(--vb-blue));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    overflow: hidden;
+  }
+  .login-logo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 60%);
+  }
+  .login-card h1 {
+    position: relative;
+    font-size: 26px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--ubuntu-orange), var(--vb-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .login-card p {
+    position: relative;
+    color: var(--fg-muted);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .input-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 12px;
+    margin-bottom: 12px;
+  }
+  .input-row:focus-within { border-color: var(--primary); }
+  .input-row input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--fg);
+    padding: 12px 0;
+    font-size: 15px;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.06);
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn:hover { background: rgba(255,255,255,0.1); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--ubuntu-orange), var(--vb-blue));
+    color: white;
+    border: none;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-lg { padding: 14px 28px; font-size: 15px; width: 100%; }
+  .btn-ghost { background: transparent; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-success { background: var(--success); color: white; border: none; }
+  .btn-warning { background: var(--accent-amber); color: #1a1a1a; border: none; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, rgba(20, 26, 36, 0.9), rgba(20, 26, 36, 0.4));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+  }
+  .hero::before { top: -80px; right: -80px; width: 300px; height: 300px; background: rgba(221, 72, 20, 0.12); }
+  .hero::after { bottom: -60px; left: -60px; width: 200px; height: 200px; background: rgba(33, 150, 243, 0.1); }
+  .hero-content {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .hero h1 { font-size: 30px; margin-bottom: 8px; }
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--ubuntu-orange), var(--vb-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p { color: var(--fg-muted); max-width: 520px; }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(221, 72, 20, 0.12);
+    color: var(--primary);
+    border: 1px solid rgba(221, 72, 20, 0.3);
+    margin-bottom: 12px;
+  }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat { text-align: center; min-width: 90px; }
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 8px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .stat-value { font-size: 26px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: var(--fg-muted); }
+
+  /* Section head */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .section-head h2 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+
+  /* Modules grid */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .module-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    width: 100%;
+    color: var(--fg);
+    font-family: inherit;
+  }
+  .module-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--mod-color, var(--primary));
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  }
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.18;
+    background: var(--mod-color, var(--primary));
+  }
+  .module-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: rgba(255,255,255,0.08);
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .module-card h3 { font-size: 17px; margin-bottom: 6px; }
+  .module-card p { color: var(--fg-muted); font-size: 13px; margin-bottom: 16px; min-height: 38px; }
+  .progress-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; background: var(--mod-color, var(--primary)); border-radius: 999px; transition: width 0.5s; }
+  .module-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .module-footer .cta { color: var(--mod-color, var(--primary)); font-weight: 500; }
+
+  /* Lesson items */
+  .lesson-item {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+    color: var(--fg);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .lesson-item:hover:not(.locked) { border-color: var(--primary); transform: translateY(-2px); }
+  .lesson-item.locked { opacity: 0.5; cursor: not-allowed; }
+  .lesson-item.completed { border-color: rgba(34, 197, 94, 0.3); }
+  .lesson-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .lesson-info { flex: 1; }
+  .lesson-tag { font-size: 11px; font-family: monospace; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .lesson-info h4 { font-size: 15px; margin: 4px 0; }
+  .lesson-info p { color: var(--fg-muted); font-size: 13px; }
+
+  /* Lesson content */
+  .lesson-content section { margin-bottom: 22px; }
+  .lesson-content h3 {
+    font-size: 17px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .lesson-content .num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    background: var(--mod-color, var(--primary));
+    flex-shrink: 0;
+  }
+  .lesson-content p {
+    color: var(--fg-muted);
+    padding-left: 38px;
+    font-size: 14.5px;
+  }
+  .example-box {
+    margin-left: 38px;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 13px;
+  }
+  .example-box .ex-label { color: #f59e0b; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .example-box .ex-text { color: #fcd34d; }
+  .tip-box {
+    margin-left: 38px;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    font-size: 13px;
+  }
+  .tip-box .tip-label { color: #22c55e; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .tip-box .tip-text { color: #86efac; }
+
+  /* Code blocks */
+  .code-block {
+    margin-left: 38px;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #0a0e14;
+    border: 1px solid #1e2b22;
+    font-family: "SF Mono", "Monaco", "Consolas", monospace;
+    font-size: 13px;
+    color: #d1f7e0;
+    overflow-x: auto;
+  }
+  .code-block .comment { color: #6b7280; }
+  .code-block .prompt { color: var(--ubuntu-orange); }
+
+  /* Quiz */
+  .quiz-progress {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .quiz-progress > div { height: 100%; background: var(--primary); transition: width 0.3s; }
+  .quiz-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--fg-muted); margin-bottom: 8px; }
+  .quiz-question { font-size: 17px; font-weight: 600; margin-bottom: 18px; line-height: 1.5; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .quiz-option:hover:not(:disabled) { border-color: var(--primary); background: rgba(221, 72, 20, 0.05); }
+  .quiz-option:disabled { cursor: default; }
+  .quiz-option.correct { border-color: var(--success); background: rgba(34, 197, 94, 0.1); }
+  .quiz-option.wrong { border-color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+  .opt-letter {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .quiz-option.correct .opt-letter { background: var(--success); border-color: var(--success); color: white; }
+  .quiz-option.wrong .opt-letter { background: var(--danger); border-color: var(--danger); color: white; }
+  .quiz-explain {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(221, 72, 20, 0.05);
+    border: 1px solid rgba(221, 72, 20, 0.2);
+    font-size: 14px;
+  }
+  .quiz-explain .ex-title { font-weight: 600; margin-bottom: 4px; }
+
+  /* Result */
+  .result-card { text-align: center; padding: 40px 24px; }
+  .result-icon {
+    width: 80px; height: 80px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    background: rgba(34, 197, 94, 0.15);
+  }
+  .result-icon.fail { background: rgba(245, 158, 11, 0.15); }
+  .result-card h3 { font-size: 24px; margin-bottom: 8px; }
+  .result-pct { font-size: 42px; font-weight: 800; color: var(--primary); margin: 12px 0; }
+
+  /* ===== VirtualBox Mockup ===== */
+  .vb-window {
+    background: #f0f0f0;
+    border: 1px solid #999;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    color: #1a1a1a;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .vb-titlebar {
+    background: linear-gradient(to bottom, #2c5d8f, #1a4570);
+    color: white;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .vb-titlebar .vb-logo {
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vb-blue-dark);
+    font-size: 11px;
+    font-weight: bold;
+  }
+  .vb-titlebar-text { flex: 1; }
+  .vb-titlebar-buttons { display: flex; gap: 6px; }
+  .vb-titlebar-buttons span {
+    width: 18px; height: 18px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .vb-menubar {
+    background: #e8e8e8;
+    border-bottom: 1px solid #ccc;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #333;
+  }
+  .vb-menubar span { margin-right: 12px; cursor: pointer; }
+  .vb-menubar span:hover { color: var(--vb-blue); }
+  .vb-toolbar {
+    background: linear-gradient(to bottom, #fafafa, #e0e0e0);
+    border-bottom: 1px solid #ccc;
+    padding: 8px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .vb-btn {
+    background: linear-gradient(to bottom, #fafafa, #d4d4d4);
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+  }
+  .vb-btn:hover { background: linear-gradient(to bottom, #e8f4fc, #b8d8e8); border-color: var(--vb-blue); }
+  .vb-btn.primary { background: linear-gradient(to bottom, #4a90e2, #2c5d8f); color: white; border-color: #1a4570; }
+  .vb-btn.primary:hover { background: linear-gradient(to bottom, #5aa0f2, #3c6d9f); }
+  .vb-btn.danger { background: linear-gradient(to bottom, #f44336, #c62828); color: white; border-color: #b71c1c; }
+  .vb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .vb-body {
+    background: white;
+    padding: 16px;
+    min-height: 320px;
+  }
+  .vm-list {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  .vm-item {
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+  }
+  .vm-item:hover { background: #f0f7ff; }
+  .vm-item.selected { background: #e0efff; border-color: var(--vb-blue); }
+  .vm-icon { font-size: 24px; }
+  .vm-info { flex: 1; }
+  .vm-info .vm-name { font-weight: 500; color: #1a1a1a; }
+  .vm-info .vm-state { font-size: 11px; color: #666; }
+  .vm-details {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .vm-details h4 { color: #1a1a1a; font-size: 13px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+  .vm-details .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    color: #444;
+  }
+  .vm-details .detail-row .label { color: #666; }
+  .vm-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+  }
+  .vm-empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+
+  /* Modal dialog */
+  .vb-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .vb-modal {
+    background: #f0f0f0;
+    border: 1px solid #999;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+  }
+  .vb-modal .vb-modal-titlebar {
+    background: linear-gradient(to bottom, #2c5d8f, #1a4570);
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .vb-modal-body {
+    background: white;
+    padding: 20px;
+    overflow-y: auto;
+    color: #1a1a1a;
+  }
+  .vb-modal-footer {
+    background: #e8e8e8;
+    border-top: 1px solid #ccc;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 12px; font-weight: 500; color: #333; margin-bottom: 4px; }
+  .form-row input, .form-row select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    color: #1a1a1a;
+    font-family: inherit;
+  }
+  .form-row input:focus, .form-row select:focus { outline: none; border-color: var(--vb-blue); box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2); }
+  .form-row .hint { font-size: 11px; color: #666; margin-top: 3px; }
+  .form-row .error { font-size: 11px; color: var(--danger); margin-top: 3px; }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slider-row input[type=range] { flex: 1; }
+  .slider-row .value {
+    min-width: 60px;
+    text-align: right;
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--vb-blue);
+    font-weight: 600;
+  }
+
+  /* Wizard steps */
+  .wizard-steps {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding: 10px;
+    background: #fafafa;
+    border-radius: 6px;
+    border: 1px solid #eee;
+  }
+  .wizard-step {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    padding: 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .wizard-step.active { color: var(--vb-blue); border-bottom-color: var(--vb-blue); font-weight: 600; }
+  .wizard-step.done { color: var(--success); }
+
+  /* Ubuntu installer */
+  .ubuntu-window {
+    background: #2c001e;
+    border-radius: 8px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+    overflow: hidden;
+    color: white;
+    font-family: "Ubuntu", -apple-system, sans-serif;
+  }
+  .ubuntu-titlebar {
+    background: rgba(0,0,0,0.3);
+    padding: 4px 10px;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    color: #aea79f;
+  }
+  .ubuntu-titlebar .dots { display: flex; gap: 5px; }
+  .ubuntu-titlebar .dots span {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #aea79f;
+    opacity: 0.6;
+  }
+  .ubuntu-body {
+    padding: 30px;
+    min-height: 380px;
+    background: linear-gradient(135deg, #2c001e 0%, #4a0e2e 100%);
+  }
+  .ubuntu-welcome {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .ubuntu-logo-big {
+    width: 80px; height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: var(--ubuntu-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    box-shadow: 0 0 40px rgba(233, 84, 32, 0.5);
+  }
+  .ubuntu-welcome h2 { font-size: 28px; margin-bottom: 8px; font-weight: 300; }
+  .ubuntu-welcome p { color: #aea79f; margin-bottom: 24px; }
+  .ubuntu-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .ubuntu-option {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 18px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: white;
+    font-family: inherit;
+  }
+  .ubuntu-option:hover { background: rgba(233, 84, 32, 0.2); border-color: var(--ubuntu-orange); }
+  .ubuntu-option .icon { font-size: 32px; margin-bottom: 8px; }
+  .ubuntu-option .title { font-size: 14px; font-weight: 500; }
+  .ubuntu-option .desc { font-size: 11px; color: #aea79f; margin-top: 4px; }
+  .ubuntu-btn {
+    background: var(--ubuntu-orange);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+  }
+  .ubuntu-btn:hover { background: #f06331; }
+  .ubuntu-btn-secondary {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ubuntu-btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+  /* Progress/installation */
+  .install-progress {
+    text-align: center;
+    padding: 30px;
+  }
+  .progress-ring {
+    width: 100px; height: 100px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: conic-gradient(var(--ubuntu-orange) 0%, rgba(255,255,255,0.1) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .progress-ring::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: #2c001e;
+  }
+  .progress-ring span {
+    position: relative;
+    z-index: 1;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .install-step {
+    background: rgba(255,255,255,0.05);
+    border-left: 3px solid var(--ubuntu-orange);
+    padding: 10px 14px;
+    margin: 8px 0;
+    border-radius: 4px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .install-step.done { border-left-color: var(--success); color: #86efac; }
+  .install-step.pending { opacity: 0.4; border-left-color: #666; }
+
+  /* Hotspot */
+  .hotspot {
+    position: absolute;
+    border: 2px solid var(--accent-amber);
+    border-radius: 6px;
+    background: rgba(245, 158, 11, 0.15);
+    cursor: pointer;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+  }
+  .hotspot-label {
+    position: absolute;
+    background: var(--accent-amber);
+    color: #1a1a1a;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Tutorial overlay */
+  .tut-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 999;
+    pointer-events: none;
+  }
+  .tut-tooltip {
+    position: fixed;
+    background: var(--bg-card-solid);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 14px 18px;
+    max-width: 320px;
+    z-index: 1001;
+    color: var(--fg);
+    font-size: 13px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .tut-tooltip h4 { color: var(--primary); margin-bottom: 6px; font-size: 14px; }
+  .tut-tooltip .actions { margin-top: 10px; display: flex; justify-content: flex-end; gap: 6px; }
+
+  /* Achievements */
+  .achievements-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .achievement {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .tab.active { background: rgba(255,255,255,0.08); color: var(--fg); }
+
+  /* Terminal */
+  .terminal {
+    background: #2c001e;
+    border: 1px solid #4a0e2e;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .terminal-bar {
+    background: rgba(0,0,0,0.4);
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #aea79f;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #4a0e2e;
+  }
+  .terminal-body {
+    padding: 14px;
+    height: 280px;
+    overflow-y: auto;
+    font-family: "SF Mono", "Monaco", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .term-line { white-space: pre-wrap; word-break: break-word; }
+  .term-line.input { color: #f7e6f0; }
+  .term-line.output { color: #aea79f; }
+  .term-line.success { color: #86efac; }
+  .term-line.error { color: #f87171; }
+  .term-line.prompt-line { color: var(--ubuntu-orange); }
+  .term-input-row { display: flex; gap: 6px; margin-top: 4px; }
+  .term-prompt { color: var(--ubuntu-orange); font-family: monospace; }
+  .term-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f7e6f0;
+    font-family: monospace;
+    font-size: 13px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero-content { flex-direction: column; align-items: flex-start; }
+    .stats { width: 100%; }
+    .container { padding: 16px 12px 40px; }
+    .hero h1 { font-size: 24px; }
+    .lesson-content p { padding-left: 0; }
+    .example-box, .tip-box, .code-block { margin-left: 0; }
+    .ubuntu-options { grid-template-columns: 1fr; }
+    .vb-modal { max-width: 100%; }
+  }
+  .hidden { display: none !important; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .mb-2 { margin-bottom: 8px; }
+  .mb-4 { margin-bottom: 16px; }
+  .text-muted { color: var(--fg-muted); }
+  .text-sm { font-size: 13px; }
+  .text-xs { font-size: 12px; }
+  code.inline {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--primary);
+  }
+  .info-banner {
+    background: rgba(33, 150, 243, 0.1);
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .info-banner .icon { font-size: 18px; }
+  .info-banner.info { background: rgba(33, 150, 243, 0.1); border-color: rgba(33, 150, 243, 0.3); }
+  .info-banner.warning { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); }
+  .info-banner.success { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); }
+  .info-banner.danger { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+/* ====================================================================
+   SIMULADOR VIRTUALBOX + UBUNTU
+   Instalação e Configuração — Arquivo HTML autossuficiente
+   Baseado no material: Encontro Vivencial Módulos I e II - Unisinos
+   ==================================================================== */
+
+// ---------- DADOS: MÓDULOS TEÓRICOS ----------
+const MODULES = [
+  {
+    id: 'virtualizacao',
+    title: 'Virtualização: Conceitos Básicos',
+    description: 'O que é virtualização, hipervisores, vantagens e tipos',
+    icon: '🖥️',
+    color: '#2196f3',
+    lessons: [
+      {
+        id: 'virt-1',
+        title: 'O que é Virtualização',
+        icon: '👻',
+        summary: 'Definição, motivação e por que usar máquinas virtuais.',
+        content: [
+          { heading: 'Definição', body: 'Virtualização é a técnica de criar uma representação virtual (abstrata) de um recurso computacional — uma máquina, disco, rede, CPU — de modo que múltiplos consumidores possam compartilhar o mesmo recurso físico de forma isolada. Na prática, permite rodar múltiplos sistemas operacionais simultaneamente em um único hardware físico.' },
+          { heading: 'Por que virtualizar?', body: 'Antes da virtualização, servidores rodavam um SO por máquina, deixando CPU e memória subutilizadas (5–15%). A virtualização permite consolidar vários servidores em um hardware, reduzindo custos de energia, espaço e refrigeração. Além disso, oferece isolamento, snapshots (pontos de restauração), migração a quente e backups facilitados.', tip: 'Na disciplina de Fundamentos de Sistemas Operacionais da Unisinos, a Profª. Andriele Busatto do Carmo recomenda o uso de máquinas virtuais (VirtualBox + Linux Mint/Ubuntu) para as atividades práticas.' },
+          { heading: 'Analogia útil', body: 'Imagine um prédio (computador físico) com vários apartamentos (VMs). Cada apartamento tem seu próprio morador (sistema operacional convidado), que não sabe que existem outros apartamentos. O síndico (hipervisor) gerencia o prédio e garante que cada apartamento tenha acesso aos recursos (água, luz = CPU, RAM, disco).' },
+          { heading: 'Tipos de virtualização', body: '1) Virtualização de plataforma (máquinas virtuais); 2) Virtualização de aplicação (JVM, .NET); 3) Virtualização de rede (SDN, VLANs); 4) Virtualização de desktop (VDI). Neste curso focamos na virtualização de plataforma com VirtualBox.' }
+        ],
+        quiz: [
+          { q: 'O que é virtualização?', options: ['Aumentar o clock da CPU fisicamente', 'Criar representações virtuais de recursos computacionais para compartilhamento isolado', 'Substituir totalmente o hardware', 'Compilar código C mais rápido'], correct: 1, explanation: 'Virtualização cria abstrações (VMs) que compartilham o hardware físico de forma isolada.' },
+          { q: 'Qual é uma vantagem principal da virtualização em servidores?', options: ['Aumenta o consumo de energia', 'Consolida servidores subutilizados, economizando recursos', 'Elimina a necessidade de SO', 'Substitui a rede por Wi-Fi'], correct: 1, explanation: 'Servidores rodavam a 5–15% de CPU. VMs permitem múltiplas instâncias em um hardware, melhorando a utilização.' },
+          { q: 'Na disciplina de SO da Unisinos, o que é recomendado para atividades práticas?', options: ['Bare metal apenas', 'Máquina virtual com VirtualBox', 'Container Docker', 'Cloud computing'], correct: 1, explanation: 'A Profª. Andriele recomenda uso de Máquina Virtual com VirtualBox para as atividades práticas.' }
+        ]
+      },
+      {
+        id: 'virt-2',
+        title: 'Hipervisores: Tipo 1 e Tipo 2',
+        icon: '⚙️',
+        summary: 'Bare-metal (Tipo 1) vs hospedado (Tipo 2) — qual o VirtualBox?',
+        content: [
+          { heading: 'Hipervisor Tipo 1 (Bare-metal)', body: 'Roda diretamente sobre o hardware, sem um SO hospedeiro. É um kernel minimalista que gerencia CPU, memória e dispositivos, e executa as VMs. Vantagem: desempenho máximo. Exemplos: VMware ESXi, Microsoft Hyper-V (bare-metal), Xen, KVM (Linux como hipervisor).', example: 'Datacenters usam Tipo 1 (ESXi, KVM) para máxima densidade e desempenho.' },
+          { heading: 'Hipervisor Tipo 2 (Hospedado)', body: 'É um aplicativo que roda sobre um SO convencional (Windows, macOS, Linux). Usa os serviços do SO hospedeiro para acessar o hardware. Vantagem: fácil instalação e uso. Desvantagem: desempenho menor devido ao overhead do SO hospedeiro.', example: 'VMware Workstation, VMware Fusion, Oracle VirtualBox, Parallels Desktop, QEMU.' },
+          { heading: 'Onde o VirtualBox se encaixa?', body: 'O Oracle VirtualBox é um hipervisor Tipo 2. Ele é instalado como um aplicativo comum no seu Windows, macOS ou Linux, e por cima dele rodam as VMs. Isso facilita muito o uso em estações de trabalho para desenvolvimento e aprendizado — exatamente o cenário do nosso curso.', tip: 'Para saber a versão instalada: no menu Ajuda → Sobre o VirtualBox, ou via terminal: VBoxManage --version' },
+          { heading: 'Comparação rápida', body: 'Tipo 1: máximo desempenho, complexo de instalar, usado em produção/servidores. Tipo 2: fácil de instalar, desempenho um pouco menor, usado em desenvolvimento/desktop. Para nosso curso, Tipo 2 (VirtualBox) é a escolha certa pela simplicidade.' }
+        ],
+        quiz: [
+          { q: 'O Oracle VirtualBox é um hipervisor de qual tipo?', options: ['Tipo 1 (bare-metal)', 'Tipo 2 (hospedado)', 'Contêiner', 'Emulador puro'], correct: 1, explanation: 'VirtualBox é Tipo 2: roda como aplicativo sobre Windows/macOS/Linux.' },
+          { q: 'Qual é a principal vantagem do hipervisor Tipo 2?', options: ['Máximo desempenho', 'Facilidade de instalação e uso', 'Não precisa de SO', 'Suporte nativo a contêineres'], correct: 1, explanation: 'Tipo 2 é fácil de instalar e usar, ideal para desktops e desenvolvimento.' },
+          { q: 'Qual é um exemplo de hipervisor Tipo 1?', options: ['VirtualBox', 'VMware Workstation', 'VMware ESXi', 'Parallels Desktop'], correct: 2, explanation: 'VMware ESXi, Hyper-V, Xen e KVM são Tipo 1 (bare-metal).' }
+        ]
+      },
+      {
+        id: 'virt-3',
+        title: 'Requisitos e Preparação',
+        icon: '📋',
+        summary: 'O que verificar antes de instalar o VirtualBox.',
+        content: [
+          { heading: 'Requisitos de hardware', body: 'Para rodar o VirtualBox + Ubuntu de forma confortável, recomenda-se: processador com suporte a virtualização (Intel VT-x ou AMD-V) habilitado na BIOS; pelo menos 8 GB de RAM (4 GB é o mínimo absoluto, mas ficará lento); 25–50 GB de espaço livre em disco; acesso à internet para baixar a ISO e atualizações.', tip: 'Para verificar se VT-x/AMD-V está habilitado: no Windows, use o tool "System Information" e procure por "Hyper-V Requirements". No Linux, rode: egrep -c "(vmx|svm)" /proc/cpuinfo — se retornar 0, está desabilitado.' },
+          { heading: 'Habilitando virtualização na BIOS', body: 'Reinicie o computador e entre na BIOS (geralmente teclas F2, F10, F12, Del ou Esc dependendo do fabricante). Procure por opções como: "Intel Virtualization Technology", "VT-x", "AMD-V", "SVM Mode", ou "Virtualization". Habilite, salve (F10) e saia. Sem isso, o VirtualBox não terá aceleração de hardware e as VMs serão muito lentas.', example: 'Em notebooks Dell: F2 na inicialização → Configuration → Virtualization → Enable. Em Acer: F2 → Main → Advanced → Intel Virtual Technology.' },
+          { heading: 'Software necessário', body: '1) Oracle VirtualBox (gratuito, disponível em https://www.virtualbox.org/); 2) VirtualBox Extension Pack (opcional, mas recomendado para suporte a USB 2.0/3.0, webcam, etc); 3) Imagem ISO do Ubuntu (https://ubuntu.com/download) ou arquivo .ova pronto (como o Linux Mint 20.2 da Unisinos).', tip: 'A Unisinos fornece um arquivo .ova com o Linux Mint 20.2 pré-configurado, com todos os pacotes necessários para a aula já instalados. Você só precisa importar!' },
+          { heading: 'Sistema operacional hospedeiro', body: 'O VirtualBox roda em Windows 10/11, macOS (versões recentes) e a maioria das distribuições Linux (Ubuntu, Fedora, Debian). Em macOS com processador Apple Silicon (M1/M2/M3), o VirtualBox não é suportado — considere usar UTM ou Parallels.' }
+        ],
+        quiz: [
+          { q: 'Qual tecnologia de CPU deve estar habilitada na BIOS?', options: ['Hyper-Threading', 'Intel VT-x ou AMD-V', 'Turbo Boost', 'SpeedStep'], correct: 1, explanation: 'VT-x (Intel) ou AMD-V (AMD) são essenciais para aceleração de hardware no VirtualBox.' },
+          { q: 'Qual é a quantidade recomendada de RAM para rodar VirtualBox + Ubuntu?', options: ['1 GB', '2 GB', 'Pelo menos 8 GB', '32 GB obrigatório'], correct: 2, explanation: '8 GB permite rodar o host + 4 GB para a VM confortavelmente. 4 GB é o mínimo absoluto.' },
+          { q: 'Onde baixar o VirtualBox oficialmente?', options: ['Microsoft Store', 'https://www.virtualbox.org/', 'GitHub', 'Apple App Store'], correct: 1, explanation: 'Sempre baixe o VirtualBox do site oficial: https://www.virtualbox.org/' },
+          { q: 'Qual formato de arquivo a Unisinos fornece com o Linux Mint pré-configurado?', options: ['.iso', '.ova', '.vhd', '.img'], correct: 1, explanation: 'Arquivo .ova (Open Virtualization Format Archive) é uma VM empacotada pronta para importar.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'instalacao-vb',
+    title: 'Instalação do VirtualBox',
+    description: 'Download e instalação passo a passo',
+    icon: '📦',
+    color: '#dd4814',
+    lessons: [
+      {
+        id: 'vb-1',
+        title: 'Download do VirtualBox',
+        icon: '⬇️',
+        summary: 'Baixando o instalador correto do site oficial.',
+        content: [
+          { heading: 'Acessando o site oficial', body: 'Abra o navegador e acesse https://www.virtualbox.org/. Na página inicial, clique no link "Downloads" no menu superior. Você será redirecionado para a página de download, que detecta automaticamente seu sistema operacional hospedeiro.' },
+          { heading: 'Escolhendo o pacote correto', body: 'Selecione o pacote para seu SO: "Windows hosts" (.exe) se você está em Windows; "OS X hosts" (.dmg) se em macOS; ou o pacote correspondente à sua distribuição Linux (Ubuntu, Debian, Fedora, etc). Para a maioria dos usuários, o link "Windows hosts" é o correto.', tip: 'Sempre baixe a versão mais recente (atualmente 7.x). Versões antigas podem ter bugs e não ter suporte a kernels recentes.' },
+          { heading: 'Baixando o Extension Pack', body: 'Na mesma página, role até "VirtualBox X.x.x Oracle VM VirtualBox Extension Pack" e clique em "All supported platforms". O Extension Pack adiciona suporte a USB 2.0/3.0, webcam pass-through, criptografia de disco, e integração avançada com o host. É altamente recomendado instalar.', example: 'Após instalar o VirtualBox, abra o programa → menu Arquivo → Preferências → Extensões → clique no ícone "+" e selecione o arquivo .vbox-extpack baixado.' },
+          { heading: 'Verificando a integridade (opcional)', body: 'Para garantir que o download não está corrompido, você pode verificar o checksum SHA-256. No site, abaixo do link de download, há o checksum oficial. No Windows: certutil -hashfile arquivo.exe SHA256. No Linux/macOS: shasum -a 256 arquivo.' }
+        ],
+        quiz: [
+          { q: 'Qual é o site oficial para baixar o VirtualBox?', options: ['github.com/virtualbox', 'virtualbox.org', 'oracle.com/vb', 'microsoft.com/vb'], correct: 1, explanation: 'O site oficial é https://www.virtualbox.org/' },
+          { q: 'O que é o VirtualBox Extension Pack?', options: ['Um antivírus', 'Pacote que adiciona USB 2.0/3.0, webcam e outras funcionalidades extras', 'Um SO convidado', 'Um driver de vídeo'], correct: 1, explanation: 'Extension Pack adiciona suporte a USB 2.0/3.0, webcam pass-through, criptografia de disco, etc.' },
+          { q: 'Para Windows, qual extensão de arquivo você baixa?', options: ['.dmg', '.deb', '.exe', '.rpm'], correct: 2, explanation: 'Para Windows, baixe o instalador .exe. Para macOS é .dmg. Para Linux depende da distribuição (.deb, .rpm).' }
+        ]
+      },
+      {
+        id: 'vb-2',
+        title: 'Instalação Passo a Passo',
+        icon: '⚙️',
+        summary: 'Executando o instalador e configurando opções.',
+        content: [
+          { heading: 'Executando o instalador', body: 'Localize o arquivo baixado (ex: VirtualBox-7.x.x-xxxxx-Win.exe) e dê dois cliques. Se aparecer a tela de Controle de Conta de Usuário (UAC) do Windows, clique em "Sim" para permitir. O instalador será aberto.' },
+          { heading: 'Tela de boas-vindas', body: 'Clique em "Next" (Avançar). A próxima tela mostra a localização da instalação padrão (C:\\Program Files\\Oracle\\VirtualBox\\). Geralmente não é necessário mudar. Clique em "Next".' },
+          { heading: 'Seleção de componentes', body: 'A próxima tela mostra os componentes a instalar: VirtualBox Application (obrigatório), VirtualBox USB Support (recomendado), VirtualBox Networking Support (recomendado), VirtualBox Python Support (opcional). Mantenha os padrões e clique em "Next".', tip: 'Se você não precisa de suporte a Python no VirtualBox (para scripting), pode desmarcar essa opção para economizar espaço.' },
+          { heading: 'Aviso de rede temporária', body: 'Aparecerá um aviso: "Warning: Network Interfaces" — explicando que a instalação pode resetar temporariamente a conexão de rede. Isso é normal e dura poucos segundos. Clique em "Yes" para continuar.' },
+          { heading: 'Pronto para instalar', body: 'Clique em "Install" (Instalar). O Windows pode pedir novamente permissão UAC — confirme. A barra de progresso mostrará a instalação. Quando aparecer "Installation Completed!" clique em "Finish".' },
+          { heading: 'Primeira execução', body: 'O VirtualBox abrirá automaticamente. A tela inicial mostra a barra lateral esquerda vazia (nenhuma VM criada) e a barra de ferramentas superior com botões: Novo, Configurações, Iniciar, Descartar. Você está pronto para criar sua primeira máquina virtual!', example: 'Atalho para criar nova VM: Ctrl+N. Atalho para configurações: Ctrl+S.' }
+        ],
+        quiz: [
+          { q: 'O que fazer se aparecer o aviso "Network Interfaces"?', options: ['Cancelar a instalação', 'Clicar em Yes — a rede será reiniciada temporariamente', 'Reiniciar o computador antes', 'Desconectar da internet'], correct: 1, explanation: 'O aviso é normal: a instalação pode resetar a rede por poucos segundos. Apenas confirme.' },
+          { q: 'Qual é o componente OBRIGATÓRIO na instalação?', options: ['VirtualBox Python Support', 'VirtualBox Application', 'USB Support', 'Networking Support'], correct: 1, explanation: 'A VirtualBox Application é o componente principal (obrigatório). Os demais são opcionais, mas recomendados.' },
+          { q: 'Qual é o atalho de teclado para criar uma nova VM?', options: ['Ctrl+C', 'Ctrl+N', 'Ctrl+V', 'Ctrl+Shift+N'], correct: 1, explanation: 'Ctrl+N abre o assistente de nova máquina virtual.' }
+        ]
+      },
+      {
+        id: 'vb-3',
+        title: 'Interface do VirtualBox',
+        icon: '🎨',
+        summary: 'Conhecendo os menus, botões e áreas principais.',
+        content: [
+          { heading: 'Barra de menu superior', body: 'Arquivo (importar/exportar appliance, preferências), Máquina (nova, adicionar, configurações), Ajuda (sobre, documentação). Esses menus dão acesso a todas as funcionalidades principais.' },
+          { heading: 'Barra de ferramentas', body: 'Botões principais: "Novo" (criar VM), "Configurações" (editar VM selecionada), "Iniciar" (ligar VM), "Descartar" (descartar estado salvo). Esses quatro botões cobrem 90% das ações diárias.' },
+          { heading: 'Painel lateral esquerdo', body: 'Lista todas as suas máquinas virtuais. Cada VM mostra seu nome e estado atual (Desligada, Em execução, Pausada). Clique para selecionar. Você pode ter quantas VMs quiser, mas só pode rodar tantas quanto sua RAM permite.' },
+          { heading: 'Painel de detalhes (direita)', body: 'Quando uma VM é selecionada, mostra seus detalhes: sistema operacional, RAM, CPU, disco, rede, áudio, USB, pasta compartilhada. Útil para inspeção rápida sem abrir Configurações.' },
+          { heading: 'Menu Preferências (Ctrl+G)', body: 'Acessado via Arquivo → Preferências. Configurações globais: pasta padrão de VMs, atualizações, idioma, rede (host-only), extensões, proxy. Aqui você instala o Extension Pack baixado anteriormente.' }
+        ],
+        quiz: [
+          { q: 'O que faz o botão "Novo" no VirtualBox?', options: ['Cria uma nova pasta', 'Inicia o assistente de nova máquina virtual', 'Abre as preferências', 'Importa um appliance'], correct: 1, explanation: 'Botão "Novo" (ou Ctrl+N) inicia o assistente para criar uma nova VM.' },
+          { q: 'Onde ficam listadas suas máquinas virtuais?', options: ['No painel direito', 'No painel esquerdo', 'Na barra de menu', 'Na barra de status'], correct: 1, explanation: 'O painel esquerdo lista todas as VMs criadas.' },
+          { q: 'Como acessar as Preferências globais do VirtualBox?', options: ['Máquina → Configurações', 'Arquivo → Preferências (Ctrl+G)', 'Ajuda → Sobre', 'Botão direito na VM'], correct: 1, explanation: 'Arquivo → Preferências abre as configurações globais (extensões, pasta padrão, rede).' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'criacao-vm',
+    title: 'Criação e Configuração da VM',
+    description: 'Assistente de nova VM e configurações avançadas',
+    icon: '🔧',
+    color: '#7c3aed',
+    lessons: [
+      {
+        id: 'vm-1',
+        title: 'Assistente de Nova Máquina Virtual',
+        icon: '✨',
+        summary: 'Passo a passo: nome, SO, RAM, CPU, disco.',
+        content: [
+          { heading: 'Iniciando o assistente', body: 'Clique no botão "Novo" (ou Ctrl+N). Aparecerá o assistente "Create Virtual Machine". A versão 7.x do VirtualBox tem um modo "Guided" (guiado) e "Unattended" (instalação automática). Vamos usar o modo guiado padrão.' },
+          { heading: 'Passo 1: Nome e sistema operacional', body: 'Nome: dê um nome descritivo, ex: "Ubuntu-22.04-LTS". O VirtualBox auto-preenche a pasta de destino e o tipo/versão do SO baseado no nome. Folder: onde a VM será salva (padrão: ~/VirtualBox VMs/). Type: Linux. Version: Ubuntu (64-bit). Clique em Next.', tip: 'Se você digitar "Ubuntu" no nome, o VirtualBox detecta automaticamente e preenche tipo e versão. Isso é chamado de "name-based OS detection".' },
+          { heading: 'Passo 2: Memória (RAM)', body: 'Defina quanto de RAM a VM usará. Recomendado: 4096 MB (4 GB) para Ubuntu desktop. Mínimo: 1024 MB (1 GB) — vai ficar MUITO lento. Máximo: deixe pelo menos 4 GB para o host. O VirtualBox mostra um medidor verde (seguro) / vermelho (perigoso). Use o verde.', example: 'Em um host com 8 GB de RAM: aloque 4 GB para a VM e mantenha 4 GB para o host. Em um host com 16 GB, pode alocar 8 GB para a VM.' },
+          { heading: 'Passo 3: Processador (CPU)', body: 'Aba "Processor": quantas CPUs a VM pode usar. Padrão: 1 CPU. Recomendado: 2 CPUs para Ubuntu desktop rodar confortavelmente. Em um host com 4+ cores, 2 CPUs é seguro. Cuidado: o limite verde indica o máximo seguro — não ultrapasse.', tip: 'Para verificar quantos núcleos seu host tem: no Windows, Gerenciador de Tarefas → Desempenho → CPU. No Linux: nproc.' },
+          { heading: 'Passo 4: Disco rígido virtual', body: 'Escolha "Create a virtual hard disk now" (criar novo). Tipo: VDI (VirtualBox Disk Image) — padrão e recomendado. Armazenamento: "Dynamically allocated" (alocado dinamicamente) — o arquivo cresce conforme a VM usa, economizando espaço. Tamanho: 25 GB mínimo para Ubuntu, 50 GB recomendado para ter espaço de trabalho.', example: 'Com "Dynamically allocated" e 50 GB, o arquivo .vdi começa com poucos MB e cresce até no máximo 50 GB conforme você instala programas.' },
+          { heading: 'Finalizando', body: 'Clique em "Finish". O VirtualBox criará a VM, que aparecerá no painel esquerdo como "Desligada". Você ainda precisa montar a ISO do Ubuntu e configurar algumas opções antes de iniciar — veremos na próxima lição.' }
+        ],
+        quiz: [
+          { q: 'Qual é o atalho para criar uma nova VM?', options: ['Ctrl+C', 'Ctrl+N', 'Ctrl+V', 'Ctrl+M'], correct: 1, explanation: 'Ctrl+N abre o assistente de nova VM.' },
+          { q: 'Quanto de RAM é recomendado alocar para Ubuntu desktop?', options: ['512 MB', '1 GB', '4 GB (4096 MB)', '16 GB'], correct: 2, explanation: '4 GB é o recomendado para rodar Ubuntu desktop confortavelmente. 1 GB é o mínimo absoluto.' },
+          { q: 'Qual tipo de disco virtual é o padrão no VirtualBox?', options: ['VHD', 'VMDK', 'VDI', 'QCOW2'], correct: 2, explanation: 'VDI (VirtualBox Disk Image) é o formato padrão do VirtualBox.' },
+          { q: 'O que significa "Dynamically allocated" (alocado dinamicamente)?', options: ['O disco é criado com o tamanho máximo imediatamente', 'O arquivo cresce conforme a VM usa, até o tamanho máximo', 'O disco é somente leitura', 'O disco é apagado a cada reinício'], correct: 1, explanation: 'Dinâmico: o arquivo .vdi começa pequeno e cresce conforme necessário, até o limite definido.' }
+        ]
+      },
+      {
+        id: 'vm-2',
+        title: 'Montando a ISO do Ubuntu',
+        icon: '💿',
+        summary: 'Como inserir a imagem ISO para boot e instalação.',
+        content: [
+          { heading: 'Por que montar a ISO?', body: 'A ISO é uma imagem de CD/DVD. Para o VirtualBox iniciar a instalação do Ubuntu, você precisa "inserir" essa ISO no drive de CD virtual da VM. Sem isso, ao ligar a VM, aparecerá "No bootable medium found" e a VM não iniciará.' },
+          { heading: 'Acessando as configurações', body: 'Selecione a VM no painel esquerdo. Clique no botão "Configurações" (ou Ctrl+S). A janela de configurações tem várias categorias no painel esquerdo: Geral, Sistema, Exibir, Armazenamento, Áudio, Rede, Portas Seriais, USB, Pasta Compartilhada.' },
+          { heading: 'Categoria Armazenamento', body: 'Clique em "Armazenamento" (Storage). No painel direito, você verá a "Árvore de armazenamento": Controller: SATA (com o disco .vdi) e Controller: IDE (com um drive de CD vazio). Clique no ícone do CD "Vazio" (Empty).' },
+          { heading: 'Selecionando a ISO', body: 'À direita, no atributo "Drive óptico", clique no pequeno ícone de CD azul e escolha "Choose a disk file..." (Escolher um arquivo de disco). Navegue até onde você salvou a ISO do Ubuntu (ex: ubuntu-22.04.x-desktop-amd64.iso) e selecione. O drive de CD agora mostra o nome da ISO em vez de "Vazio".', tip: 'Atalho alternativo: você também pode montar a ISO via menu Devices → Optical Drives → Choose disk file, enquanto a VM está rodando. Mas para instalação, é melhor montar antes de iniciar.' },
+          { heading: 'Marcar como Live CD/DVD', body: 'Logo abaixo, há uma checkbox "Live CD/DVD". Marque-a. Isso permite que a VM dê boot pela ISO mesmo sem disco rígido instalado. Clique em OK para salvar as configurações.', example: 'Agora ao ligar a VM, ela iniciará pelo CD virtual (ISO do Ubuntu), carregando o instalador do Ubuntu.' }
+        ],
+        quiz: [
+          { q: 'O que acontece se você ligar a VM sem montar a ISO?', options: ['Ubuntu instala automaticamente', 'Aparece "No bootable medium found" e a VM não inicia', 'O Windows abre', 'A VM formata o disco'], correct: 1, explanation: 'Sem mídia de boot, a VM não encontra o que carregar e mostra "No bootable medium found".' },
+          { q: 'Em qual categoria das configurações você monta a ISO?', options: ['Geral', 'Sistema', 'Armazenamento (Storage)', 'Rede'], correct: 2, explanation: 'Em Armazenamento → Controller IDE → drive de CD, você escolhe o arquivo ISO.' },
+          { q: 'Para que serve marcar "Live CD/DVD"?', options: ['Permite boot pela ISO mesmo sem disco instalado', 'Acelera a VM', 'Compartilha arquivos com host', 'Habilita rede'], correct: 0, explanation: 'Live CD/DVD permite que a VM dê boot pela ISO, ideal para instalação.' }
+        ]
+      },
+      {
+        id: 'vm-3',
+        title: 'Configurações Avançadas',
+        icon: '🎚️',
+        summary: 'Vídeo, rede, pasta compartilhada e Guest Additions.',
+        content: [
+          { heading: 'Vídeo (Display)', body: 'Em Configurações → Exibir: Video Memory: 128 MB (máximo recomendado). Graphics Controller: VBoxSVGA (para Linux) ou VBoxVGA (outros). Marque "Enable 3D Acceleration" para melhor desempenho gráfico. Marque "Enable 2D Video Acceleration" se disponível.' },
+          { heading: 'Rede (Network)', body: 'Em Configurações → Rede: Adapter 1 habilitado. Attached to: NAT (padrão) — a VM tem internet mas não é acessível do host. Para acessar a VM do host, use "Bridged Adapter" (a VM ganha IP na sua rede física) ou "Host-only Adapter" (rede privada com host).', tip: 'Para iniciantes: NAT é o mais simples e funciona para a maioria dos casos (baixar pacotes, navegar). Para servidores web na VM, use Bridged.' },
+          { heading: 'Pasta compartilhada (Shared Folders)', body: 'Em Configurações → Pastas Compartilhadas: clique no ícone "+" à direita. Folder Path: escolha uma pasta do host (ex: C:\\Users\\SeuNome\\Documents). Auto-mount: marque. Make Permanent: marque. Na VM, a pasta aparecerá em /media/sf_NomeDaPasta. Requer Guest Additions instalado.', example: 'Com pasta compartilhada, você pode arrastar arquivos entre host e VM sem precisar de SCP/SFTP.' },
+          { heading: 'Áudio', body: 'Em Configurações → Áudio: geralmente pode deixar habilitado com Host Driver padrão e Intel HD Audio controller. Se tiver problemas de áudio, tente desabilitar completamente — algumas VMs de servidor não precisam de áudio.' },
+          { heading: 'USB', body: 'Em Configurações → USB: habilitar USB 2.0 (EHCI) ou USB 3.0 (xHCI) requer o Extension Pack instalado. Habilitar permite passar dispositivos USB do host para a VM (pen drives, webcams, etc).' },
+          { heading: 'Sistema (BIOS/UEFI)', body: 'Em Configurações → Sistema → Placa-mãe: habilitar "Habilitar EFI" muda de BIOS legacy para UEFI. Ubuntu moderno funciona melhor em UEFI. Em Processador: habilitar "PAE/NX" e "VT-x/AMD-V" e "Nested Paging" para desempenho.' }
+        ],
+        quiz: [
+          { q: 'Qual modo de rede permite que a VM tenha acesso à internet facilmente?', options: ['Bridged Adapter', 'Host-only Adapter', 'NAT', 'Internal Network'], correct: 2, explanation: 'NAT é o padrão e o mais simples: a VM tem internet via NAT do host, mas não é acessível de fora.' },
+          { q: 'Para que serve uma pasta compartilhada?', options: ['Aumentar a RAM', 'Compartilhar arquivos entre host e VM', 'Acelerar a rede', 'Fazer backup'], correct: 1, explanation: 'Pasta compartilhada permite trocar arquivos entre host e VM facilmente. Requer Guest Additions.' },
+          { q: 'Qual é o recomendado em memória de vídeo para Ubuntu?', options: ['16 MB', '64 MB', '128 MB', '512 MB'], correct: 2, explanation: '128 MB é o máximo recomendado e suficiente para Ubuntu desktop.' },
+          { q: 'O que habilitar para melhorar desempenho gráfico em Linux?', options: ['2D Acceleration apenas', '3D Acceleration', 'Desabilitar vídeo', 'Reduzir VRAM'], correct: 1, explanation: 'Enable 3D Acceleration melhora bastante o desempenho de interface em Linux.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'instalacao-ubuntu',
+    title: 'Instalação do Ubuntu',
+    description: 'Boot, particionamento e pós-instalação',
+    icon: '🐧',
+    color: '#e95420',
+    lessons: [
+      {
+        id: 'ub-1',
+        title: 'Boot e Tela Inicial',
+        icon: '🚀',
+        summary: 'Iniciando a VM, escolhendo idioma e opção de instalação.',
+        content: [
+          { heading: 'Iniciando a VM', body: 'Selecione a VM no painel esquerdo e clique em "Iniciar" (Start). Uma nova janela se abre, mostrando o boot da VM. Você verá o menu GRUB do Ubuntu com as opções: "Try or Install Ubuntu", "Ubuntu (safe graphics)", etc. A primeira opção é a padrão — espere o timeout ou pressione Enter.' },
+          { heading: 'Carregando o live system', body: 'O Ubuntu carrega o "live system" em memória RAM. Isso pode levar 30 segundos a 2 minutos dependendo do hardware. Você verá a tela do Ubuntu com o logo e um cursor animado. Após o carregamento, aparece a tela de boas-vindas.' },
+          { heading: 'Tela de boas-vindas', body: 'À esquerda: escolha o idioma (Português do Brasil). À direita: duas opções grandes — "Experimentar o Ubuntu" (Try Ubuntu) e "Instalar o Ubuntu" (Install Ubuntu). "Experimentar" roda o Ubuntu direto do CD sem instalar — útil para testar. "Instalar" inicia o instalador.', tip: 'Você pode usar o "Experimentar" para testar o Ubuntu antes de instalar. Mas se tem certeza, vá direto em "Instalar".' },
+          { heading: 'Escolhendo instalar', body: 'Clique em "Instalar o Ubuntu". O instalador gráfico (Ubiquity/Calamares) inicia. Ele passará por várias telas de configuração. Você pode continuar usando o live system enquanto instala — não precisa fechar nada.' }
+        ],
+        quiz: [
+          { q: 'Qual é a primeira tela que aparece ao iniciar a VM?', options: ['A instalação do Ubuntu direto', 'O menu GRUB com opções de boot', 'A tela de login do Ubuntu', 'O desktop do Ubuntu'], correct: 1, explanation: 'O GRUB aparece primeiro com opções. A primeira opção "Try or Install Ubuntu" leva ao live system.' },
+          { q: 'O que faz a opção "Experimentar o Ubuntu"?', options: ['Instala direto no disco', 'Roda o Ubuntu da RAM sem instalar, para testar', 'Formata o disco', 'Reinicia a VM'], correct: 1, explanation: '"Try Ubuntu" carrega o sistema em memória para você testar sem modificar o disco. Útil para diagnóstico.' },
+          { q: 'Qual é a primeira configuração do instalador?', options: ['Particionamento de disco', 'Idioma e teclado', 'Senha de root', 'Configuração de rede'], correct: 1, explanation: 'Após clicar em "Instalar Ubuntu", a primeira tela pede para escolher o idioma.' }
+        ]
+      },
+      {
+        id: 'ub-2',
+        title: 'Configurações do Instalador',
+        icon: '⚙️',
+        summary: 'Idioma, teclado, tipo de instalação, atualizações.',
+        content: [
+          { heading: 'Escolha de idioma e teclado', body: 'Selecione "Português (Brasil)" como idioma. Em layout de teclado: "Portuguese (Brazil)" — geralmente detectado automaticamente. Clique em "Continuar".' },
+          { heading: 'Tipo de instalação', body: 'Aparecem checkboxes: "Instalação normal" (instala navegador, office, media players, etc — ~5 GB) ou "Instalação mínima" (apenas navegador e utilitários básicos — ~2 GB). Para iniciantes, recomenda-se "Instalação normal". Também há opções: "Baixar atualizações enquanto instala o Ubuntu" (requer internet) e "Instalar software de terceiros para gráficos e dispositivos Wi-Fi e mídia Flash" (recomendado marcar).', tip: 'Marque "Baixar atualizações enquanto instala" para já sair com o sistema atualizado. Marque "Software de terceiros" para ter drivers proprietários e codecs.' },
+          { heading: 'Tipo de instalação de disco', body: 'Tela crítica: "Apagar disco e reinstalar o Ubuntu" (usa o disco inteiro — recomendado para VM), "Criar partições manualmente" (avançado). Para VM, escolha "Apagar disco e instalar Ubuntu". O "disco" aqui é o disco virtual (.vdi) da VM, não seu disco físico do host!', example: 'Em VM não há risco: o "disco" é o .vdi de 25-50 GB que você criou. Apagar não afeta seu Windows/macOS/Linux host.' },
+          { heading: 'Recursos avançados', body: 'Em "Recursos avançados": você pode escolher LVM (Logical Volume Manager) para flexibilidade futura de redimensionar partições, ou ZFS para integridade de dados. Para iniciantes, deixe desmarcado — use o padrão ext4 simples.' },
+          { heading: 'Confirmação', body: 'Clique em "Instalar agora". Aparecerá uma confirmação mostrando as mudanças que serão feitas (criar partição EFI, partição raiz /, swap). Confirme clicando em "Continuar". A instalação começa de fato.' }
+        ],
+        quiz: [
+          { q: 'Qual opção de instalação inclui navegador, office e media players?', options: ['Instalação mínima', 'Instalação normal', 'Instalação server', 'Instalação customizada'], correct: 1, explanation: 'Instalação normal traz os aplicativos padrão (Firefox, LibreOffice, etc). Mínima traz apenas o essencial.' },
+          { q: 'Em uma VM, qual é a opção mais segura de particionamento?', options: ['Criar partições manualmente', 'Apagar disco e reinstalar o Ubuntu', 'Instalar alongside Windows', 'LVM customizado'], correct: 1, explanation: 'Em VM, o "disco" é o .vdi virtual. "Apagar disco" não afeta seu host — é seguro e o mais simples.' },
+          { q: 'O que faz a opção "Baixar atualizações enquanto instala"?', options: ['Pula a instalação de software', 'Já baixa as atualizações de segurança durante a instalação', 'Cancela a instalação', 'Aumenta o tamanho do disco'], correct: 1, explanation: 'Permite que o sistema baixe atualizações em paralelo à instalação — você já sai com o sistema atualizado.' }
+        ]
+      },
+      {
+        id: 'ub-3',
+        title: 'Usuário, Senha e Fuso Horário',
+        icon: '👤',
+        summary: 'Criando usuário, definindo senha e configurando região.',
+        content: [
+          { heading: 'Enquanto instala...', body: 'A instalação dos arquivos acontece em background. Enquanto isso, o instalador pede para você configurar o usuário e a região. Isso economiza tempo — você não precisa esperar a cópia de arquivos terminar.' },
+          { heading: 'Criando usuário', body: 'Preencha: "Seu nome" (ex: João Silva), "Nome do computador" (hostname, ex: joao-ubuntu), "Escolha um nome de usuário" (login, ex: joao — apenas letras minúsculas, sem espaços), "Escolha uma senha" e "Confirme sua senha".' },
+          { heading: 'Tipo de senha', body: 'Você pode marcar: "Solicitar minha senha para entrar" (mais seguro, recomendado) ou "Entrar automaticamente" (sem senha no login — prático em VM de testes, menos seguro). Para VM de estudos, "Entrar automaticamente" é aceitável.', tip: 'Para a disciplina: você pode usar "Entrar automaticamente" para facilitar o uso em aula. Em produção, sempre use senha.' },
+          { heading: 'Fuso horário', body: 'Em seguida aparece um mapa. Clique no seu continente e cidade mais próxima (para Brasil: São Paulo, Brasília, etc). O fuso horário será configurado. Clique em "Continuar".' },
+          { heading: 'Documentos e configurações', body: 'Em algumas versões, o instalador oferece opção de importar configurações de outros sistemas (não aplicável em VM vazia). Pule esta etapa.' }
+        ],
+        quiz: [
+          { q: 'O que o "Nome do computador" (hostname) define?', options: ['A senha do usuário', 'O nome da máquina na rede', 'O tamanho do disco', 'O idioma do sistema'], correct: 1, explanation: 'Hostname é o nome da máquina na rede (ex: joao-ubuntu). Aparece no prompt do terminal.' },
+          { q: 'Qual caractere é PROIBIDO no nome de usuário (login)?', options: ['Letras minúsculas', 'Números', 'Letras maiúsculas e espaços', 'Underscore _'], correct: 2, explanation: 'Logins Unix não podem ter maiúsculas nem espaços. Use apenas minúsculas, números, underscore.' },
+          { q: 'Em uma VM de estudos, qual opção de login é mais prática?', options: ['Solicitar senha sempre', 'Entrar automaticamente', 'Usar biometria', 'Usar token USB'], correct: 1, explanation: 'Em VM de estudos, "Entrar automaticamente" facilita. Em produção, sempre exija senha.' }
+        ]
+      },
+      {
+        id: 'ub-4',
+        title: 'Pós-Instalação e Guest Additions',
+        icon: '🎁',
+        summary: 'Reinicialização, Guest Additions e atualizações.',
+        content: [
+          { heading: 'Finalizando a instalação', body: 'Quando a cópia de arquivos termina, aparece: "Instalação concluída. Você precisa reiniciar o computador para usar a nova instalação." Clique em "Reiniciar agora".' },
+          { heading: 'Removendo a mídia de instalação', body: 'Aparecerá a mensagem: "Please remove the installation medium, then press ENTER". O VirtualBox costuma desmontar a ISO automaticamente, mas se não, vá em Devices → Optical Drives → remova a ISO. Pressione Enter.' },
+          { heading: 'Primeiro boot do Ubuntu instalado', body: 'A VM reinicia e agora dá boot pelo disco virtual (.vdi), não mais pela ISO. Você verá a tela de login (ou entrará direto se configurou auto-login). O desktop do Ubuntu abre — parabéns, instalação concluída!', tip: 'Se aparecer "Operation System not found" no boot, você esqueceu de desmarcar "Live CD/DVD" nas configurações da VM, ou o boot está tentando ler a ISO. Verifique Configurações → Armazenamento.' },
+          { heading: 'Guest Additions — essencial!', body: 'As Guest Additions são drivers extras do VirtualBox que você instala DENTRO da VM. Elas adicionam: resolução de tela automática, clipboard compartilhado (copiar/colar entre host e VM), drag-and-drop, pastas compartilhadas, aceleração gráfica 2D/3D, mouse integrado (sem captura).', example: 'Para instalar: na VM rodando, menu Devices → "Insert Guest Additions CD image...". Abrirá uma janela perguntando se quer rodar. Confirme. Após instalar, reinicie a VM.' },
+          { heading: 'Habilitando clipboard e drag-and-drop', body: 'Após instalar Guest Additions, vá em: Devices → Shared Clipboard → Bidirectional. Devices → Drag and Drop → Bidirectional. Agora você pode copiar texto entre host e VM e arrastar arquivos!' },
+          { heading: 'Atualizando o sistema', body: 'Abra o terminal (Ctrl+Alt+T) e rode: sudo apt update && sudo apt upgrade -y. Isso baixa e instala todas as atualizações disponíveis. Pode demorar alguns minutos dependendo da internet.', code: 'aluno@ubuntu:~$ <span class="prompt">sudo apt update</span>\naluno@ubuntu:~$ <span class="prompt">sudo apt upgrade -y</span>' },
+          { heading: 'Snapshots — sua rede de segurança', body: 'No VirtualBox, antes de fazer mudanças arriscadas, crie um snapshot: menu Máquina → Tomar Snapshot (ou Ctrl+T). Se algo der errado, você pode restaurar a VM ao estado do snapshot em segundos. Essencial para experimentar sem medo!' }
+        ],
+        quiz: [
+          { q: 'O que são Guest Additions?', options: ['Um novo SO', 'Drivers que melhoram integração host-VM (clipboard, resolução, etc)', 'Um antivírus', 'Um tipo de ISO'], correct: 1, explanation: 'Guest Additions adicionam drivers que melhoram a integração: resolução automática, clipboard, pastas compartilhadas, etc.' },
+          { q: 'Como instalar Guest Additions?', options: ['Baixar do site da Oracle', 'Devices → Insert Guest Additions CD image, dentro da VM', 'Reinstalar o VirtualBox', 'É automático'], correct: 1, explanation: 'Menu Devices → Insert Guest Additions CD image instala dentro da VM rodando.' },
+          { q: 'Qual comando atualiza todos os pacotes no Ubuntu?', options: ['sudo apt update', 'sudo apt upgrade -y', 'sudo apt update && sudo apt upgrade -y', 'sudo update all'], correct: 2, explanation: 'sudo apt update atualiza a lista de pacotes; sudo apt upgrade -y instala as atualizações. Os dois juntos completam.' },
+          { q: 'O que é um snapshot no VirtualBox?', options: ['Uma foto da tela', 'Um ponto de restauração da VM, para voltar se algo der errado', 'Um backup do host', 'Um tipo de rede'], correct: 1, explanation: 'Snapshot salva o estado da VM. Você pode restaurar a qualquer momento — útil antes de mudanças arriscadas.' }
+        ]
+      }
+    ]
+  }
+];
+
+// ---------- ESTADO DO JOGO ----------
+const STORAGE_KEY = 'vb-ubuntu-sim-v1';
+function defaultState() {
+  return {
+    playerName: '',
+    totalPoints: 0,
+    modules: {
+      virtualizacao: { completed: false, completedLessons: [] },
+      'instalacao-vb': { completed: false, completedLessons: [] },
+      'criacao-vm': { completed: false, completedLessons: [] },
+      'instalacao-ubuntu': { completed: false, completedLessons: [] },
+      'sim-vb': { completed: false, completedLessons: [] },
+      'sim-ubuntu': { completed: false, completedLessons: [] }
+    },
+    achievements: []
+  };
+}
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    return Object.assign(defaultState(), s);
+  } catch (e) { return defaultState(); }
+}
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+const state = loadState();
+function completeLesson(moduleId, lessonId, points) {
+  const mod = state.modules[moduleId];
+  if (mod.completedLessons.includes(lessonId)) return;
+  mod.completedLessons.push(lessonId);
+  state.totalPoints += points;
+  saveState();
+}
+function completeModule(moduleId) {
+  state.modules[moduleId].completed = true;
+  saveState();
+}
+function addAchievement(name) {
+  if (!state.achievements.includes(name)) {
+    state.achievements.push(name);
+    saveState();
+  }
+}
+function resetProgress() {
+  Object.assign(state, defaultState());
+  saveState();
+}
+
+// ---------- RENDER PRINCIPAL ----------
+const app = document.getElementById('app');
+function render() {
+  if (!state.playerName) renderLogin();
+  else renderHome();
+}
+
+function renderLogin() {
+  app.innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="login-logo">📦</div>
+        <h1>Simulador VirtualBox + Ubuntu</h1>
+        <p>Aprenda a instalar e configurar o VirtualBox, criar máquinas virtuais e instalar o Ubuntu Linux — tudo de forma interativa.</p>
+        <div class="info-banner info">
+          <span class="icon">🎓</span>
+          <div>Baseado no material "Encontro Vivencial Módulos I e II" — Profª. Andriele Busatto do Carmo (Unisinos)</div>
+        </div>
+        <div class="input-row">
+          <span>👤</span>
+          <input type="text" id="nameInput" placeholder="Digite seu nome..." />
+        </div>
+        <button class="btn btn-primary btn-lg" id="startBtn">Começar →</button>
+      </div>
+    </div>
+  `;
+  const input = document.getElementById('nameInput');
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('startBtn').addEventListener('click', doLogin);
+}
+
+function doLogin() {
+  const name = document.getElementById('nameInput').value.trim() || 'Estudante';
+  state.playerName = name;
+  saveState();
+  render();
+}
+
+function renderHome() {
+  const completedCount = Object.values(state.modules).filter(m => m.completed).length;
+  app.innerHTML = `
+    <div class="hero">
+      <div class="hero-content">
+        <div>
+          <span class="badge">✨ Bem-vindo de volta</span>
+          <h1>Olá, <span>${escapeHtml(state.playerName)}</span>!</h1>
+          <p>Aprenda a instalar o VirtualBox, criar máquinas virtuais e instalar o Ubuntu Linux. Inclui simuladores interativos onde você pratica o procedimento real!</p>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-icon" style="background: rgba(245,158,11,0.2)">⚡</div>
+            <div class="stat-value">${state.totalPoints}</div>
+            <div class="stat-label">Pontos</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" style="background: rgba(34,197,94,0.2)">🏆</div>
+            <div class="stat-value">${completedCount}</div>
+            <div class="stat-label">Módulos</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" style="background: rgba(168,85,247,0.2)">🎖️</div>
+            <div class="stat-value">${state.achievements.length}</div>
+            <div class="stat-label">Conquistas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>📚 Módulos do Curso</h2>
+      <button class="btn btn-ghost btn-sm" id="resetBtn">↻ Resetar progresso</button>
+    </div>
+
+    <div class="modules-grid" id="modulesGrid"></div>
+
+    ${state.achievements.length > 0 ? `
+      <div class="card mt-6">
+        <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">🎖️ Conquistas</h2>
+        <div class="achievements-list">
+          ${state.achievements.map(a => `<div class="achievement">✨ ${escapeHtml(a)}</div>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Tem certeza que deseja resetar todo o progresso?')) {
+      resetProgress();
+      render();
+    }
+  });
+
+  const grid = document.getElementById('modulesGrid');
+
+  // Teoria
+  MODULES.forEach(mod => {
+    const modState = state.modules[mod.id];
+    const completedLessons = modState.completedLessons.length;
+    const pct = (completedLessons / mod.lessons.length) * 100;
+    const card = document.createElement('button');
+    card.className = 'module-card';
+    card.style.setProperty('--mod-color', mod.color);
+    card.innerHTML = `
+      <div class="module-icon" style="background: ${mod.color}22; color: ${mod.color}">${mod.icon}</div>
+      ${modState.completed ? '<span class="badge" style="position: absolute; top: 16px; right: 16px; background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">🏆 Completo</span>' : ''}
+      <h3>${mod.title}</h3>
+      <p>${mod.description}</p>
+      <div class="text-xs text-muted flex-between">
+        <span>Progresso</span>
+        <span>${completedLessons}/${mod.lessons.length} lições</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+      <div class="module-footer">
+        <span class="text-xs text-muted">${mod.lessons.reduce((a, l) => a + l.quiz.length, 0)} questões</span>
+        <span class="cta">${pct === 0 ? 'Começar →' : pct === 100 ? 'Revisar →' : 'Continuar →'}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => renderModule(mod.id));
+    grid.appendChild(card);
+  });
+
+  // Simuladores interativos
+  const sim1Card = document.createElement('button');
+  sim1Card.className = 'module-card';
+  sim1Card.style.setProperty('--mod-color', '#2196f3');
+  const sim1Done = state.modules['sim-vb'].completed;
+  sim1Card.innerHTML = `
+    <div class="module-icon" style="background: rgba(33,150,243,0.2); color: #2196f3">🖥️</div>
+    ${sim1Done ? '<span class="badge" style="position: absolute; top: 16px; right: 16px; background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">🏆 Completo</span>' : ''}
+    <h3>Simulador VirtualBox Interativo</h3>
+    <p>Pratique o procedimento real: clique em Novo, configure RAM/CPU/disco, monte a ISO e crie sua VM — tudo num mockup visual do VirtualBox.</p>
+    <div class="text-xs text-muted flex-between">
+      <span>Tutorial guiado</span>
+      <span>~15 min</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width: ${sim1Done ? 100 : 0}%"></div></div>
+    <div class="module-footer">
+      <span class="text-xs text-muted">5 etapas práticas</span>
+      <span class="cta">Abrir simulador →</span>
+    </div>
+  `;
+  sim1Card.addEventListener('click', renderSimVBox);
+  grid.appendChild(sim1Card);
+
+  const sim2Card = document.createElement('button');
+  sim2Card.className = 'module-card';
+  sim2Card.style.setProperty('--mod-color', '#e95420');
+  const sim2Done = state.modules['sim-ubuntu'].completed;
+  sim2Card.innerHTML = `
+    <div class="module-icon" style="background: rgba(233,84,32,0.2); color: #e95420">🐧</div>
+    ${sim2Done ? '<span class="badge" style="position: absolute; top: 16px; right: 16px; background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">🏆 Completo</span>' : ''}
+    <h3>Simulador Instalação Ubuntu</h3>
+    <p>Percorra o instalador do Ubuntu: boot, idioma, particionamento, criação de usuário e finalização. Com terminal pós-instalação funcional.</p>
+    <div class="text-xs text-muted flex-between">
+      <span>Tutorial guiado</span>
+      <span>~20 min</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width: ${sim2Done ? 100 : 0}%"></div></div>
+    <div class="module-footer">
+      <span class="text-xs text-muted">6 etapas práticas</span>
+      <span class="cta">Abrir simulador →</span>
+    </div>
+  `;
+  sim2Card.addEventListener('click', renderSimUbuntu);
+  grid.appendChild(sim2Card);
+}
+
+function renderModule(moduleId) {
+  const mod = MODULES.find(m => m.id === moduleId);
+  if (!mod) return;
+  const modState = state.modules[moduleId];
+  const completedLessons = modState.completedLessons;
+  const pct = (completedLessons.length / mod.lessons.length) * 100;
+
+  app.innerHTML = `
+    <button class="btn btn-ghost btn-sm mb-4" id="backBtn">← Voltar ao menu</button>
+    <div class="card" style="position: relative; overflow: hidden; margin-bottom: 24px;">
+      <div style="position: absolute; top: -80px; right: -80px; width: 240px; height: 240px; border-radius: 50%; background: ${mod.color}; opacity: 0.1; filter: blur(60px); pointer-events: none;"></div>
+      <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; position: relative;">
+        <div class="module-icon" style="margin: 0; background: ${mod.color}22; color: ${mod.color}; font-size: 32px; width: 64px; height: 64px;">${mod.icon}</div>
+        <div style="flex: 1; min-width: 250px;">
+          ${modState.completed ? '<span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">✓ Concluído</span>' : `<span class="badge" style="color: ${mod.color}; border-color: ${mod.color}66">Módulo</span>`}
+          <h1 style="font-size: 26px; margin: 8px 0;">${mod.title}</h1>
+          <p class="text-muted">${mod.description}</p>
+          <div style="max-width: 320px; margin-top: 12px;">
+            <div class="text-xs text-muted flex-between">
+              <span>Progresso</span>
+              <span>${completedLessons.length}/${mod.lessons.length} lições</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%; background: ${mod.color};"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h2 style="font-size: 18px; margin-bottom: 12px; padding: 0 4px;">Lições do módulo</h2>
+    <div id="lessonsList"></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', render);
+
+  const list = document.getElementById('lessonsList');
+  mod.lessons.forEach((lesson, idx) => {
+    const isCompleted = completedLessons.includes(lesson.id);
+    const isLocked = idx > 0 && !completedLessons.includes(mod.lessons[idx - 1].id);
+    const item = document.createElement('button');
+    item.className = 'lesson-item' + (isCompleted ? ' completed' : '') + (isLocked ? ' locked' : '');
+    item.disabled = isLocked;
+    item.innerHTML = `
+      <div class="lesson-icon" style="background: ${isCompleted ? 'rgba(34,197,94,0.2)' : isLocked ? 'rgba(255,255,255,0.05)' : 'rgba(221,72,20,0.1)'}; color: ${isCompleted ? '#22c55e' : isLocked ? 'var(--fg-muted)' : mod.color};">
+        ${isCompleted ? '✓' : isLocked ? '🔒' : lesson.icon}
+      </div>
+      <div class="lesson-info">
+        <div class="lesson-tag">LIÇÃO ${idx + 1} ${isCompleted ? '• concluída' : ''}</div>
+        <h4>${lesson.title}</h4>
+        <p>${lesson.summary}</p>
+      </div>
+      <div style="text-align: right;">
+        ${!isLocked ? '<div style="color: var(--primary); font-size: 22px;">▶</div>' : ''}
+        <div class="text-xs text-muted" style="margin-top: 4px;">${lesson.quiz.length} questões</div>
+      </div>
+    `;
+    if (!isLocked) item.addEventListener('click', () => renderLesson(mod, idx));
+    list.appendChild(item);
+  });
+}
+
+function renderLesson(mod, lessonIdx) {
+  const lesson = mod.lessons[lessonIdx];
+  const hasNext = lessonIdx < mod.lessons.length - 1;
+  app.innerHTML = `
+    <div class="flex-between mb-4">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Voltar ao módulo</button>
+      <div style="display: flex; gap: 8px;">
+        <span class="badge" style="color: ${mod.color}; border-color: ${mod.color}66">${mod.title}</span>
+        <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--fg); border-color: var(--border)">📖 ${lesson.title}</span>
+      </div>
+    </div>
+    <div class="card lesson-content" id="lessonContent" style="--mod-color: ${mod.color}"></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => renderModule(mod.id));
+  renderLessonContent(mod, lesson, lessonIdx, hasNext);
+}
+
+function renderLessonContent(mod, lesson, lessonIdx, hasNext) {
+  const container = document.getElementById('lessonContent');
+  container.innerHTML = `
+    <h2 style="font-size: 26px; margin-bottom: 6px;">${lesson.title}</h2>
+    <p class="text-muted" style="margin-bottom: 24px;">${lesson.summary}</p>
+    ${lesson.content.map((sec, idx) => `
+      <section>
+        <h3><span class="num">${idx + 1}</span> ${sec.heading}</h3>
+        <p>${sec.body}</p>
+        ${sec.example ? `<div class="example-box"><div class="ex-label">EXEMPLO</div><div class="ex-text">${sec.example}</div></div>` : ''}
+        ${sec.tip ? `<div class="tip-box"><div class="tip-label">DICA</div><div class="tip-text">${sec.tip}</div></div>` : ''}
+        ${sec.code ? `<div class="code-block">${sec.code}</div>` : ''}
+      </section>
+    `).join('')}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 12px;">
+      <p class="text-sm text-muted">Estudou todo o conteúdo? Teste seus conhecimentos!</p>
+      <button class="btn btn-primary" id="startQuizBtn">✓ Iniciar quiz (${lesson.quiz.length} questões)</button>
+    </div>
+  `;
+  document.getElementById('startQuizBtn').addEventListener('click', () => renderQuiz(mod, lesson, lessonIdx, hasNext, 0, 0));
+}
+
+function renderQuiz(mod, lesson, lessonIdx, hasNext, currentQ, score) {
+  const q = lesson.quiz[currentQ];
+  const isLast = currentQ === lesson.quiz.length - 1;
+  const progressPct = (currentQ / lesson.quiz.length) * 100;
+  app.innerHTML = `
+    <div class="flex-between mb-4">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Voltar ao módulo</button>
+      <div style="display: flex; gap: 8px;">
+        <span class="badge" style="color: ${mod.color}; border-color: ${mod.color}66">${mod.title}</span>
+        <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--fg); border-color: var(--border)">📝 Quiz</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="quiz-meta">
+        <span>Questão ${currentQ + 1} de ${lesson.quiz.length}</span>
+        <span style="color: var(--primary); font-weight: 500;">Acertos: ${score}</span>
+      </div>
+      <div class="quiz-progress"><div style="width: ${progressPct}%"></div></div>
+      <div class="quiz-question">${q.q}</div>
+      <div id="options"></div>
+      <div id="explain"></div>
+      <div id="nextArea" style="display: none; margin-top: 16px; text-align: right;">
+        <button class="btn btn-primary" id="nextBtn">${isLast ? 'Ver resultado' : 'Próxima questão'} →</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => renderModule(mod.id));
+
+  const opts = document.getElementById('options');
+  q.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.innerHTML = `<div class="opt-letter">${String.fromCharCode(65 + idx)}</div><span>${opt}</span>`;
+    btn.addEventListener('click', () => handleAnswer(idx));
+    opts.appendChild(btn);
+  });
+
+  function handleAnswer(selectedIdx) {
+    const buttons = opts.querySelectorAll('.quiz-option');
+    buttons.forEach((b, i) => {
+      b.disabled = true;
+      if (i === q.correct) b.classList.add('correct');
+      else if (i === selectedIdx) b.classList.add('wrong');
+    });
+    const correct = selectedIdx === q.correct;
+    const newScore = correct ? score + 1 : score;
+    document.getElementById('explain').innerHTML = `
+      <div class="quiz-explain">
+        <div class="ex-title">${correct ? '✓ Correto!' : '⚠ Não é a resposta certa.'}</div>
+        <div class="text-muted">${q.explanation}</div>
+      </div>
+    `;
+    document.getElementById('nextArea').style.display = 'block';
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (isLast) renderQuizResult(mod, lesson, lessonIdx, hasNext, newScore, lesson.quiz.length);
+      else renderQuiz(mod, lesson, lessonIdx, hasNext, currentQ + 1, newScore);
+    });
+  }
+}
+
+function renderQuizResult(mod, lesson, lessonIdx, hasNext, score, total) {
+  const pct = Math.round((score / total) * 100);
+  const passed = pct >= 60;
+  if (passed) {
+    completeLesson(mod.id, lesson.id, score * 10);
+    if (!hasNext) {
+      completeModule(mod.id);
+      const achMap = {
+        virtualizacao: 'Entende de Virtualização',
+        'instalacao-vb': 'Instalador VirtualBox',
+        'criacao-vm': 'Criador de VMs',
+        'instalacao-ubuntu': 'Instalador Ubuntu'
+      };
+      if (achMap[mod.id]) addAchievement(achMap[mod.id]);
+    }
+  }
+  app.innerHTML = `
+    <div class="flex-between mb-4">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Voltar ao módulo</button>
+    </div>
+    <div class="card result-card">
+      <div class="result-icon ${passed ? '' : 'fail'}">${passed ? '🏆' : '📚'}</div>
+      <h3>${passed ? 'Parabéns!' : 'Continue praticando!'}</h3>
+      <p class="text-muted">Você acertou <strong style="color: var(--fg)">${score}</strong> de <strong style="color: var(--fg)">${total}</strong> questões</p>
+      <div class="result-pct" style="${passed ? '' : 'color: var(--accent-amber)'}">${pct}%</div>
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+        <button class="btn" id="retryBtn">↻ Tentar novamente</button>
+        ${hasNext ? '<button class="btn btn-primary" id="nextLessonBtn">Próxima lição →</button>' : '<button class="btn btn-primary" id="backModuleBtn">← Voltar ao módulo</button>'}
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => renderModule(mod.id));
+  document.getElementById('retryBtn').addEventListener('click', () => renderQuiz(mod, lesson, lessonIdx, hasNext, 0, 0));
+  if (hasNext) document.getElementById('nextLessonBtn').addEventListener('click', () => renderLesson(mod, lessonIdx + 1));
+  else document.getElementById('backModuleBtn').addEventListener('click', () => renderModule(mod.id));
+}
+
+// ====================================================================
+// SIMULADOR VIRTUALBOX INTERATIVO
+// ====================================================================
+let simVBState = {
+  vms: [],
+  step: 0,
+  selectedVM: null
+};
+
+const VB_STEPS = [
+  { title: 'Abrir VirtualBox', hint: 'Clique no ícone do VirtualBox para abrir o programa.', action: 'open' },
+  { title: 'Criar nova VM', hint: 'Clique no botão "Novo" (ou Ctrl+N) para iniciar o assistente.', action: 'new' },
+  { title: 'Configurar nome e SO', hint: 'Preencha nome "Ubuntu-VM", tipo Linux, versão Ubuntu (64-bit).', action: 'name' },
+  { title: 'Configurar RAM e CPU', hint: 'Defina 4096 MB de RAM e 2 CPUs.', action: 'hw' },
+  { title: 'Criar disco virtual', hint: 'Crie um disco VDI de 25 GB dinamicamente alocado.', action: 'disk' },
+  { title: 'Montar ISO do Ubuntu', hint: 'Vá em Configurações → Armazenamento → escolha a ISO.', action: 'iso' },
+  { title: 'Iniciar a VM', hint: 'Clique em "Iniciar" para dar boot pela ISO.', action: 'start' }
+];
+
+function renderSimVBox() {
+  simVBState = { vms: [], step: 0, selectedVM: null };
+  app.innerHTML = `
+    <button class="btn btn-ghost btn-sm mb-4" id="backBtn">← Voltar ao menu</button>
+    <div class="card" style="margin-bottom: 16px;">
+      <div class="flex-between">
+        <div>
+          <span class="badge" style="color: #2196f3; border-color: rgba(33,150,243,0.5);">Simulador Interativo</span>
+          <h1 style="font-size: 24px; margin: 8px 0;">🖥️ Simulador do VirtualBox</h1>
+          <p class="text-muted">Pratique o procedimento real de criação de VM. Siga as instruções na barra superior.</p>
+        </div>
+      </div>
+      <div id="vbTutorialBar" style="margin-top: 16px; padding: 12px 14px; background: rgba(33,150,243,0.08); border: 1px solid rgba(33,150,243,0.3); border-radius: 8px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="font-size: 24px;">👉</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #2196f3; font-size: 13px;" id="vbStepTitle">Passo 1: Abrir VirtualBox</div>
+            <div class="text-sm text-muted" id="vbStepHint">Clique no ícone do VirtualBox para abrir o programa.</div>
+          </div>
+          <div class="text-xs text-muted">Passo <span id="vbStepNum">1</span>/${VB_STEPS.length}</div>
+        </div>
+      </div>
+    </div>
+    <div id="vbContent"></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', render);
+  renderVBScreen();
+}
+
+function renderVBScreen() {
+  const content = document.getElementById('vbContent');
+  if (simVBState.step === 0) {
+    // Desktop with VirtualBox icon
+    content.innerHTML = `
+      <div style="background: linear-gradient(135deg, #1a3a5c, #0d2540); border-radius: 12px; padding: 40px; min-height: 400px; position: relative;">
+        <div style="position: absolute; top: 20px; left: 20px; font-size: 12px; color: rgba(255,255,255,0.4);">Desktop do Host (Windows)</div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 60px; cursor: pointer;" id="vbIcon">
+          <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #2196f3, #0d47a1); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 44px; box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4);">📦</div>
+          <div style="color: white; font-size: 13px; background: rgba(0,0,0,0.3); padding: 2px 10px; border-radius: 4px;">Oracle VirtualBox</div>
+        </div>
+        <div style="position: absolute; bottom: 20px; left: 20px; right: 20px; height: 40px; background: rgba(0,0,0,0.3); border-radius: 8px; display: flex; align-items: center; padding: 0 16px;">
+          <span style="color: rgba(255,255,255,0.5); font-size: 12px;">⊞ Iniciar</span>
+        </div>
+      </div>
+    `;
+    document.getElementById('vbIcon').addEventListener('click', () => {
+      simVBState.step = 1;
+      updateVBStep();
+      renderVBScreen();
+    });
+  } else if (simVBState.step >= 1 && simVBState.step <= 7) {
+    // VirtualBox main window
+    renderVBMainWindow(content);
+  }
+}
+
+function renderVBMainWindow(content) {
+  const hasVMs = simVBState.vms.length > 0;
+  content.innerHTML = `
+    <div class="vb-window">
+      <div class="vb-titlebar">
+        <div class="vb-logo">V</div>
+        <div class="vb-titlebar-text">Oracle VM VirtualBox Manager</div>
+        <div class="vb-titlebar-buttons"><span>—</span><span>☐</span><span>✕</span></div>
+      </div>
+      <div class="vb-menubar">
+        <span>Arquivo</span><span>Máquina</span><span>Ajuda</span>
+      </div>
+      <div class="vb-toolbar">
+        <div class="vb-btn ${simVBState.step === 1 ? 'primary' : ''}" id="btnNew" ${simVBState.step < 1 ? 'disabled' : ''}>📝 Novo</div>
+        <div class="vb-btn" id="btnConfig" disabled>⚙️ Configurar</div>
+        <div class="vb-btn" id="btnStart" ${hasVMs ? '' : 'disabled'}>▶ Iniciar</div>
+        <div class="vb-btn" disabled>⏸ Pausar</div>
+        <div class="vb-btn" disabled>⏹ Descartar</div>
+        <div style="flex: 1;"></div>
+        <div class="vb-btn" id="btnSnap" disabled>📸 Snapshot</div>
+      </div>
+      <div class="vb-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase;">Máquinas</div>
+          <div class="vm-list" id="vmList">
+            ${hasVMs ? simVBState.vms.map((vm, i) => `
+              <div class="vm-item ${simVBState.selectedVM === i ? 'selected' : ''}" data-idx="${i}">
+                <div class="vm-icon">🖥️</div>
+                <div class="vm-info">
+                  <div class="vm-name">${escapeHtml(vm.name)}</div>
+                  <div class="vm-state">${vm.state}</div>
+                </div>
+              </div>
+            `).join('') : `
+              <div class="vm-empty">
+                <div class="icon">📭</div>
+                <div>Nenhuma máquina virtual</div>
+                <div class="text-xs">Clique em "Novo" para criar</div>
+              </div>
+            `}
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase;">Detalhes</div>
+          <div class="vm-details" id="vmDetails">
+            ${simVBState.selectedVM !== null ? renderVMDetails(simVBState.vms[simVBState.selectedVM]) : '<div style="color: #888; text-align: center; padding: 20px;">Selecione uma VM para ver detalhes</div>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (simVBState.step >= 1) {
+    document.getElementById('btnNew').addEventListener('click', openVBNewWizard);
+  }
+  // Permite clicar em VMs
+  document.querySelectorAll('.vm-item').forEach(item => {
+    item.addEventListener('click', () => {
+      simVBState.selectedVM = parseInt(item.dataset.idx);
+      renderVBScreen();
+    });
+  });
+}
+
+function renderVMDetails(vm) {
+  return `
+    <h4>${escapeHtml(vm.name)}</h4>
+    <div class="detail-row"><span class="label">Sistema:</span><span>${vm.os}</span></div>
+    <div class="detail-row"><span class="label">Memória RAM:</span><span>${vm.ram || '—'} MB</span></div>
+    <div class="detail-row"><span class="label">Processadores:</span><span>${vm.cpu || '—'}</span></div>
+    <div class="detail-row"><span class="label">Disco:</span><span>${vm.disk || '—'} GB</span></div>
+    <div class="detail-row"><span class="label">ISO montada:</span><span>${vm.iso ? '✓ Sim' : '✗ Não'}</span></div>
+    <div class="detail-row"><span class="label">Estado:</span><span>${vm.state}</span></div>
+  `;
+}
+
+function openVBNewWizard() {
+  const overlay = document.createElement('div');
+  overlay.className = 'vb-modal-overlay';
+  overlay.innerHTML = `
+    <div class="vb-modal">
+      <div class="vb-modal-titlebar">
+        <div>Create Virtual Machine</div>
+        <div style="cursor: pointer;" id="closeModal">✕</div>
+      </div>
+      <div class="vb-modal-body" id="modalBody"></div>
+      <div class="vb-modal-footer">
+        <button class="vb-btn" id="cancelBtn">Cancelar</button>
+        <button class="vb-btn primary" id="nextBtn">Próximo →</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  let wizStep = 0;
+  const wizData = { name: 'Ubuntu-VM', type: 'Linux', version: 'Ubuntu (64-bit)', ram: 4096, cpu: 2, disk: 25, iso: false };
+
+  function renderWiz() {
+    const body = document.getElementById('modalBody');
+    const stepsHtml = `
+      <div class="wizard-steps">
+        <div class="wizard-step ${wizStep === 0 ? 'active' : wizStep > 0 ? 'done' : ''}">Nome e SO</div>
+        <div class="wizard-step ${wizStep === 1 ? 'active' : wizStep > 1 ? 'done' : ''}">RAM</div>
+        <div class="wizard-step ${wizStep === 2 ? 'active' : wizStep > 2 ? 'done' : ''}">CPU</div>
+        <div class="wizard-step ${wizStep === 3 ? 'active' : wizStep > 3 ? 'done' : ''}">Disco</div>
+        <div class="wizard-step ${wizStep === 4 ? 'active' : ''}">Pronto</div>
+      </div>
+    `;
+    if (wizStep === 0) {
+      body.innerHTML = stepsHtml + `
+        <h3 style="color: #1a1a1a; margin-bottom: 16px;">Nome e sistema operacional</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 16px;">Por favor, dê um nome descritivo para a máquina virtual e escolha o sistema operacional que será instalado.</p>
+        <div class="form-row">
+          <label>Nome *</label>
+          <input type="text" id="vmName" value="${wizData.name}" />
+          <div class="hint">O VirtualBox detecta o SO automaticamente pelo nome</div>
+        </div>
+        <div class="form-row">
+          <label>Pasta de destino</label>
+          <input type="text" value="~/VirtualBox VMs/Ubuntu-VM" disabled />
+        </div>
+        <div class="form-row">
+          <label>Tipo</label>
+          <select id="vmType"><option>Linux</option><option>Windows</option><option>Other</option></select>
+        </div>
+        <div class="form-row">
+          <label>Versão</label>
+          <select id="vmVersion"><option>Ubuntu (64-bit)</option><option>Ubuntu (32-bit)</option><option>Debian (64-bit)</option></select>
+        </div>
+      `;
+    } else if (wizStep === 1) {
+      body.innerHTML = stepsHtml + `
+        <h3 style="color: #1a1a1a; margin-bottom: 16px;">Memória (RAM)</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 16px;">Quanto de memória a máquina virtual pode usar. Recomendado: 4096 MB (4 GB).</p>
+        <div class="form-row">
+          <label>Memória base (MB)</label>
+          <div class="slider-row">
+            <input type="range" id="vmRam" min="512" max="16384" step="512" value="${wizData.ram}" />
+            <div class="value" id="ramValue">${wizData.ram} MB</div>
+          </div>
+          <div class="hint">Mínimo: 512 MB · Recomendado: 4096 MB · Verde: seguro</div>
+        </div>
+        <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px; margin-top: 12px; font-size: 12px; color: #2e7d32;">
+          ✓ Quantidade segura para o seu host
+        </div>
+      `;
+      const ramInput = document.getElementById('vmRam');
+      ramInput.addEventListener('input', () => {
+        document.getElementById('ramValue').textContent = ramInput.value + ' MB';
+        wizData.ram = parseInt(ramInput.value);
+      });
+    } else if (wizStep === 2) {
+      body.innerHTML = stepsHtml + `
+        <h3 style="color: #1a1a1a; margin-bottom: 16px;">Processador (CPU)</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 16px;">Quantos processadores a máquina virtual pode usar. Recomendado: 2 CPUs.</p>
+        <div class="form-row">
+          <label>Processadores</label>
+          <div class="slider-row">
+            <input type="range" id="vmCpu" min="1" max="4" step="1" value="${wizData.cpu}" />
+            <div class="value" id="cpuValue">${wizData.cpu} CPU(s)</div>
+          </div>
+          <div class="hint">Mínimo: 1 CPU · Recomendado: 2 CPUs</div>
+        </div>
+        <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px; margin-top: 12px; font-size: 12px; color: #2e7d32;">
+          ✓ Configuração segura para o seu host
+        </div>
+      `;
+      const cpuInput = document.getElementById('vmCpu');
+      cpuInput.addEventListener('input', () => {
+        document.getElementById('cpuValue').textContent = cpuInput.value + ' CPU(s)';
+        wizData.cpu = parseInt(cpuInput.value);
+      });
+    } else if (wizStep === 3) {
+      body.innerHTML = stepsHtml + `
+        <h3 style="color: #1a1a1a; margin-bottom: 16px;">Disco rígido virtual</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 16px;">Crie um novo disco virtual para a máquina. Tipo: VDI, alocado dinamicamente.</p>
+        <div class="form-row">
+          <label>tipo de arquivo de disco rígido</label>
+          <select><option>VDI (VirtualBox Disk Image)</option><option>VHD</option><option>VMDK</option></select>
+        </div>
+        <div class="form-row">
+          <label>Armazenamento em disco físico</label>
+          <select><option>Alocado dinamicamente (recomendado)</option><option>Tamanho fixo</option></select>
+        </div>
+        <div class="form-row">
+          <label>Tamanho do disco (GB)</label>
+          <div class="slider-row">
+            <input type="range" id="vmDisk" min="8" max="100" step="1" value="${wizData.disk}" />
+            <div class="value" id="diskValue">${wizData.disk} GB</div>
+          </div>
+          <div class="hint">Mínimo: 8 GB · Recomendado: 25 GB</div>
+        </div>
+      `;
+      const diskInput = document.getElementById('vmDisk');
+      diskInput.addEventListener('input', () => {
+        document.getElementById('diskValue').textContent = diskInput.value + ' GB';
+        wizData.disk = parseInt(diskInput.value);
+      });
+    } else if (wizStep === 4) {
+      body.innerHTML = stepsHtml + `
+        <h3 style="color: #1a1a1a; margin-bottom: 16px;">Pronto para criar</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 16px;">Revise as configurações e clique em "Concluir" para criar a máquina virtual.</p>
+        <div class="vm-details">
+          <h4>Resumo</h4>
+          <div class="detail-row"><span class="label">Nome:</span><span>${wizData.name}</span></div>
+          <div class="detail-row"><span class="label">Sistema:</span><span>${wizData.type} - ${wizData.version}</span></div>
+          <div class="detail-row"><span class="label">RAM:</span><span>${wizData.ram} MB</span></div>
+          <div class="detail-row"><span class="label">CPU:</span><span>${wizData.cpu}</span></div>
+          <div class="detail-row"><span class="label">Disco:</span><span>${wizData.disk} GB (VDI, dinâmico)</span></div>
+        </div>
+      `;
+      document.getElementById('nextBtn').textContent = 'Concluir ✓';
+    }
+  }
+
+  renderWiz();
+
+  document.getElementById('closeModal').addEventListener('click', () => overlay.remove());
+  document.getElementById('cancelBtn').addEventListener('click', () => overlay.remove());
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (wizStep === 0) {
+      wizData.name = document.getElementById('vmName').value || 'Ubuntu-VM';
+      wizData.type = document.getElementById('vmType').value;
+      wizData.version = document.getElementById('vmVersion').value;
+    }
+    if (wizStep < 4) {
+      wizStep++;
+      renderWiz();
+    } else {
+      // Cria a VM
+      const newVM = {
+        name: wizData.name,
+        os: wizData.type + ' - ' + wizData.version,
+        ram: wizData.ram,
+        cpu: wizData.cpu,
+        disk: wizData.disk,
+        iso: false,
+        state: 'Desligada'
+      };
+      simVBState.vms.push(newVM);
+      simVBState.selectedVM = simVBState.vms.length - 1;
+      simVBState.step = 2;
+      updateVBStep();
+      overlay.remove();
+      renderVBScreen();
+    }
+  });
+}
+
+function updateVBStep() {
+  const stepIdx = Math.min(simVBState.step, VB_STEPS.length - 1);
+  const step = VB_STEPS[stepIdx];
+  const title = document.getElementById('vbStepTitle');
+  const hint = document.getElementById('vbStepHint');
+  const num = document.getElementById('vbStepNum');
+  if (title) title.textContent = `Passo ${stepIdx + 1}: ${step.title}`;
+  if (hint) hint.textContent = step.hint;
+  if (num) num.textContent = stepIdx + 1;
+
+  // Se a VM existe mas não tem ISO, mostrar dica para montar
+  if (simVBState.vms.length > 0 && simVBState.step === 2) {
+    // Avança para step de ISO
+    simVBState.step = 5;
+    const s = VB_STEPS[5];
+    if (title) title.textContent = `Passo 6: ${s.title}`;
+    if (hint) hint.textContent = s.hint;
+    if (num) num.textContent = '6';
+  }
+
+  // Verifica se completou tudo
+  if (simVBState.vms.length > 0 && simVBState.vms[0].iso && simVBState.step === 6) {
+    setTimeout(() => {
+      // Avança o passo final - simula iniciar a VM
+      simVBState.vms[0].state = 'Em execução';
+      completeLesson('sim-vb', 'sim-complete', 100);
+      addAchievement('Mestre do VirtualBox');
+      completeModule('sim-vb');
+      renderVBScreen();
+      showVBCompletionModal();
+    }, 500);
+  }
+}
+
+function showVBCompletionModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'vb-modal-overlay';
+  overlay.innerHTML = `
+    <div class="vb-modal" style="max-width: 480px;">
+      <div class="vb-modal-titlebar">
+        <div>🎉 Simulação Concluída!</div>
+      </div>
+      <div class="vb-modal-body" style="text-align: center; padding: 30px;">
+        <div style="font-size: 60px; margin-bottom: 12px;">🏆</div>
+        <h3 style="color: #1a1a1a; font-size: 22px; margin-bottom: 8px;">Parabéns, ${escapeHtml(state.playerName)}!</h3>
+        <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Você criou e configurou sua primeira máquina virtual no VirtualBox! A VM está pronta para receber o Ubuntu.</p>
+        <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; text-align: left; font-size: 13px; color: #2e7d32; margin-bottom: 16px;">
+          <strong>✓ Conquista desbloqueada:</strong> Mestre do VirtualBox<br>
+          <strong>✓ Pontos ganhos:</strong> +100
+        </div>
+        <p style="color: #666; font-size: 13px; margin-bottom: 16px;">Próximo passo: inicie o Simulador de Instalação do Ubuntu para continuar a jornada!</p>
+        <button class="vb-btn primary" id="continueBtn" style="width: 100%; padding: 10px;">Continuar →</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('continueBtn').addEventListener('click', () => {
+    overlay.remove();
+    render();
+  });
+}
+
+// Patch: adicionar handler para montar ISO e iniciar VM
+function setupVBInteractions() {
+  // Esta função será chamada via delegate nos cliques da VM
+}
+
+// Sobrescreve renderVBMainWindow para adicionar handlers extras
+const _origRenderVBMainWindow = renderVBMainWindow;
+renderVBMainWindow = function(content) {
+  _origRenderVBMainWindow(content);
+  // Se há VM selecionada e estamos no step de ISO, adicionar botão de montar
+  if (simVBState.selectedVM !== null) {
+    const vm = simVBState.vms[simVBState.selectedVM];
+    if (!vm.iso && simVBState.step === 5) {
+      const details = document.getElementById('vmDetails');
+      if (details) {
+        const btn = document.createElement('button');
+        btn.className = 'vb-btn primary';
+        btn.style.cssText = 'width: 100%; margin-top: 12px; padding: 8px;';
+        btn.textContent = '💿 Montar ISO do Ubuntu';
+        btn.addEventListener('click', () => {
+          vm.iso = true;
+          simVBState.step = 6;
+          updateVBStep();
+          renderVBScreen();
+        });
+        details.appendChild(btn);
+      }
+    }
+    // Se há ISO, mostrar botão Iniciar
+    if (vm.iso && simVBState.step === 6) {
+      const details = document.getElementById('vmDetails');
+      if (details) {
+        const btn = document.createElement('button');
+        btn.className = 'vb-btn primary';
+        btn.style.cssText = 'width: 100%; margin-top: 12px; padding: 8px;';
+        btn.textContent = '▶ Iniciar VM';
+        btn.addEventListener('click', () => {
+          updateVBStep();
+        });
+        details.appendChild(btn);
+      }
+      const btnStart = document.getElementById('btnStart');
+      if (btnStart) {
+        btnStart.disabled = false;
+        btnStart.addEventListener('click', () => updateVBStep());
+      }
+    }
+  }
+};
+
+// ====================================================================
+// SIMULADOR INSTALAÇÃO UBUNTU
+// ====================================================================
+let simUbuntuState = {
+  step: 0,
+  config: { language: 'pt-BR', installType: 'normal', user: '', computer: '', password: '', autoLogin: true, timezone: 'São Paulo' },
+  installProgress: 0,
+  installed: false
+};
+
+const UBUNTU_STEPS = [
+  { title: 'Boot pela ISO', hint: 'A VM iniciará e mostrará o menu do GRUB. Aguarde ou pressione Enter.' },
+  { title: 'Tela de boas-vindas', hint: 'Escolha o idioma Português (Brasil) e clique em "Instalar Ubuntu".' },
+  { title: 'Tipo de instalação', hint: 'Escolha "Instalação normal" e marque "Baixar atualizações".' },
+  { title: 'Particionamento', hint: 'Escolha "Apagar disco e reinstalar Ubuntu". Em VM, isso é seguro.' },
+  { title: 'Criar usuário', hint: 'Preencha nome, nome de usuário e senha.' },
+  { title: 'Fuso horário', hint: 'Selecione São Paulo (ou sua cidade).' },
+  { title: 'Instalando...', hint: 'Aguarde a cópia de arquivos. Mostraremos o progresso.' },
+  { title: 'Instalação completa!', hint: 'Reinicie a VM e use o Ubuntu!' }
+];
+
+function renderSimUbuntu() {
+  simUbuntuState = { step: 0, config: { language: 'pt-BR', installType: 'normal', user: '', computer: '', password: '', autoLogin: true, timezone: 'São Paulo' }, installProgress: 0, installed: false };
+  app.innerHTML = `
+    <button class="btn btn-ghost btn-sm mb-4" id="backBtn">← Voltar ao menu</button>
+    <div class="card" style="margin-bottom: 16px;">
+      <div class="flex-between">
+        <div>
+          <span class="badge" style="color: #e95420; border-color: rgba(233,84,32,0.5);">Simulador Interativo</span>
+          <h1 style="font-size: 24px; margin: 8px 0;">🐧 Simulador de Instalação do Ubuntu</h1>
+          <p class="text-muted">Percorra o instalador do Ubuntu passo a passo, como na vida real.</p>
+        </div>
+      </div>
+      <div id="ubuntuTutorialBar" style="margin-top: 16px; padding: 12px 14px; background: rgba(233,84,32,0.08); border: 1px solid rgba(233,84,32,0.3); border-radius: 8px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="font-size: 24px;">👉</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #e95420; font-size: 13px;" id="ubStepTitle">Passo 1: Boot pela ISO</div>
+            <div class="text-sm text-muted" id="ubStepHint">A VM iniciará e mostrará o menu do GRUB. Aguarde ou pressione Enter.</div>
+          </div>
+          <div class="text-xs text-muted">Passo <span id="ubStepNum">1</span>/${UBUNTU_STEPS.length}</div>
+        </div>
+      </div>
+    </div>
+    <div id="ubContent"></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', render);
+  renderUbuntuStep();
+}
+
+function renderUbuntuStep() {
+  const content = document.getElementById('ubContent');
+  const step = simUbuntuState.step;
+
+  if (step === 0) {
+    // GRUB menu
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Ubuntu-VM [Running] - Oracle VM VirtualBox</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div style="background: black; padding: 40px; min-height: 360px; color: white; font-family: monospace; font-size: 14px;">
+          <div style="margin-bottom: 20px;">
+            <pre style="color: white;">
+GNU GRUB  version 2.06
+─────────────────────────────────────────────────────────────
+
+*Ubuntu
+ Try or Install Ubuntu
+ Ubuntu (safe graphics)
+ OEM install (for manufacturers)
+ Boot from next device
+ UEFI Firmware Settings
+
+</pre>
+          </div>
+          <div style="text-align: center; margin-top: 60px;">
+            <div style="color: #aea79f; margin-bottom: 20px;">Use ↑ e ↓ para navegar. Pressione Enter para selecionar.</div>
+            <button class="ubuntu-btn" id="grubContinue">Pressionar Enter ▶</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('grubContinue').addEventListener('click', () => {
+      simUbuntuState.step = 1;
+      updateUbuntuStep();
+      renderUbuntuStep();
+    });
+  } else if (step === 1) {
+    // Welcome screen
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Ubuntu 22.04 LTS</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body">
+          <div class="ubuntu-welcome">
+            <div class="ubuntu-logo-big">🐧</div>
+            <h2>Bem-vindo</h2>
+            <p>Escolha seu idioma para começar</p>
+            <div style="max-width: 300px; margin: 0 auto 20px;">
+              <select id="langSelect" style="width: 100%; padding: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;">
+                <option value="pt-BR" selected>Português (Brasil)</option>
+                <option value="en">English</option>
+                <option value="es">Español</option>
+              </select>
+            </div>
+            <div class="ubuntu-options">
+              <button class="ubuntu-option" id="tryUbuntu">
+                <div class="icon">👀</div>
+                <div class="title">Experimentar Ubuntu</div>
+                <div class="desc">Teste sem instalar</div>
+              </button>
+              <button class="ubuntu-option" id="installUbuntu">
+                <div class="icon">⚙️</div>
+                <div class="title">Instalar Ubuntu</div>
+                <div class="desc">Instalar no disco</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('tryUbuntu').addEventListener('click', () => {
+      alert('Você escolheu "Experimentar Ubuntu". Para o curso, vamos instalar. Clique em "Instalar Ubuntu".');
+    });
+    document.getElementById('installUbuntu').addEventListener('click', () => {
+      simUbuntuState.config.language = document.getElementById('langSelect').value;
+      simUbuntuState.step = 2;
+      updateUbuntuStep();
+      renderUbuntuStep();
+    });
+  } else if (step === 2) {
+    // Installation type
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Instalação do Ubuntu</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body">
+          <div style="max-width: 580px; margin: 0 auto;">
+            <h2 style="font-size: 22px; margin-bottom: 8px; font-weight: 300;">Tipo de instalação</h2>
+            <p style="color: #aea79f; font-size: 13px; margin-bottom: 24px;">Escolha quais aplicações instalar e se deseja baixar atualizações.</p>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <label style="display: flex; gap: 12px; cursor: pointer; padding: 8px; border-radius: 4px; background: rgba(233,84,32,0.1); border: 1px solid rgba(233,84,32,0.4); margin-bottom: 8px;">
+                <input type="radio" name="installType" value="normal" checked style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Instalação normal</div>
+                  <div style="font-size: 12px; color: #aea79f;">Navegador, utilitários, office, media players, etc.</div>
+                </div>
+              </label>
+              <label style="display: flex; gap: 12px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="radio" name="installType" value="minimal" style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Instalação mínima</div>
+                  <div style="font-size: 12px; color: #aea79f;">Apenas navegador e utilitários básicos.</div>
+                </div>
+              </label>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+              <label style="display: flex; gap: 12px; cursor: pointer; padding: 4px 0;">
+                <input type="checkbox" id="updates" checked style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Baixar atualizações enquanto instala o Ubuntu</div>
+                  <div style="font-size: 12px; color: #aea79f;">Recomendado. Economiza tempo após a instalação.</div>
+                </div>
+              </label>
+              <label style="display: flex; gap: 12px; cursor: pointer; padding: 4px 0;">
+                <input type="checkbox" id="thirdParty" checked style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Instalar software de terceiros para gráficos e dispositivos Wi-Fi</div>
+                  <div style="font-size: 12px; color: #aea79f;">Codecs, drivers proprietários, etc.</div>
+                </div>
+              </label>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <button class="ubuntu-btn-secondary" id="backBtn2">← Voltar</button>
+              <button class="ubuntu-btn" id="continueBtn">Continuar →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('backBtn2').addEventListener('click', () => { simUbuntuState.step = 1; updateUbuntuStep(); renderUbuntuStep(); });
+    document.getElementById('continueBtn').addEventListener('click', () => {
+      simUbuntuState.config.installType = document.querySelector('input[name=installType]:checked').value;
+      simUbuntuState.step = 3;
+      updateUbuntuStep();
+      renderUbuntuStep();
+    });
+  } else if (step === 3) {
+    // Disk partitioning
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Instalação do Ubuntu</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body">
+          <div style="max-width: 580px; margin: 0 auto;">
+            <h2 style="font-size: 22px; margin-bottom: 8px; font-weight: 300;">Tipo de instalação</h2>
+            <p style="color: #aea79f; font-size: 13px; margin-bottom: 24px;">Como você quer instalar o Ubuntu? Este é o disco VIRTUAL da VM — não afeta seu host.</p>
+            <div style="background: rgba(233,84,32,0.1); border: 1px solid rgba(233,84,32,0.4); border-radius: 8px; padding: 16px; margin-bottom: 8px; cursor: pointer;" id="eraseDisk">
+              <div style="display: flex; gap: 12px;">
+                <input type="radio" checked style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Apagar disco e reinstalar o Ubuntu</div>
+                  <div style="font-size: 12px; color: #aea79f;">Usa todo o disco virtual (25 GB). Recomendado para VM.</div>
+                </div>
+              </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; margin-bottom: 24px; opacity: 0.6;">
+              <div style="display: flex; gap: 12px;">
+                <input type="radio" disabled style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Criar partições manualmente (avançado)</div>
+                  <div style="font-size: 12px; color: #aea79f;">Para usuários experientes</div>
+                </div>
+              </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-bottom: 24px; font-size: 12px; color: #aea79f;">
+              <strong>Disco selecionado:</strong> VBOX HARDDISK (25.0 GB)
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <button class="ubuntu-btn-secondary" id="backBtn2">← Voltar</button>
+              <button class="ubuntu-btn" id="installNow">Instalar agora →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('backBtn2').addEventListener('click', () => { simUbuntuState.step = 2; updateUbuntuStep(); renderUbuntuStep(); });
+    document.getElementById('installNow').addEventListener('click', () => {
+      // Show confirmation
+      const overlay = document.createElement('div');
+      overlay.className = 'vb-modal-overlay';
+      overlay.innerHTML = `
+        <div class="vb-modal" style="max-width: 480px;">
+          <div class="vb-modal-titlebar"><div>Confirmar instalação</div></div>
+          <div class="vb-modal-body" style="padding: 20px;">
+            <p style="margin-bottom: 12px;">As seguintes mudanças serão feitas no disco:</p>
+            <div style="background: #f5f5f5; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #1a1a1a; margin-bottom: 16px;">
+              <div>partição #1 (EFI) — 537 MB</div>
+              <div>partição #2 (ext4) — 24.5 GB (montada em /)</div>
+              <div>swap — 4.0 GB</div>
+            </div>
+            <p style="color: #666; font-size: 12px;">Continuar?</p>
+          </div>
+          <div class="vb-modal-footer">
+            <button class="vb-btn" id="cancelBtn">Cancelar</button>
+            <button class="vb-btn primary" id="confirmBtn">Continuar →</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      document.getElementById('cancelBtn').addEventListener('click', () => overlay.remove());
+      document.getElementById('confirmBtn').addEventListener('click', () => {
+        overlay.remove();
+        simUbuntuState.step = 4;
+        updateUbuntuStep();
+        renderUbuntuStep();
+      });
+    });
+  } else if (step === 4) {
+    // User creation
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Instalação do Ubuntu</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body">
+          <div style="max-width: 580px; margin: 0 auto;">
+            <h2 style="font-size: 22px; margin-bottom: 8px; font-weight: 300;">Quem é você?</h2>
+            <p style="color: #aea79f; font-size: 13px; margin-bottom: 24px;">Preencha suas informações para criar uma conta de usuário.</p>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; color: #aea79f; margin-bottom: 4px;">Seu nome</label>
+                <input type="text" id="userName" placeholder="Ex: João Silva" value="${escapeHtml(state.playerName)}" style="width: 100%; padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;" />
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; color: #aea79f; margin-bottom: 4px;">Nome do computador (hostname)</label>
+                <input type="text" id="computerName" placeholder="Ex: joao-ubuntu" style="width: 100%; padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;" />
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; color: #aea79f; margin-bottom: 4px;">Escolha um nome de usuário (login)</label>
+                <input type="text" id="loginName" placeholder="Ex: joao" style="width: 100%; padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;" />
+                <div style="font-size: 11px; color: #aea79f; margin-top: 4px;">Apenas letras minúsculas, números e underscore</div>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 12px; color: #aea79f; margin-bottom: 4px;">Senha</label>
+                <input type="password" id="password" placeholder="Mínimo 6 caracteres" style="width: 100%; padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;" />
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: #aea79f; margin-bottom: 4px;">Confirmar senha</label>
+                <input type="password" id="password2" placeholder="Repita a senha" style="width: 100%; padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;" />
+              </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-bottom: 24px;">
+              <label style="display: flex; gap: 12px; cursor: pointer; padding: 4px 0;">
+                <input type="radio" name="loginType" value="auto" checked style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Entrar automaticamente</div>
+                  <div style="font-size: 12px; color: #aea79f;">Prático para VM de estudos</div>
+                </div>
+              </label>
+              <label style="display: flex; gap: 12px; cursor: pointer; padding: 4px 0;">
+                <input type="radio" name="loginType" value="password" style="margin-top: 4px;" />
+                <div>
+                  <div style="font-weight: 500;">Solicitar minha senha para entrar</div>
+                  <div style="font-size: 12px; color: #aea79f;">Mais seguro</div>
+                </div>
+              </label>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <button class="ubuntu-btn-secondary" id="backBtn2">← Voltar</button>
+              <button class="ubuntu-btn" id="continueBtn">Continuar →</button>
+            </div>
+            <div id="formError" style="color: #f87171; font-size: 12px; margin-top: 12px; text-align: center; display: none;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('backBtn2').addEventListener('click', () => { simUbuntuState.step = 3; updateUbuntuStep(); renderUbuntuStep(); });
+    document.getElementById('continueBtn').addEventListener('click', () => {
+      const user = document.getElementById('userName').value.trim();
+      const computer = document.getElementById('computerName').value.trim();
+      const login = document.getElementById('loginName').value.trim();
+      const pass1 = document.getElementById('password').value;
+      const pass2 = document.getElementById('password2').value;
+      const errorEl = document.getElementById('formError');
+      if (!user || !computer || !login) {
+        errorEl.textContent = 'Preencha todos os campos.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!/^[a-z0-9_]+$/.test(login)) {
+        errorEl.textContent = 'Login deve ter apenas letras minúsculas, números e underscore.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (pass1.length < 6) {
+        errorEl.textContent = 'Senha deve ter pelo menos 6 caracteres.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (pass1 !== pass2) {
+        errorEl.textContent = 'As senhas não coincidem.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      simUbuntuState.config.user = user;
+      simUbuntuState.config.computer = computer;
+      simUbuntuState.config.login = login;
+      simUbuntuState.config.password = pass1;
+      simUbuntuState.config.autoLogin = document.querySelector('input[name=loginType]:checked').value === 'auto';
+      simUbuntuState.step = 5;
+      updateUbuntuStep();
+      renderUbuntuStep();
+    });
+  } else if (step === 5) {
+    // Timezone
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Instalação do Ubuntu</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body">
+          <div style="max-width: 580px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 22px; margin-bottom: 8px; font-weight: 300;">Onde você está?</h2>
+            <p style="color: #aea79f; font-size: 13px; margin-bottom: 24px;">Selecione seu fuso horário para acertar o relógio do sistema.</p>
+            <div style="background: linear-gradient(135deg, #1a4d6e, #0d2c45); border-radius: 12px; padding: 40px; margin-bottom: 24px; position: relative; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+              <div style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 8px;">🌍</div>
+                <div style="color: white; font-size: 18px; font-weight: 500;">São Paulo</div>
+                <div style="color: #aea79f; font-size: 13px;">America/Sao_Paulo (UTC-3)</div>
+              </div>
+            </div>
+            <select id="tzSelect" style="width: 100%; max-width: 300px; padding: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px; margin-bottom: 24px;">
+              <option>São Paulo</option>
+              <option>Rio de Janeiro</option>
+              <option>Brasília</option>
+              <option>Salvador</option>
+              <option>Manaus</option>
+              <option>Fortaleza</option>
+            </select>
+            <div style="display: flex; justify-content: space-between; max-width: 580px;">
+              <button class="ubuntu-btn-secondary" id="backBtn2">← Voltar</button>
+              <button class="ubuntu-btn" id="continueBtn">Continuar →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('backBtn2').addEventListener('click', () => { simUbuntuState.step = 4; updateUbuntuStep(); renderUbuntuStep(); });
+    document.getElementById('continueBtn').addEventListener('click', () => {
+      simUbuntuState.config.timezone = document.getElementById('tzSelect').value;
+      simUbuntuState.step = 6;
+      updateUbuntuStep();
+      renderUbuntuStep();
+    });
+  } else if (step === 6) {
+    // Installing
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>Instalação do Ubuntu</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body">
+          <div class="install-progress">
+            <div class="progress-ring" id="progressRing"><span id="progressPct">0%</span></div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; font-weight: 300;">Instalando o Ubuntu...</h2>
+            <p style="color: #aea79f; font-size: 13px; margin-bottom: 20px;">Aguarde enquanto os arquivos são copiados.</p>
+            <div style="max-width: 500px; margin: 0 auto; text-align: left;" id="stepsList">
+              <div class="install-step pending" data-step="0"><span>📋</span> Preparando instalação</div>
+              <div class="install-step pending" data-step="1"><span>💽</span> Criando partições no disco</div>
+              <div class="install-step pending" data-step="2"><span>📦</span> Copiando arquivos do sistema (1.5 GB)</div>
+              <div class="install-step pending" data-step="3"><span>⚙️</span> Configurando o sistema</div>
+              <div class="install-step pending" data-step="4"><span>👤</span> Criando usuário ${escapeHtml(simUbuntuState.config.user || '')}</div>
+              <div class="install-step pending" data-step="5"><span>🌐</span> Configurando rede e fuso horário</div>
+              <div class="install-step pending" data-step="6"><span>✨</span> Finalizando instalação</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    // Animate progress
+    let progress = 0;
+    let currentStep = 0;
+    const stepsEls = document.querySelectorAll('.install-step');
+    const interval = setInterval(() => {
+      progress += 2;
+      if (progress > 100) progress = 100;
+      document.getElementById('progressPct').textContent = progress + '%';
+      document.getElementById('progressRing').style.background = `conic-gradient(var(--ubuntu-orange) ${progress}%, rgba(255,255,255,0.1) ${progress}%)`;
+      const newStep = Math.floor((progress / 100) * 7);
+      if (newStep > currentStep) {
+        if (currentStep < stepsEls.length) stepsEls[currentStep].classList.replace('pending', 'done');
+        currentStep = newStep;
+      }
+      if (progress >= 100) {
+        clearInterval(interval);
+        stepsEls.forEach(s => s.classList.replace('pending', 'done'));
+        setTimeout(() => {
+          simUbuntuState.step = 7;
+          simUbuntuState.installed = true;
+          updateUbuntuStep();
+          renderUbuntuStep();
+        }, 800);
+      }
+    }, 80);
+  } else if (step === 7) {
+    // Complete - show terminal
+    content.innerHTML = `
+      <div class="ubuntu-window">
+        <div class="ubuntu-titlebar">
+          <span>${escapeHtml(simUbuntuState.config.computer || 'ubuntu')} - Ubuntu Desktop</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+        <div class="ubuntu-body" style="min-height: 420px; padding: 0;">
+          <div style="background: linear-gradient(135deg, #2c001e 0%, #4a0e2e 100%); padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 48px; margin-bottom: 8px;">🎉</div>
+            <h2 style="font-size: 24px; font-weight: 300; margin-bottom: 4px;">Instalação concluída!</h2>
+            <p style="color: #aea79f; font-size: 13px;">Bem-vindo ao Ubuntu, ${escapeHtml(simUbuntuState.config.user || '')}!</p>
+          </div>
+          <div style="padding: 16px; background: #f5f5f5; color: #1a1a1a;">
+            <div style="background: #2c001e; border-radius: 8px; padding: 4px;">
+              <div style="background: rgba(0,0,0,0.4); padding: 6px 12px; font-size: 11px; color: #aea79f; display: flex; justify-content: space-between;">
+                <span>Terminal — ${escapeHtml(simUbuntuState.config.login || 'aluno')}@${escapeHtml(simUbuntuState.config.computer || 'ubuntu')}</span>
+                <div class="dots" style="display: flex; gap: 5px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #aea79f; opacity: 0.6;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #aea79f; opacity: 0.6;"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #aea79f; opacity: 0.6;"></span></div>
+              </div>
+              <div class="terminal-body" id="ubTerminal" style="height: 200px; background: #2c001e;">
+                <div class="term-line prompt-line">${escapeHtml(simUbuntuState.config.login || 'aluno')}@${escapeHtml(simUbuntuState.config.computer || 'ubuntu')}:~$ <span style="color: #f7e6f0;">uname -a</span></div>
+                <div class="term-line output">Linux ${escapeHtml(simUbuntuState.config.computer || 'ubuntu')} 5.15.0-91-generic #101-Ubuntu SMP x86_64 GNU/Linux</div>
+                <div class="term-line prompt-line">${escapeHtml(simUbuntuState.config.login || 'aluno')}@${escapeHtml(simUbuntuState.config.computer || 'ubuntu')}:~$ <span style="color: #f7e6f0;">lsb_release -a</span></div>
+                <div class="term-line output">Distributor ID: Ubuntu
+Description:    Ubuntu 22.04 LTS
+Release:        22.04
+Codename:       jammy</div>
+                <div class="term-line prompt-line">${escapeHtml(simUbuntuState.config.login || 'aluno')}@${escapeHtml(simUbuntuState.config.computer || 'ubuntu')}:~$</div>
+              </div>
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; font-size: 13px; color: #2e7d32;">
+              <strong>✓ Conquista desbloqueada:</strong> Instalador Ubuntu<br>
+              <strong>✓ Pontos ganhos:</strong> +100
+            </div>
+            <div style="text-align: center; margin-top: 16px;">
+              <button class="btn btn-primary" id="backHomeBtn">← Voltar ao menu principal</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    completeLesson('sim-ubuntu', 'sim-complete', 100);
+    addAchievement('Instalador Ubuntu');
+    completeModule('sim-ubuntu');
+    document.getElementById('backHomeBtn').addEventListener('click', render);
+  }
+}
+
+function updateUbuntuStep() {
+  const step = UBUNTU_STEPS[simUbuntuState.step];
+  const title = document.getElementById('ubStepTitle');
+  const hint = document.getElementById('ubStepHint');
+  const num = document.getElementById('ubStepNum');
+  if (title) title.textContent = `Passo ${simUbuntuState.step + 1}: ${step.title}`;
+  if (hint) hint.textContent = step.hint;
+  if (num) num.textContent = simUbuntuState.step + 1;
+}
+
+// ---------- UTIL ----------
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+// ---------- INIT ----------
+render();
+</script>
+</body>
+</html>
