@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS Simulator — Jogo Educativo de Sistemas Operacionais</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg-card: rgba(20, 26, 36, 0.7);
+    --bg-card-solid: #141a24;
+    --fg: #e6edf3;
+    --fg-muted: #8b949e;
+    --border: #21262d;
+    --primary: #10b981;
+    --primary-2: #06b6d4;
+    --accent-amber: #f59e0b;
+    --accent-purple: #a855f7;
+    --danger: #ef4444;
+    --success: #22c55e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(16, 185, 129, 0.08), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(6, 182, 212, 0.06), transparent 40%);
+    background-attachment: fixed;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* Login screen */
+  .login-wrap {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    height: 240px;
+    background: rgba(16, 185, 129, 0.2);
+    border-radius: 50%;
+    filter: blur(60px);
+  }
+  .login-logo {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+  }
+  .login-card h1 {
+    position: relative;
+    font-size: 32px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .login-card p {
+    position: relative;
+    color: var(--fg-muted);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .input-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 12px;
+    margin-bottom: 12px;
+  }
+  .input-row:focus-within {
+    border-color: var(--primary);
+  }
+  .input-row input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--fg);
+    padding: 12px 0;
+    font-size: 15px;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.06);
+    color: var(--fg);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn:hover { background: rgba(255,255,255,0.1); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    color: white;
+    border: none;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-lg { padding: 14px 28px; font-size: 15px; width: 100%; }
+  .btn-ghost { background: transparent; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+
+  /* Hero / stats */
+  .hero {
+    background: linear-gradient(135deg, rgba(20, 26, 36, 0.9), rgba(20, 26, 36, 0.4));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before, .hero::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+  }
+  .hero::before {
+    top: -80px; right: -80px;
+    width: 300px; height: 300px;
+    background: rgba(16, 185, 129, 0.1);
+  }
+  .hero::after {
+    bottom: -60px; left: -60px;
+    width: 200px; height: 200px;
+    background: rgba(6, 182, 212, 0.08);
+  }
+  .hero-content {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .hero h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    color: var(--fg-muted);
+    max-width: 500px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    margin-bottom: 12px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .stat {
+    text-align: center;
+    min-width: 90px;
+  }
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 8px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+
+  /* Module grid */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .section-head h2 {
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .module-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    width: 100%;
+    color: var(--fg);
+    font-family: inherit;
+  }
+  .module-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.15);
+  }
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.15;
+    background: var(--mod-color, var(--primary));
+  }
+  .module-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: rgba(255,255,255,0.08);
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .module-card h3 {
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+  .module-card p {
+    color: var(--fg-muted);
+    font-size: 13px;
+    margin-bottom: 16px;
+    min-height: 38px;
+  }
+  .progress-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--mod-color, var(--primary));
+    border-radius: 999px;
+    transition: width 0.5s;
+  }
+  .module-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .module-footer .cta {
+    color: var(--mod-color, var(--primary));
+    font-weight: 500;
+  }
+
+  /* Lesson list */
+  .lesson-item {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+    color: var(--fg);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .lesson-item:hover:not(.locked) {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+  }
+  .lesson-item.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .lesson-item.completed {
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+  .lesson-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .lesson-info { flex: 1; }
+  .lesson-tag {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lesson-info h4 {
+    font-size: 15px;
+    margin: 4px 0;
+  }
+  .lesson-info p {
+    color: var(--fg-muted);
+    font-size: 13px;
+  }
+
+  /* Lesson content */
+  .lesson-content section {
+    margin-bottom: 22px;
+  }
+  .lesson-content h3 {
+    font-size: 17px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .lesson-content .num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    background: var(--mod-color, var(--primary));
+    flex-shrink: 0;
+  }
+  .lesson-content p {
+    color: var(--fg-muted);
+    padding-left: 38px;
+    font-size: 14.5px;
+  }
+  .example-box {
+    margin-left: 38px;
+    margin-top: 8px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 13px;
+  }
+  .example-box .ex-label {
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .example-box .ex-text {
+    color: #fcd34d;
+  }
+
+  /* Quiz */
+  .quiz-progress {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .quiz-progress > div {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.3s;
+  }
+  .quiz-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--fg-muted);
+    margin-bottom: 8px;
+  }
+  .quiz-question {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .quiz-option:hover:not(:disabled) {
+    border-color: var(--primary);
+    background: rgba(16, 185, 129, 0.05);
+  }
+  .quiz-option:disabled { cursor: default; }
+  .quiz-option.correct {
+    border-color: var(--success);
+    background: rgba(34, 197, 94, 0.1);
+  }
+  .quiz-option.wrong {
+    border-color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+  }
+  .opt-letter {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .quiz-option.correct .opt-letter {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+  .quiz-option.wrong .opt-letter {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+  }
+  .quiz-explain {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    font-size: 14px;
+  }
+  .quiz-explain .ex-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  /* Result */
+  .result-card { text-align: center; padding: 40px 24px; }
+  .result-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    background: rgba(16, 185, 129, 0.15);
+  }
+  .result-icon.fail { background: rgba(245, 158, 11, 0.15); }
+  .result-card h3 { font-size: 24px; margin-bottom: 8px; }
+  .result-pct {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 12px 0;
+  }
+
+  /* Linux terminal */
+  .terminal {
+    background: #0a0e14;
+    border: 1px solid #1e2b22;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #0f1419;
+    border-bottom: 1px solid #1e2b22;
+  }
+  .term-dots { display: flex; gap: 6px; }
+  .term-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    opacity: 0.8;
+  }
+  .term-dots span:nth-child(1) { background: #ef4444; }
+  .term-dots span:nth-child(2) { background: #eab308; }
+  .term-dots span:nth-child(3) { background: #22c55e; }
+  .term-title {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(16, 185, 129, 0.7);
+    font-family: monospace;
+  }
+  .term-tag {
+    font-size: 10px;
+    color: rgba(16, 185, 129, 0.5);
+    font-family: monospace;
+  }
+  .terminal-body {
+    padding: 16px;
+    height: 460px;
+    overflow-y: auto;
+    font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .terminal-body::-webkit-scrollbar { width: 8px; }
+  .terminal-body::-webkit-scrollbar-track { background: rgba(16,185,129,0.04); }
+  .terminal-body::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.3); border-radius: 4px; }
+  .term-line { white-space: pre-wrap; word-break: break-word; }
+  .term-line.input { color: #d1f7e0; }
+  .term-line.output { color: rgba(220, 252, 231, 0.9); }
+  .term-line.error { color: #f87171; }
+  .term-line.success { color: #fde047; font-weight: 600; }
+  .term-line.system { color: #67e8f9; }
+  .term-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .term-prompt {
+    color: var(--primary);
+    font-family: monospace;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  .term-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #d1f7e0;
+    font-family: monospace;
+    font-size: 13.5px;
+    caret-color: var(--primary);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab.active {
+    background: rgba(255,255,255,0.08);
+    color: var(--fg);
+  }
+
+  /* Command reference */
+  .cmd-category { margin-bottom: 24px; }
+  .cmd-cat-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .cmd-cat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .cmd-item {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+  }
+  .cmd-item code {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .cmd-item .syntax {
+    color: var(--fg-muted);
+    font-size: 12px;
+    margin-left: 6px;
+  }
+  .cmd-item p {
+    color: var(--fg-muted);
+    font-size: 12.5px;
+    margin: 6px 0;
+    line-height: 1.5;
+  }
+  .cmd-item .example {
+    font-family: monospace;
+    font-size: 11.5px;
+    color: #6ee7b7;
+    background: rgba(16, 185, 129, 0.06);
+    padding: 3px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* Achievements */
+  .achievements-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .achievement {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .hero-content { flex-direction: column; align-items: flex-start; }
+    .stats { width: 100%; }
+    .container { padding: 16px 12px 40px; }
+    .hero h1 { font-size: 24px; }
+    .lesson-content p { padding-left: 0; }
+    .example-box { margin-left: 0; }
+  }
+
+  .hidden { display: none !important; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .mt-2 { margin-top: 8px; }
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .mb-4 { margin-bottom: 16px; }
+  .text-muted { color: var(--fg-muted); }
+  .text-sm { font-size: 13px; }
+  .text-xs { font-size: 12px; }
+  code.inline {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--primary);
+  }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+/* ====================================================================
+   OS SIMULATOR — Jogo Educativo de Sistemas Operacionais
+   Arquivo HTML autossuficiente — abre em qualquer navegador
+   ==================================================================== */
+
+// ---------- DADOS: MÓDULOS, LIÇÕES, QUIZZES ----------
+const MODULES = [
+  {
+    id: 'intro',
+    title: 'Introdução aos Sistemas Operacionais',
+    description: 'Conceitos iniciais: o que é um SO, suas funções e tipos',
+    icon: '🧭',
+    color: '#10b981',
+    lessons: [
+      {
+        id: 'intro-1',
+        title: 'O que é um Sistema Operacional?',
+        icon: '💻',
+        summary: 'Definição, propósito e o papel do SO como intermediário.',
+        content: [
+          { heading: 'Definição formal', body: 'Um Sistema Operacional (SO) é um software de sistema que atua como intermediário entre o hardware e os programas/aplicativos do usuário. Ele gerencia os recursos do computador (processador, memória, dispositivos de E/S) e fornece uma interface coerente e abstraída para que aplicações possam ser executadas sem precisar conhecer os detalhes físicos do hardware. Em essência, o SO transforma uma máquina física complexa em uma máquina virtual fácil de programar e usar.', example: 'Sem SO, um programa precisaria controlar diretamente o cabeçote de leitura do disco; com SO, basta executar fwrite() e o SO cuida do resto.' },
+          { heading: 'Papel do SO: Gerente de recursos', body: 'O SO atua como um gerente de recursos: decide qual processo recebe CPU, quanto de memória cada aplicação pode usar, qual programa acessa o disco primeiro, como a rede é compartilhada. Em um sistema multitarefa, dezenas de processos "acham" que têm a máquina só para si graças à abstração criada pelo SO. Esse gerenciamento envolve políticas de escalonamento, alocação de memória, sincronização e proteção entre processos.' },
+          { heading: 'Papel do SO: Máquina estendida', body: 'Além de gerenciar, o SO oferece uma "máquina estendida": uma camada de abstrações (arquivos, processos, sockets, janelas) que esconde a complexidade do hardware. Um programa não precisa saber o endereço de registradores do controlador de disco para gravar um arquivo — basta chamar uma API do SO. Isso reduz drasticamente a complexidade do desenvolvimento de software e torna os programas portáveis entre diferentes hardwares.' },
+          { heading: 'Componentes básicos', body: 'Os componentes típicos de um SO incluem: kernel (núcleo do sistema), gerenciador de processos, escalonador de CPU, gerenciador de memória, sistema de arquivos, drivers de dispositivos, sistema de E/S, e a interface com o usuário (shell gráfico ou textual). Cada componente é responsável por uma área específica do funcionamento do sistema.' }
+        ],
+        quiz: [
+          { q: 'Qual é a função principal de um Sistema Operacional?', options: ['Executar jogos com alto desempenho', 'Gerenciar recursos do hardware e fornecer abstrações para aplicações', 'Aumentar a velocidade do processador fisicamente', 'Substituir a memória RAM por SSD'], correct: 1, explanation: 'O SO gerencia recursos (CPU, memória, E/S) e oferece abstrações (arquivos, processos) para que aplicações não precisem lidar com o hardware diretamente.' },
+          { q: 'A ideia de "máquina estendida" se refere a:', options: ['Aumentar fisicamente o tamanho do computador', 'Uma camada de abstrações que esconde detalhes do hardware', 'Adicionar mais monitores ao sistema', 'Atualizar a BIOS da placa-mãe'], correct: 1, explanation: 'A máquina estendida é a abstração fornecida pelo SO: arquivos, processos e sockets no lugar de blocos de disco e interrupções.' },
+          { q: 'Qual componente é considerado o "núcleo" do SO?', options: ['Shell', 'Driver de vídeo', 'Kernel', 'Compilador'], correct: 2, explanation: 'O kernel é o núcleo do SO, executando em modo privilegiado e coordenando todos os serviços essenciais.' }
+        ]
+      },
+      {
+        id: 'intro-2',
+        title: 'História e Evolução dos SOs',
+        icon: '📜',
+        summary: 'De sistemas em lote aos SOs modernos multicore e em nuvem.',
+        content: [
+          { heading: 'Geração 0: Válvulas (1945–1950)', body: 'Os primeiros computadores não tinham SO: programadores reservavam a máquina, plugavam cabos em painéis e inseriam cartões perfurados manualmente. Cada execução era exclusiva, sem compartilhamento. O uso era extremamente ineficiente — grande parte do tempo era gasto preparando a máquina, não processando.' },
+          { heading: 'Sistemas em Lote (Batch) — anos 1950', body: 'Para reduzir o tempo ocioso, surgiram os SOs em lote: jobs eram coletados em fitas magnéticas por um operador e processados em sequência sem intervenção humana. O SO residente carregava cada job, executava e passava ao próximo. Não havia interatividade, mas o throughput melhorou drasticamente.', example: 'O IBM OS/360 foi um marco desse período, processando jobs científicos e comerciais.' },
+          { heading: 'Sistemas de Tempo Compartilhado — anos 1960', body: 'O Multics (MIT, Bell Labs, GE) e, posteriormente, o Unix introduziram o tempo compartilhado (time-sharing): múltiplos usuários interagiam simultaneamente com o computador via terminais. O SO dividia o tempo de CPU em fatias (quantum) tão rapidamente que cada usuário tinha a ilusão de uso exclusivo. Esse modelo é a base dos SOs modernos.' },
+          { heading: 'SOs de Rede e Distribuídos — anos 1980–1990', body: 'Com redes de computadores, surgiram SOs capazes de gerenciar comunicação entre máquinas (Novell NetWare, Windows NT, sistemas Unix em rede). Sistemas distribuídos como Amoeba e Mach trouxeram a visão de "uma máquina virtual composta por várias máquinas físicas".' },
+          { heading: 'SOs Modernos — Multicore, Mobile e Cloud', body: 'Atualmente, SOs lidam com processadores multicore, GPUs, virtualização de hardware, contêineres, dispositivos móveis, IoT e computação em nuvem. Linux, Windows, macOS, Android e iOS representam a maturidade de décadas de evolução, com kernels híbridos, suporte a namespaces, cgroups, e escalonadores avançados.' }
+        ],
+        quiz: [
+          { q: 'O que caracterizava os sistemas em lote (batch)?', options: ['Múltiplos usuários interagindo simultaneamente', 'Jobs coletados e processados em sequência sem interação', 'Processamento distribuído em rede', 'Uso de GPUs para paralelismo'], correct: 1, explanation: 'Nos sistemas batch, jobs eram empilhados e executados em sequência pelo SO residente, sem interação direta do usuário.' },
+          { q: 'Qual sistema é considerado o marco do tempo compartilhado e precursor do Unix?', options: ['MS-DOS', 'Multics', 'Windows 95', 'Android'], correct: 1, explanation: 'O Multics introduziu o tempo compartilhado; o Unix, mais simples, foi inspirado em suas ideias e dominou a partir dos anos 1970.' },
+          { q: 'Nos SOs modernos, qual recurso NÃO é uma característica típica?', options: ['Suporte a multicore', 'Virtualização e contêineres', 'Tempo compartilhado', 'Processamento exclusivo em lote sem interação'], correct: 3, explanation: 'SOs modernos são interativos e multitarefa; processamento em lote exclusivo é característica de sistemas antigos.' }
+        ]
+      },
+      {
+        id: 'intro-3',
+        title: 'Funções e Serviços do SO',
+        icon: '🔧',
+        summary: 'Gerência de processos, memória, E/S, arquivos e segurança.',
+        content: [
+          { heading: 'Gerência de processos', body: 'O SO cria, escalona, suspende e termina processos. Um processo é um programa em execução, com seu próprio espaço de endereçamento. O escalonador decide qual processo roda em cada instante usando políticas como Round-Robin, prioridades ou CFS (Completely Fair Scheduler) no Linux. O SO também sincroniza o acesso concorrente a recursos via mutexes, semáforos e monitores.' },
+          { heading: 'Gerência de memória', body: 'O SO mapeia memória virtual para física, usa paginação e segmentação, controla o swap e aplica algoritmos de substituição de páginas (LRU, FIFO, clock). Isso permite que cada processo tenha seu próprio espaço de endereçamento protegido e que a memória RAM pareça maior do que fisicamente é.', example: 'Um processo pode "ver" 4 GB de memória em uma máquina com 1 GB graças à paginação sob demanda.' },
+          { heading: 'Sistema de arquivos', body: 'O SO organiza dados em arquivos e diretórios sobre mídias físicas (discos, SSDs, redes). Gerencia permissões, journaling, alocação de blocos, caches de leitura/escrita. Sistemas de arquivos modernos (ext4, XFS, Btrfs, ZFS, NTFS, APFS) oferecem integridade, snapshots, compressão e RAID por software.' },
+          { heading: 'Gerência de E/S e drivers', body: 'O SO abstrai dispositivos de E/S via drivers. Aplicações usam chamadas de sistema (read, write, open, close) que são traduzidas em comandos específicos para cada controlador. Buffers, caches, spooling e IRQs são geridos para que a E/S seja eficiente e não bloqueie a CPU.' },
+          { heading: 'Segurança e proteção', body: 'O SO implementa proteção entre processos (modos kernel/user), autenticação de usuários, controle de acesso (permissões Unix, ACLs), auditoria e isolamento. Mecanismos modernos como namespaces e cgroups permitem criar contêineres — processos isolados que compartilham o mesmo kernel.' }
+        ],
+        quiz: [
+          { q: 'O que é um processo?', options: ['Um arquivo de texto', 'Um programa em execução com seu próprio espaço de endereçamento', 'Um pedaço do disco rígido', 'Um driver de impressora'], correct: 1, explanation: 'Processo = programa em execução, com espaço de endereçamento próprio, state, e recursos alocados pelo SO.' },
+          { q: 'Memória virtual permite que:', options: ['O processador rode mais rápido', 'Um processo use mais memória do que a RAM fisicamente disponível', 'Discos sejam substituídos por nuvem', 'Programas sejam compilados automaticamente'], correct: 1, explanation: 'A memória virtual, via paginação e swap, dá a ilusão de uma memória maior que a física.' },
+          { q: 'Qual escalonador é usado por padrão no kernel Linux moderno?', options: ['FIFO estrito', 'CFS (Completely Fair Scheduler)', 'Lottery', 'Big Kernel Lock'], correct: 1, explanation: 'O CFS tenta dividir o tempo de CPU justamente entre processos usando uma árvore red-black.' },
+          { q: 'Namespaces e cgroups são a base de qual tecnologia moderna?', options: ['Contêineres (Docker, Podman)', 'Discos SSD', 'GPUs gráficas', 'BIOS UEFI'], correct: 0, explanation: 'Namespaces isolam a "visão" do processo; cgroups limitam recursos. Juntos, formam a base dos contêineres Linux.' }
+        ]
+      },
+      {
+        id: 'intro-4',
+        title: 'Tipos de Sistemas Operacionais',
+        icon: '🗂️',
+        summary: 'Batch, tempo compartilhado, tempo real, distribuído, embarcado.',
+        content: [
+          { heading: 'SOs Batch', body: 'Processam jobs em sequência sem interação direta do usuário. Ainda existem em cenários específicos: rendering de filmes, processamento de folha de pagamento, big data em Hadoop. O foco é throughput máximo, não interatividade.' },
+          { heading: 'SOs de Tempo Compartilhado', body: 'Múltiplos usuários/programas compartilham a CPU via fatias de tempo. Linux, Windows, macOS são exemplos. Foco em justiça e interatividade. Cada processo tem a ilusão de uso exclusivo da máquina.' },
+          { heading: 'SOs de Tempo Real (RTOS)', body: 'Projetados para atender prazos rígidos (hard real-time) ou flexíveis (soft real-time). Usados em controle de voo, robótica, equipamentos médicos, automação industrial. RTOS como VxWorks, FreeRTOS, RT-Linux garantem determinismo: o tempo de resposta é previsível.', example: 'Um airbag precisa disparar em milissegundos — um SO de tempo real garante esse prazo.' },
+          { heading: 'SOs Distribuídos', body: 'Múltiplos computadores conectados em rede aparecem ao usuário como uma única máquina. Exemplos: Google Borg, Kubernetes (orquestrador), plan9. Distribuem processos, arquivos e comunicação entre nós, com foco em escalabilidade e tolerância a falhas.' },
+          { heading: 'SOs Embarcados e Mobile', body: 'Otimizados para dispositivos com recursos limitados (IoT, smartphones, carros). Android (Linux + JVM), iOS (Darwin), Embedded Linux, FreeRTOS. Foco em baixo consumo de energia, conectividade e restrições de memória.' }
+        ],
+        quiz: [
+          { q: 'Um RTOS é projetado principalmente para:', options: ['Maximizar o throughput em jobs de longa duração', 'Garantir prazos de resposta previsíveis', 'Reduzir o consumo de RAM', 'Servir páginas web'], correct: 1, explanation: 'RTOS prioriza determinismo: cada tarefa deve completar dentro de um prazo conhecido.' },
+          { q: 'Qual é um exemplo de SO de tempo compartilhado moderno?', options: ['VxWorks', 'FreeRTOS', 'Linux', 'MS-DOS'], correct: 2, explanation: 'Linux é um SO de propósito geral com escalonamento preemptivo e multitarefa: tempo compartilhado.' },
+          { q: 'SOs distribuídos têm como característica:', options: ['Cada máquina é usada isoladamente', 'Vários nós aparecem ao usuário como uma única máquina virtual', 'Não possuem rede', 'Só rodam jobs em lote'], correct: 1, explanation: 'SOs distribuídos abstraem a rede: o usuário enxerga um sistema unificado, mesmo com múltiplos nós físicos.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'structures',
+    title: 'Estruturas de Sistemas Operacionais',
+    description: 'Monolítico, camadas, microkernel, modular e híbrido',
+    icon: '📦',
+    color: '#f59e0b',
+    lessons: [
+      {
+        id: 'str-1',
+        title: 'Serviços do SO e Chamadas de Sistema',
+        icon: '📞',
+        summary: 'APIs, syscalls e o anel de proteção entre user/kernel.',
+        content: [
+          { heading: 'Serviços para o usuário', body: 'O SO oferece serviços diretamente ao usuário: interface (GUI/CLI), execução de programas, operações de E/S, sistema de arquivos, comunicação entre processos (IPC), detecção de erros. Sem esses serviços, cada aplicação teria que reimplementar tudo do zero.' },
+          { heading: 'Serviços para o sistema', body: 'Além dos serviços visíveis, o SO oferece serviços internos: alocação de recursos, contabilidade (logs de uso), proteção e segurança. Esses serviços mantêm o sistema estável e justo entre múltiplos usuários/processos.' },
+          { heading: 'Chamadas de Sistema (syscalls)', body: 'As chamadas de sistema são a interface entre o modo usuário e o modo kernel. Quando um programa precisa ler um arquivo, ele invoca a syscall read(), que faz o processador mudar para modo kernel, executar o código do SO e retornar. Há categorias: controle de processo (fork, exec, exit), manipulação de arquivos (open, read, write, close), gerência de dispositivos (ioctl), manutenção de informação (time, date) e comunicação (pipe, shm, msgget).', example: 'printf("oi") na libc eventualmente chama write(1, "oi", 2) — uma syscall.' },
+          { heading: 'Anéis de proteção', body: 'Os processadores modernos implementam anéis (rings) de proteção. O kernel roda no Ring 0 (maior privilégio), drivers em Ring 0 ou Ring 1/2, e aplicações em Ring 3 (menor privilégio). Tentar acessar hardware diretamente do Ring 3 causa uma exceção tratada pelo SO. Esse mecanismo é fundamental para proteção e estabilidade.' }
+        ],
+        quiz: [
+          { q: 'O que é uma chamada de sistema (syscall)?', options: ['Um erro do compilador', 'Uma função da biblioteca padrão C', 'A interface para transitar do modo usuário para o modo kernel', 'Um tipo de variável global'], correct: 2, explanation: 'Syscalls são o portão de entrada para o kernel: read, write, fork, open são exemplos.' },
+          { q: 'Em qual anel de proteção rodam as aplicações de usuário?', options: ['Ring 0', 'Ring 1', 'Ring 2', 'Ring 3'], correct: 3, explanation: 'Aplicações rodam em Ring 3 (menor privilégio). O kernel roda em Ring 0.' },
+          { q: 'Qual NÃO é uma categoria típica de chamadas de sistema?', options: ['Controle de processo', 'Manipulação de arquivos', 'Comunicação entre processos', 'Renderização de jogos 3D'], correct: 3, explanation: 'Renderização 3D é feita por bibliotecas gráficas (OpenGL/Vulkan/DirectX), não por syscalls do SO.' }
+        ]
+      },
+      {
+        id: 'str-2',
+        title: 'Estrutura Monolítica',
+        icon: '◼️',
+        summary: 'Tudo no kernel: rápido, mas difícil de manter.',
+        content: [
+          { heading: 'Conceito', body: 'Em uma estrutura monolítica, todo o SO — escalonador, gerenciador de memória, sistema de arquivos, drivers de rede, IPC — roda dentro do kernel em modo privilegiado (Ring 0). Não há separação estrita entre componentes; todos podem chamar todos diretamente via chamadas de função.' },
+          { heading: 'Vantagens', body: 'Comunicação entre componentes é rápida (chamadas de função diretas, sem troca de modo). O desempenho é excelente porque não há overhead de IPC entre subsistemas. O kernel pode ser altamente otimizado.' },
+          { heading: 'Desvantagens', body: 'Qualquer bug em um driver pode derrubar todo o sistema (kernel panic). Manutenção é difícil: o kernel vira um "monstro" de milhões de linhas (o Linux tem ~30 milhões de linhas). Adicionar um novo subsistema exige recompilar/relinkar o kernel. Segurança: uma vulnerabilidade em qualquer componente compromete todo o kernel.', example: 'Linux é o exemplo mais conhecido de estrutura monolítica modular: tudo roda em Ring 0, mas módulos podem ser carregados/removidos em runtime.' },
+          { heading: 'Exemplos', body: 'Linux, MS-DOS, primeiras versões do Unix, FreeBSD. Apesar de "monolítico", sistemas modernos como Linux adotam módulos carregáveis (LKM) que adicionam flexibilidade sem mudar o modelo fundamental.' }
+        ],
+        quiz: [
+          { q: 'Qual é a principal vantagem da estrutura monolítica?', options: ['Segurança superior por isolamento', 'Desempenho: comunicação direta entre componentes', 'Fácil manutenção do código', 'Suporte nativo a contêineres'], correct: 1, explanation: 'Como tudo está no mesmo espaço de endereçamento, as chamadas são diretas e rápidas.' },
+          { q: 'Qual é a principal desvantagem da estrutura monolítica?', options: ['Baixo desempenho', 'Dificuldade de manter e bug em qualquer componente pode derrubar o sistema', 'Incapacidade de rodar em multicore', 'Não suporta chamadas de sistema'], correct: 1, explanation: 'Um erro em um driver pode causar kernel panic porque tudo compartilha o mesmo espaço.' },
+          { q: 'Qual SO moderno usa o modelo monolítico (com módulos carregáveis)?', options: ['Windows NT', 'macOS', 'Linux', 'Minix 3'], correct: 2, explanation: 'Linux é monolítico modular: LKMs permitem adicionar código em runtime, mas tudo roda em Ring 0.' }
+        ]
+      },
+      {
+        id: 'str-3',
+        title: 'Estrutura em Camadas',
+        icon: '🥞',
+        summary: 'Cada camada usa apenas serviços da inferior.',
+        content: [
+          { heading: 'Conceito', body: 'O SO é dividido em camadas hierárquicas (anéis). A camada 0 (hardware) é a base; a camada 1 gerencia CPU; a camada 2 gerencia memória; a camada 3 gerencia E/S; a camada 4 é o sistema de arquivos; e assim por diante. Cada camada só usa serviços da camada imediatamente inferior, criando uma hierarquia limpa.' },
+          { heading: 'Vantagens', body: 'Modularidade clara: cada camada pode ser projetada e testada independentemente. Encapsulamento: detalhes de implementação de uma camada ficam escondidos das superiores. Facilita depuração e raciocínio sobre o sistema.' },
+          { heading: 'Desvantagens', body: 'Overhead de desempenho: cada chamada atravessa múltiplas camadas. Definir a hierarquia correta é difícil — algumas operações naturalmente não se encaixam bem em níveis rígidos. Exemplo clássico: o cronômetro do sistema (usado para scheduling) também é necessário para E/S, criando dependência circular aparente.', example: 'O THE operating system (Dijkstra, 1968) foi o primeiro SO em camadas, com 6 níveis.' },
+          { heading: 'Aplicações', body: 'A ideia de camadas sobrevive em partes dos SOs modernos (TCP/IP é implementado em camadas), mas poucos SOs usam o modelo estritamente em camadas para o kernel inteiro. Predomina em sistemas educacionais e em protocolos de rede.' }
+        ],
+        quiz: [
+          { q: 'Na estrutura em camadas, uma camada pode usar serviços de:', options: ['Qualquer camada', 'Apenas da camada imediatamente inferior', 'Apenas da camada superior', 'Apenas do hardware diretamente'], correct: 1, explanation: 'A regra do modelo em camadas: cada nível usa apenas serviços do nível imediatamente abaixo.' },
+          { q: 'Qual é a principal desvantagem do modelo em camadas?', options: ['Falta de modularidade', 'Overhead de desempenho por atravessar múltiplas camadas', 'Difícil isolamento de bugs', 'Incompatível com chamadas de sistema'], correct: 1, explanation: 'Cada chamada precisa "descer" pelas camadas, adicionando overhead.' },
+          { q: 'Onde o modelo em camadas ainda é amplamente usado hoje?', options: ['Em toda a arquitetura do kernel Linux', 'Na pilha de protocolos TCP/IP', 'Apenas em sistemas de tempo real', 'Em nenhum lugar, foi totalmente abandonado'], correct: 1, explanation: 'TCP/IP é o exemplo clássico: aplicação → transporte → rede → enlace → física.' }
+        ]
+      },
+      {
+        id: 'str-4',
+        title: 'Microkernel',
+        icon: '⭕',
+        summary: 'Kernel mínimo, serviços em processo de usuário.',
+        content: [
+          { heading: 'Conceito', body: 'No microkernel, o kernel é reduzido ao mínimo essencial: escalonamento, comunicação IPC (passagem de mensagens) e gerência básica de memória. Todos os outros serviços — sistema de arquivos, drivers, pilha de rede, gerência de processos — rodam como processos em modo usuário (servidores), comunicando-se por mensagens.' },
+          { heading: 'Vantagens', body: 'Robustez: se um driver cair, só ele morre — o kernel continua. Segurança: menos código em Ring 0 significa menor superfície de ataque. Extensibilidade: adicionar um novo sistema de arquivos é só iniciar um novo processo servidor. Distribuído: como tudo passa por mensagens, é natural estender para uma arquitetura distribuída.', example: 'Minix 3, QNX, L4 são microkernels clássicos. O macOS XNU é híbrido, mas baseado em ideias microkernel (Mach).' },
+          { heading: 'Desvantagens', body: 'Desempenho: cada operação atravessa múltiplas fronteiras de modo (user→kernel→user), e a passagem de mensagens tem overhead. Para I/O intensivo, o custo pode ser grande. Algumas implementações mitigam isso com L4, que tem performance comparável a monolíticos para certas cargas.' },
+          { heading: 'Microkernels notáveis', body: 'Mach (base do macOS XNU e GNU Hurd), Minix 3 (educacional, foco em confiabilidade), L4 (alto desempenho, usado em smartphones via OKL4), QNX (RTOS comercial, usado em automóveis e equipamentos médicos).' }
+        ],
+        quiz: [
+          { q: 'No microkernel, onde rodam os drivers e o sistema de arquivos?', options: ['No kernel (Ring 0)', 'Como processos em modo usuário (servidores)', 'Diretamente no hardware', 'Na BIOS'], correct: 1, explanation: 'Microkernel mantém apenas o essencial no kernel; o resto roda como servidores em userspace.' },
+          { q: 'Qual é a principal vantagem do microkernel?', options: ['Máximo desempenho para E/S', 'Robustez: falhas em drivers não derrubam o kernel', 'Simplicidade de implementação', 'Menor uso de memória'], correct: 1, explanation: 'Como cada serviço é um processo isolado, uma falha é contida — o kernel não cai.' },
+          { q: 'Qual é a principal desvantagem do microkernel?', options: ['Falta de isolamento entre componentes', 'Overhead de passagem de mensagens', 'Incapacidade de usar rede', 'Necessita de BIOS especial'], correct: 1, explanation: 'Cada operação atravessa múltiplas fronteiras de modo, adicionando overhead.' }
+        ]
+      },
+      {
+        id: 'str-5',
+        title: 'Estrutura Modular e Híbrida',
+        icon: '🧩',
+        summary: 'Módulos carregáveis e combinações modernas.',
+        content: [
+          { heading: 'Estrutura modular', body: 'O kernel tem um núcleo fixo, mas outros componentes (drivers, sistemas de arquivos, protocolos de rede) são módulos carregáveis em runtime. Combina o desempenho do monolítico com a flexibilidade de adicionar/remover componentes sem reiniciar. O Linux usa Loadable Kernel Modules (LKM) extensivamente.', example: 'lsmod lista módulos carregados; modprobe carrega um novo; rmmod remove um módulo.' },
+          { heading: 'Estrutura híbrida', body: 'SOs modernos combinam ideias: o kernel é majoritariamente monolítico para desempenho, mas incorpora ideias de microkernel para isolamento de certos componentes. Windows NT (Windows 10/11) e macOS (XNU = Mach + BSD) são exemplos: têm um núcleo executivo em Ring 0 e subsistemas em userspace.' },
+          { heading: 'Comparação geral', body: 'Monolítico: máximo desempenho, manutenção difícil. Em camadas: organizado, mas lento. Microkernel: robusto e seguro, mas com overhead. Modular: flexível e performático (Linux). Híbrido: pragmático, combina o melhor de vários mundos (Windows, macOS). A escolha depende do domínio: servidores favorecem Linux (monolítico modular); sistemas críticos favorecem microkernels.' },
+          { heading: 'Tendências modernas', body: 'Microkernels voltaram a ganhar atenção com a segurança (Google Fuchsia / Zircon, seL4 verificado formalmente). Contêineres e unikernels (MirageOS, IncludeOS) representam uma nova vertente: kernels especializados para cada aplicação, eliminando código desnecessário.' }
+        ],
+        quiz: [
+          { q: 'O que são LKMs no Linux?', options: ['Bibliotecas de usuário', 'Módulos carregáveis no kernel em runtime', 'Protocolos de rede', 'Tipos de syscall'], correct: 1, explanation: 'LKMs (Loadable Kernel Modules) permitem adicionar/remover drivers e subsistemas em runtime.' },
+          { q: 'Qual SO usa uma estrutura híbrida (Mach + BSD)?', options: ['Linux', 'Windows 11', 'macOS (XNU)', 'FreeBSD'], correct: 2, explanation: 'XNU, o kernel do macOS/iOS, combina o microkernel Mach com código BSD em um modelo híbrido.' },
+          { q: 'Qual é uma tendência moderna que combina isolamento e minimalismo?', options: ['Unikernels e microkernels verificados como seL4', 'Kernels monolíticos maiores', 'Eliminação de chamadas de sistema', 'Substituição total do kernel por BIOS'], correct: 0, explanation: 'seL4 (microkernel formalmente verificado) e unikernels (kernel especializado por app) são tendências atuais.' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'virtualization',
+    title: 'Virtualização e Conceitos Avançados',
+    description: 'VMs, hipervisores, contêineres e paravirtualização',
+    icon: '🖥️',
+    color: '#06b6d4',
+    lessons: [
+      {
+        id: 'virt-1',
+        title: 'O que é Virtualização',
+        icon: '👻',
+        summary: 'Definição, motivação e tipos de virtualização.',
+        content: [
+          { heading: 'Definição', body: 'Virtualização é a técnica de criar uma representação virtual (abstrata) de um recurso computacional — uma máquina, um disco, uma rede, uma CPU — de forma que múltiplos consumidores possam compartilhar o mesmo recurso físico de maneira isolada. A virtualização permite que um hardware físico execute múltiplos SOs simultaneamente, cada um acreditando ter a máquina só para si.' },
+          { heading: 'Motivação', body: 'Antes da virtualização, servidores rodavam um SO por máquina, deixando a CPU e a memória subutilizadas (5–15% em média). A virtualização permite consolidar vários servidores em um hardware físico, reduzindo custos de energia, espaço e refrigeração. Adicionalmente, oferece isolamento, snapshots, migração a quente (live migration) e facilidade de backup.', example: 'Um único servidor físico pode rodar 20 VMs, cada uma com seu próprio SO, sem interferência.' },
+          { heading: 'Tipos de virtualização', body: '1) Virtualização de plataforma (máquinas virtuais); 2) Virtualização de recursos (CPU, memória, rede, storage); 3) Virtualização de desktop (VDI); 4) Virtualização de aplicação (Java JVM, .NET CLR); 5) Virtualização de rede (SDN, VLANs, overlays). Cada tipo abstrai um nível diferente do sistema.' },
+          { heading: 'História', body: 'A virtualização nasceu nos mainframes IBM (CP-40, CP-67, 1960s). Foi "redescoberta" na era x86 pela VMware (1999) com binary translation. Em 2005, Intel (VT-x) e AMD (AMD-V) adicionaram suporte de hardware à virtualização, eliminando o overhead da tradução por software e tornando a virtualização ubíqua.' }
+        ],
+        quiz: [
+          { q: 'Qual é a principal motivação para usar virtualização em servidores?', options: ['Aumentar o clock da CPU', 'Consolidar servidores subutilizados, economizando recursos', 'Substituir a necessidade de SO', 'Tornar a rede mais rápida'], correct: 1, explanation: 'Servidores rodavam a 5–15% de CPU. A virtualização permite múltiplas VMs em um hardware, melhorando a utilização.' },
+          { q: 'Quando a virtualização x86 se tornou ubíqua?', options: ['1960s, com mainframes IBM', '1999, com VMware usando binary translation', '2005+, com VT-x e AMD-V (suporte de hardware)', '2020, com contêineres'], correct: 2, explanation: 'VMware (1999) iniciou, mas foi o suporte de hardware (Intel VT-x, AMD-V) em 2005 que tornou a virtualização ubíqua.' },
+          { q: 'Qual NÃO é um tipo de virtualização?', options: ['Máquina virtual (plataforma)', 'Virtualização de aplicação (JVM)', 'Virtualização de rede (SDN)', 'Compilação estática de C'], correct: 3, explanation: 'Compilação de C gera código nativo, sem criar uma camada virtual: não é virtualização.' }
+        ]
+      },
+      {
+        id: 'virt-2',
+        title: 'Hipervisores: Tipo 1 vs Tipo 2',
+        icon: '🖥️',
+        summary: 'Bare-metal vs hospedado: arquiteturas e exemplos.',
+        content: [
+          { heading: 'Hipervisor Tipo 1 (Bare-metal)', body: 'O hipervisor Tipo 1 roda diretamente sobre o hardware, sem um SO hospedeiro. Ele mesmo é um kernel minimalista responsável por gerenciar CPU, memória e dispositivos e por executar as VMs. Vantagens: desempenho máximo, pois não há um SO intermediário; segurança: menos código, menor superfície de ataque.', example: 'VMware ESXi, Microsoft Hyper-V (quando instalado bare-metal), Xen, KVM (Linux como hipervisor), Proxmox VE.' },
+          { heading: 'Hipervisor Tipo 2 (Hospedado)', body: 'O hipervisor Tipo 2 é um aplicativo que roda sobre um SO convencional (Windows, macOS, Linux). Ele usa os serviços do SO hospedeiro para acessar o hardware. Vantagens: fácil instalação e uso; desvantagem: desempenho menor devido ao overhead do SO hospedeiro.', example: 'VMware Workstation, VMware Fusion, Oracle VirtualBox, Parallels Desktop, QEMU (sem KVM).' },
+          { heading: 'KVM: o híbrido do Linux', body: 'KVM (Kernel-based Virtual Machine) é curioso: é um módulo do kernel Linux que transforma o Linux em um hipervisor Tipo 1, mas o Linux continua sendo um SO hospedeiro. Na prática, é classificado como Tipo 1 porque as VMs acessam o hardware via KVM, não via o SO hospedeiro. É a base da maioria das nuvens públicas (AWS, Google Cloud, DigitalOcean).' },
+          { heading: 'Comparação prática', body: 'Datacenters usam Tipo 1 (ESXi, KVM) para máxima densidade e desempenho. Desenvolvedores e usuários finais usam Tipo 2 (VirtualBox, VMware Fusion) para rodar VMs no seu laptop. A escolha depende do cenário: produção = Tipo 1; desenvolvimento/teste = Tipo 2 é suficiente.' }
+        ],
+        quiz: [
+          { q: 'Qual é a característica do hipervisor Tipo 1?', options: ['Roda sobre um SO hospedeiro', 'Roda diretamente sobre o hardware (bare-metal)', 'Só roda em laptops', 'Não suporta VMs'], correct: 1, explanation: 'Tipo 1 é bare-metal: VMware ESXi, Xen, KVM, Hyper-V são exemplos.' },
+          { q: 'VirtualBox é um exemplo de qual tipo de hipervisor?', options: ['Tipo 1 (bare-metal)', 'Tipo 2 (hospedado)', 'Contêiner', 'Emulador puro'], correct: 1, explanation: 'VirtualBox roda como aplicativo sobre Windows/Linux/macOS: Tipo 2.' },
+          { q: 'O KVM no Linux é melhor classificado como:', options: ['Hipervisor Tipo 2 puro', 'Emulador sem aceleração', 'Tipo 1: o kernel Linux vira o hipervisor', 'Sistema de arquivos'], correct: 2, explanation: 'KVM transforma o kernel Linux em um hipervisor Tipo 1; as VMs acessam o hardware diretamente via KVM.' }
+        ]
+      },
+      {
+        id: 'virt-3',
+        title: 'Máquinas Virtuais vs Contêineres',
+        icon: '📦',
+        summary: 'VM (virtualização total) vs contêiner (virtualização de SO).',
+        content: [
+          { heading: 'Máquina Virtual (VM)', body: 'Uma VM virtualiza o hardware: CPU, memória, disco, rede. Sobre o hardware virtualizado, roda um SO completo (convidado/guest). Cada VM tem seu próprio kernel. Vantagens: isolamento total, pode rodar qualquer SO (Windows em Linux, Linux em macOS). Desvantagens: overhead alto — cada VM consome GBs de RAM para o SO guest; boot lento (segundos a minutos).', example: 'Uma VM Ubuntu sobre VMware ESXi pode ter 4 GB de RAM e 30 GB de disco, apenas para o SO.' },
+          { heading: 'Contêiner', body: 'Um contêiner virtualiza o SO, não o hardware. Todos os contêineres compartilham o kernel do host; cada contêiner tem seu próprio filesystem, processos, rede e usuários graças a namespaces e cgroups. Vantagens: leve (MBs, não GBs), boot em milissegundos, alta densidade (centenas por host). Desvantagens: só roda SO compatível com o kernel do host (Linux em Linux).', example: 'Docker, Podman, containerd, LXC. Um contêiner Nginx ocupa ~50 MB e sobe em 200 ms.' },
+          { heading: 'Comparação direta', body: 'VM: isolamento forte, qualquer SO, pesado. Contêiner: isolamento fraco (compartilha kernel), só Linux (no Linux), leve e rápido. Na prática, ambos coexistem: nuvens executam contêineres dentro de VMs para combinar isolamento com densidade. Kubernetes tipicamente roda pods em VMs.' },
+          { heading: 'Quando usar cada um', body: 'Use VM quando: precisa de outro SO (Windows em Linux), precisa de isolamento máximo (multi-tenancy desconfiado), workloads legadas. Use contêineres quando: microserviços, CI/CD, escala horizontal, deploy de aplicações cloud-native. Combinações como Kata Containers trazem isolamento de VM com a experiência de uso de contêiner.' }
+        ],
+        quiz: [
+          { q: 'O que uma máquina virtualiza, e o que um contêiner virtualiza?', options: ['VM virtualiza o SO; contêiner virtualiza o hardware', 'VM virtualiza o hardware; contêiner virtualiza o SO', 'Ambos virtualizam o hardware', 'Ambos virtualizam o SO'], correct: 1, explanation: 'VM = virtualização de hardware (cada VM tem kernel próprio). Contêiner = virtualização de SO (compartilha kernel do host).' },
+          { q: 'Por que contêineres são mais leves que VMs?', options: ['Usam menos bibliotecas C', 'Não precisam de um kernel/SO guest completo; compartilham o kernel do host', 'São escritos em assembly', 'Não suportam rede'], correct: 1, explanation: 'Sem SO guest, contêiner economiza GBs de RAM e disco. Boot é apenas iniciar processos isolados.' },
+          { q: 'Qual limitação fundamental dos contêineres em Linux?', options: ['Só rodam aplicações em C', 'Só rodam aplicações compatíveis com o kernel do host (Linux em Linux)', 'Não podem usar rede', 'Não podem ser escalados'], correct: 1, explanation: 'Contêineres compartilham o kernel: não é possível rodar Windows "nativamente" em contêineres Linux.' }
+        ]
+      },
+      {
+        id: 'virt-4',
+        title: 'Paravirtualização e Virtualização Assistida por Hardware',
+        icon: '⚡',
+        summary: 'Como o hardware ajuda a virtualizar de forma eficiente.',
+        content: [
+          { heading: 'Virtualização total (full virtualization)', body: 'O SO guest não sabe que está virtualizado. O hipervisor traduz/trapa cada instrução sensível do guest para que ele rode sem modificações. Vantagem: qualquer SO funciona sem alterações. Desvantagem: alto overhead via binary translation. Foi a abordagem inicial da VMware em 1999.' },
+          { heading: 'Paravirtualização', body: 'O SO guest é modificado para saber que está virtualizado e chamar diretamente o hipervisor (hypercalls) em vez de executar instruções sensíveis. Vantagem: desempenho muito superior. Desvantagem: requer modificações no kernel guest. Xen clássico usava paravirtualização — kernels Linux precisavam ser compilados com suporte a Xen.', example: 'Análogo a paravirtualização: um motorista que conhece o atalho (hypercall) em vez do GPS (binary translation).' },
+          { heading: 'Virtualização assistida por hardware (HVM)', body: 'Intel VT-x e AMD-V adicionaram um novo modo de execução (root/non-root) no processador. O guest roda em non-root mode; quando tenta executar uma instrução sensível, há uma "VM exit" para o hipervisor em root mode, que trata e devolve o controle (VM entry). Isso eliminou a necessidade de binary translation, tornando a virtualização total quase tão rápida quanto nativa. Hoje, quase toda virtualização usa HVM.' },
+          { heading: 'SR-IOV, VT-d, Nested Virtualization', body: 'SR-IOV permite que uma NIC física apareça como múltiplas NICs virtuais, dando a cada VM acesso direto ao hardware. VT-d (IOMMU) permite passar dispositivos PCIe diretamente para VMs (PCI passthrough). Nested virtualization permite rodar um hipervisor dentro de uma VM (útil para testes). Esses avanços tornaram a virtualização quase tão rápida quanto bare-metal.' }
+        ],
+        quiz: [
+          { q: 'Na paravirtualização, o SO guest:', options: ['Não sabe que está virtualizado', 'É modificado para chamar o hipervisor (hypercalls)', 'Não pode usar chamadas de sistema', 'Roda em Ring 0 diretamente no hardware'], correct: 1, explanation: 'Paravirtualização modifica o guest para fazer hypercalls; o Xen clássico usava essa técnica.' },
+          { q: 'O que faz a virtualização assistida por hardware (VT-x, AMD-V)?', options: ['Substitui o SO guest', 'Adiciona modos root/non-root na CPU para capturar instruções sensíveis', 'Elimina a necessidade de kernel', 'Acelera a rede apenas'], correct: 1, explanation: 'VT-x/AMD-V adicionaram modos de execução: VM exits/entries permitem que o hipervisor intercepte apenas quando necessário.' },
+          { q: 'SR-IOV e VT-d servem para:', options: ['Compilar código mais rápido', 'Dar a VMs/contêineres acesso direto a hardware (NIC, PCIe)', 'Aumentar a RAM virtual', 'Substituir o sistema de arquivos'], correct: 1, explanation: 'SR-IOV divide uma NIC em múltiplas virtuais; VT-d (IOMMU) faz PCIe passthrough para VMs.' }
+        ]
+      }
+    ]
+  }
+];
+
+// ---------- DADOS: COMANDOS LINUX ----------
+const COMMANDS = [
+  { name: 'pwd', syntax: 'pwd', description: 'Mostra o diretório de trabalho atual (Print Working Directory).', examples: ['pwd'], category: 'navigation' },
+  { name: 'cd', syntax: 'cd [diretório]', description: 'Muda o diretório atual. Use ".." para subir, "." para o atual, "~" para o home, ou "/" para a raiz.', examples: ['cd /etc', 'cd ..', 'cd ~/projetos'], category: 'navigation' },
+  { name: 'ls', syntax: 'ls [-l] [-a] [caminho]', description: 'Lista o conteúdo do diretório. -l mostra detalhes (permissões, tamanho, dono). -a mostra arquivos ocultos.', examples: ['ls', 'ls -l', 'ls -la /etc'], category: 'filesystem' },
+  { name: 'mkdir', syntax: 'mkdir [-p] diretório', description: 'Cria um diretório. -p cria diretórios pais necessários.', examples: ['mkdir nova_pasta', 'mkdir -p a/b/c'], category: 'filesystem' },
+  { name: 'rmdir', syntax: 'rmdir diretório', description: 'Remove um diretório VAZIO. Use rm -r para diretórios com conteúdo.', examples: ['rmdir pasta_vazia'], category: 'filesystem' },
+  { name: 'touch', syntax: 'touch arquivo', description: 'Cria um arquivo vazio ou atualiza a data de modificação.', examples: ['touch novo.txt'], category: 'filesystem' },
+  { name: 'cp', syntax: 'cp [-r] origem destino', description: 'Copia arquivos. Use -r para copiar diretórios recursivamente.', examples: ['cp notas.txt copia.txt', 'cp -r projetos backup'], category: 'filesystem' },
+  { name: 'mv', syntax: 'mv origem destino', description: 'Move ou renomeia arquivos e diretórios.', examples: ['mv arquivo.txt novo_nome.txt', 'mv arquivo.txt /tmp/'], category: 'filesystem' },
+  { name: 'rm', syntax: 'rm [-r] [-f] arquivo', description: 'Remove arquivos. -r recursivo (diretórios). -f força. CUIDADO: rm -rf / pode destruir tudo!', examples: ['rm arquivo.txt', 'rm -r pasta'], category: 'filesystem' },
+  { name: 'cat', syntax: 'cat arquivo', description: 'Exibe o conteúdo de um arquivo na tela.', examples: ['cat notas.txt', 'cat /etc/hostname'], category: 'text' },
+  { name: 'echo', syntax: 'echo texto [> arquivo]', description: 'Exibe texto. Use ">" para redirecionar a um arquivo (sobrescreve) ou ">>" para anexar.', examples: ['echo "olá"', 'echo "olá" > arquivo.txt'], category: 'text' },
+  { name: 'grep', syntax: 'grep padrão arquivo', description: 'Procura um padrão de texto em um arquivo. Mostra linhas que contêm o padrão.', examples: ['grep "Linux" notas.txt', 'grep "root" /etc/passwd'], category: 'text' },
+  { name: 'head', syntax: 'head [-n N] arquivo', description: 'Mostra as primeiras N linhas de um arquivo (padrão: 10).', examples: ['head notas.txt', 'head -n 3 /etc/passwd'], category: 'text' },
+  { name: 'tail', syntax: 'tail [-n N] arquivo', description: 'Mostra as últimas N linhas de um arquivo (padrão: 10).', examples: ['tail notas.txt', 'tail -n 5 /etc/passwd'], category: 'text' },
+  { name: 'whoami', syntax: 'whoami', description: 'Mostra o usuário atual.', examples: ['whoami'], category: 'system' },
+  { name: 'date', syntax: 'date', description: 'Mostra a data e hora atuais do sistema.', examples: ['date'], category: 'system' },
+  { name: 'uname', syntax: 'uname [-a]', description: 'Mostra informações do sistema. -a mostra tudo (kernel, host, arquitetura).', examples: ['uname', 'uname -a'], category: 'system' },
+  { name: 'chmod', syntax: 'chmod permissões arquivo', description: 'Muda permissões de um arquivo. Use notação octal (755) ou simbólica (u+x). 7=rwx, 5=rx, 4=r, 0=nada.', examples: ['chmod +x script.sh', 'chmod 755 script.sh'], category: 'system' },
+  { name: 'clear', syntax: 'clear', description: 'Limpa a tela do terminal.', examples: ['clear'], category: 'system' },
+  { name: 'help', syntax: 'help', description: 'Mostra a lista de comandos suportados pelo simulador.', examples: ['help'], category: 'system' },
+  { name: 'tutorial', syntax: 'tutorial', description: 'Inicia um tutorial guiado de comandos Linux.', examples: ['tutorial'], category: 'system' },
+  { name: 'history', syntax: 'history', description: 'Mostra o histórico de comandos executados nesta sessão.', examples: ['history'], category: 'system' }
+];
+
+const CMD_CATEGORIES = {
+  navigation: { label: 'Navegação', icon: '📂', color: '#10b981' },
+  filesystem: { label: 'Manipulação de Arquivos', icon: '📄', color: '#06b6d4' },
+  text: { label: 'Texto e Busca', icon: '✏️', color: '#f59e0b' },
+  system: { label: 'Sistema', icon: '⚙️', color: '#a855f7' }
+};
+
+const TUTORIALS = [
+  { id: 1, title: 'Onde estou?', description: 'Primeiro, descubra em qual diretório você está. Use o comando que mostra o diretório de trabalho atual.', hint: 'O comando é "pwd" (Print Working Directory).', validate: (cmd) => cmd.trim() === 'pwd', solution: 'pwd' },
+  { id: 2, title: 'Listando arquivos', description: 'Agora liste os arquivos e pastas no diretório atual.', hint: 'O comando é "ls". Experimente também "ls -l" para ver detalhes.', validate: (cmd) => cmd.trim().startsWith('ls'), solution: 'ls' },
+  { id: 3, title: 'Navegando para documentos', description: 'Entre na pasta "documentos" que está dentro do diretório atual.', hint: 'Use "cd documentos" para mudar de diretório.', validate: (cmd, state) => cmd.trim().startsWith('cd') && state.cwd === '/home/aluno/documentos', solution: 'cd documentos' },
+  { id: 4, title: 'Lendo um arquivo', description: 'Exiba o conteúdo do arquivo "notas.txt".', hint: 'Use "cat notas.txt" para mostrar o conteúdo.', validate: (cmd) => cmd.trim().startsWith('cat') && cmd.includes('notas.txt'), solution: 'cat notas.txt' },
+  { id: 5, title: 'Voltando para home', description: 'Volte para o seu diretório home. Dica: "cd" sem argumentos ou "cd ~".', hint: 'Use "cd" ou "cd ~" para voltar ao home.', validate: (cmd, state) => cmd.trim().startsWith('cd') && state.cwd === '/home/aluno', solution: 'cd' },
+  { id: 6, title: 'Criando uma pasta', description: 'Crie uma nova pasta chamada "teste".', hint: 'Use "mkdir teste".', validate: (cmd) => cmd.trim().startsWith('mkdir') && cmd.includes('teste'), solution: 'mkdir teste' },
+  { id: 7, title: 'Criando um arquivo com conteúdo', description: 'Crie um arquivo chamado "ola.txt" contendo o texto "ola linux". Dica: use echo com redirecionador >.', hint: 'echo "ola linux" > ola.txt', validate: (cmd) => cmd.includes('echo') && cmd.includes('>') && cmd.includes('ola.txt'), solution: 'echo "ola linux" > ola.txt' },
+  { id: 8, title: 'Procurando um padrão', description: 'Use o grep para procurar pela palavra "Linux" no arquivo README.txt. Dica: o ~ representa seu home.', hint: 'grep Linux ~/README.txt', validate: (cmd) => cmd.includes('grep') && cmd.toLowerCase().includes('linux'), solution: 'grep Linux ~/README.txt' },
+  { id: 9, title: 'Tornando um script executável', description: 'Torne o script ~/projetos/hello.sh executável usando chmod com a notação +x. Depois você poderá executá-lo.', hint: 'chmod +x ~/projetos/hello.sh', validate: (cmd) => cmd.includes('chmod') && cmd.includes('+x'), solution: 'chmod +x ~/projetos/hello.sh' },
+  { id: 10, title: 'Removendo um arquivo', description: 'Remova o arquivo ola.txt que você criou. Use rm (sem -r, pois é um arquivo).', hint: 'rm ola.txt', validate: (cmd) => cmd.trim().startsWith('rm') && cmd.includes('ola.txt'), solution: 'rm ola.txt' }
+];
+
+// ---------- FILESYSTEM VIRTUAL ----------
+function createInitialFS() {
+  const file = (name, content, perms = '-rw-r--r--') => ({ name, type: 'file', content, permissions: perms, owner: 'aluno', size: content.length });
+  const dir = (name, children = {}, perms = 'drwxr-xr-x') => ({ name, type: 'dir', children, permissions: perms, owner: 'aluno', size: 4096 });
+  return dir('/', {
+    home: dir('home', {
+      aluno: dir('aluno', {
+        'README.txt': file('README.txt', ['Bem-vindo ao simulador Linux!', '', 'Este eh um ambiente seguro para praticar comandos.', 'Tente:', '  ls              # listar arquivos', '  pwd             # mostrar diretorio atual', '  mkdir projetos  # criar pasta', '  cd projetos     # entrar na pasta', '  echo "oi" > ola.txt  # criar arquivo', '  cat ola.txt     # ver conteudo', '  rm ola.txt      # remover', '', 'Use "help" para ver todos os comandos.', 'Use "tutorial" para ver o tutorial interativo.'].join('\n')),
+        documentos: dir('documentos', {
+          'notas.txt': file('notas.txt', ['Minhas notas de SO:', '- Estudar kernels', '- Praticar Linux', '- Fazer o quiz'].join('\n')),
+          'trabalho.md': file('trabalho.md', '# Trabalho de SO\n\n## Tópicos\n1. Estruturas de kernel\n2. Virtualizacao\n3. Comandos Linux\n')
+        }),
+        projetos: dir('projetos', {
+          'hello.sh': file('hello.sh', ['#!/bin/bash', 'echo "Ola, mundo!"', 'echo "Bem-vindo ao Linux"'].join('\n'), '-rwxr-xr-x'),
+          src: dir('src', {
+            'main.c': file('main.c', ['int main() {', '    printf("Hello, OS!\\n");', '    return 0;', '}'].join('\n'))
+          })
+        }),
+        downloads: dir('downloads', {
+          'arquivo.zip': file('arquivo.zip', 'PK[dados binarios simulados]')
+        })
+      })
+    }),
+    etc: dir('etc', {
+      hostname: file('hostname', 'simulator\n'),
+      passwd: file('passwd', ['root:x:0:0:root:/root:/bin/bash', 'aluno:x:1000:1000:Aluno:/home/aluno:/bin/bash'].join('\n')),
+      'os-release': file('os-release', ['NAME="SimulatorOS"', 'VERSION="1.0"', 'ID=simulator', 'PRETTY_NAME="SimulatorOS 1.0"'].join('\n'))
+    }),
+    bin: dir('bin', {
+      bash: file('bash', '[binario simulado do bash]'),
+      ls: file('ls', '[binario simulado do ls]'),
+      cat: file('cat', '[binario simulado do cat]')
+    }),
+    usr: dir('usr', { bin: dir('bin', {}), lib: dir('lib', {}), share: dir('share', {}) }),
+    var: dir('var', { log: dir('log', { syslog: file('syslog', '[logs do sistema simulados]') }) }),
+    tmp: dir('tmp', {}),
+    root: dir('root', {}, 'drwx------')
+  });
+}
+
+function normalizePath(path) {
+  const parts = path.split('/').filter(Boolean);
+  const result = [];
+  for (const p of parts) {
+    if (p === '.') continue;
+    if (p === '..') { result.pop(); continue; }
+    result.push(p);
+  }
+  return '/' + result.join('/');
+}
+function resolvePath(currentPath, target) {
+  if (!target || target === '.') return currentPath;
+  if (target === '..') {
+    if (currentPath === '/') return '/';
+    const parts = currentPath.split('/').filter(Boolean);
+    parts.pop();
+    return '/' + parts.join('/');
+  }
+  if (target === '~') return '/home/aluno';
+  if (target.startsWith('~/')) return '/home/aluno/' + target.slice(2);
+  if (target.startsWith('/')) return normalizePath(target);
+  const base = currentPath === '/' ? '' : currentPath;
+  return normalizePath(base + '/' + target);
+}
+function getNode(fs, path) {
+  if (path === '/') return fs;
+  const parts = path.split('/').filter(Boolean);
+  let current = fs;
+  for (const part of parts) {
+    if (current.type !== 'dir' || !current.children || !current.children[part]) return null;
+    current = current.children[part];
+  }
+  return current;
+}
+function setNode(fs, path, node) {
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 0) return false;
+  let current = fs;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (current.type !== 'dir' || !current.children || !current.children[parts[i]]) return false;
+    current = current.children[parts[i]];
+  }
+  if (current.type !== 'dir' || !current.children) return false;
+  current.children[parts[parts.length - 1]] = node;
+  return true;
+}
+function removeNode(fs, path) {
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 0) return null;
+  let current = fs;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (current.type !== 'dir' || !current.children || !current.children[parts[i]]) return null;
+    current = current.children[parts[i]];
+  }
+  if (current.type !== 'dir' || !current.children) return null;
+  const name = parts[parts.length - 1];
+  const node = current.children[name];
+  if (!node) return null;
+  delete current.children[name];
+  return node;
+}
+function cloneFS(fs) { return JSON.parse(JSON.stringify(fs)); }
+
+// ---------- ESTADO DO JOGO (localStorage) ----------
+const STORAGE_KEY = 'os-simulator-html-v1';
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    return Object.assign({
+      playerName: '',
+      totalPoints: 0,
+      modules: {
+        intro: { completed: false, completedLessons: [] },
+        structures: { completed: false, completedLessons: [] },
+        virtualization: { completed: false, completedLessons: [] },
+        linux: { completed: false, completedLessons: [] }
+      },
+      achievements: []
+    }, s);
+  } catch (e) {
+    return {
+      playerName: '',
+      totalPoints: 0,
+      modules: {
+        intro: { completed: false, completedLessons: [] },
+        structures: { completed: false, completedLessons: [] },
+        virtualization: { completed: false, completedLessons: [] },
+        linux: { completed: false, completedLessons: [] }
+      },
+      achievements: []
+    };
+  }
+}
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+const state = loadState();
+
+function completeLesson(moduleId, lessonId, points) {
+  const mod = state.modules[moduleId];
+  if (mod.completedLessons.includes(lessonId)) return;
+  mod.completedLessons.push(lessonId);
+  state.totalPoints += points;
+  saveState();
+}
+function completeModule(moduleId) {
+  state.modules[moduleId].completed = true;
+  saveState();
+}
+function addAchievement(name) {
+  if (!state.achievements.includes(name)) {
+    state.achievements.push(name);
+    saveState();
+  }
+}
+function resetProgress() {
+  state.playerName = '';
+  state.totalPoints = 0;
+  state.modules = {
+    intro: { completed: false, completedLessons: [] },
+    structures: { completed: false, completedLessons: [] },
+    virtualization: { completed: false, completedLessons: [] },
+    linux: { completed: false, completedLessons: [] }
+  };
+  state.achievements = [];
+  saveState();
+}
+
+// ---------- RENDERIZAÇÃO ----------
+const app = document.getElementById('app');
+
+function render() {
+  if (!state.playerName) {
+    renderLogin();
+  } else {
+    renderHome();
+  }
+}
+
+function renderLogin() {
+  app.innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="login-logo">🎮</div>
+        <h1>OS Simulator</h1>
+        <p>Aprenda Sistemas Operacionais jogando: conceitos, estruturas, virtualização e comandos Linux num só lugar.</p>
+        <div class="input-row">
+          <span>👤</span>
+          <input type="text" id="nameInput" placeholder="Digite seu nome..." />
+        </div>
+        <button class="btn btn-primary btn-lg" id="startBtn">Começar a jogar →</button>
+      </div>
+    </div>
+  `;
+  const input = document.getElementById('nameInput');
+  input.focus();
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('startBtn').addEventListener('click', doLogin);
+}
+
+function doLogin() {
+  const name = document.getElementById('nameInput').value.trim() || 'Estudante';
+  state.playerName = name;
+  saveState();
+  render();
+}
+
+function renderHome() {
+  const completedCount = Object.values(state.modules).filter(m => m.completed).length;
+  app.innerHTML = `
+    <div class="hero">
+      <div class="hero-content">
+        <div>
+          <span class="badge">✨ Bem-vindo de volta</span>
+          <h1>Olá, <span>${escapeHtml(state.playerName)}</span>!</h1>
+          <p>Escolha um módulo para continuar sua jornada pelo mundo dos Sistemas Operacionais. Conclua lições, faça quizzes e pratique no terminal Linux.</p>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-icon" style="background: rgba(245,158,11,0.2)">⚡</div>
+            <div class="stat-value">${state.totalPoints}</div>
+            <div class="stat-label">Pontos</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" style="background: rgba(16,185,129,0.2)">🏆</div>
+            <div class="stat-value">${completedCount}</div>
+            <div class="stat-label">Módulos</div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" style="background: rgba(168,85,247,0.2)">🎖️</div>
+            <div class="stat-value">${state.achievements.length}</div>
+            <div class="stat-label">Conquistas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>🎓 Módulos do Curso</h2>
+      <button class="btn btn-ghost btn-sm" id="resetBtn">↻ Resetar progresso</button>
+    </div>
+
+    <div class="modules-grid" id="modulesGrid"></div>
+
+    ${state.achievements.length > 0 ? `
+      <div class="card mt-6">
+        <h2 style="font-size: 18px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">🎖️ Conquistas</h2>
+        <div class="achievements-list">
+          ${state.achievements.map(a => `<div class="achievement">✨ ${escapeHtml(a)}</div>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Tem certeza que deseja resetar todo o progresso?')) {
+      resetProgress();
+      render();
+    }
+  });
+
+  const grid = document.getElementById('modulesGrid');
+  MODULES.forEach(mod => {
+    const modState = state.modules[mod.id];
+    const completedLessons = modState.completedLessons.length;
+    const pct = (completedLessons / mod.lessons.length) * 100;
+    const card = document.createElement('button');
+    card.className = 'module-card';
+    card.style.setProperty('--mod-color', mod.color);
+    card.innerHTML = `
+      <div class="module-icon" style="background: ${mod.color}22; color: ${mod.color}">${mod.icon}</div>
+      ${modState.completed ? '<span class="badge" style="position: absolute; top: 16px; right: 16px; background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">🏆 Completo</span>' : ''}
+      <h3>${mod.title}</h3>
+      <p>${mod.description}</p>
+      <div class="text-xs text-muted flex-between">
+        <span>Progresso</span>
+        <span>${completedLessons}/${mod.lessons.length} lições</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+      <div class="module-footer">
+        <span class="text-xs text-muted">${mod.lessons.reduce((a, l) => a + l.quiz.length, 0)} questões totais</span>
+        <span class="cta">${pct === 0 ? 'Começar →' : pct === 100 ? 'Revisar →' : 'Continuar →'}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => renderModule(mod.id));
+    grid.appendChild(card);
+  });
+
+  // Linux module
+  const linuxCard = document.createElement('button');
+  linuxCard.className = 'module-card';
+  linuxCard.style.setProperty('--mod-color', '#10b981');
+  const linuxCompleted = state.modules.linux.completed;
+  linuxCard.innerHTML = `
+    <div class="module-icon" style="background: rgba(16,185,129,0.2); color: #10b981">💻</div>
+    ${linuxCompleted ? '<span class="badge" style="position: absolute; top: 16px; right: 16px; background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">🏆 Completo</span>' : ''}
+    <h3>Terminal Linux — Exploração</h3>
+    <p>Simulador interativo com 10 desafios guiados. Pratique ls, cd, mkdir, grep, chmod e mais num ambiente seguro.</p>
+    <div class="text-xs text-muted flex-between">
+      <span>Tutorial</span>
+      <span>10 passos</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width: ${linuxCompleted ? 100 : 0}%"></div></div>
+    <div class="module-footer">
+      <span class="text-xs text-muted" style="font-family: monospace">$ tutorial</span>
+      <span class="cta">Abrir terminal →</span>
+    </div>
+  `;
+  linuxCard.addEventListener('click', renderLinuxModule);
+  grid.appendChild(linuxCard);
+}
+
+function renderModule(moduleId) {
+  const mod = MODULES.find(m => m.id === moduleId);
+  if (!mod) return;
+  const modState = state.modules[moduleId];
+  const completedLessons = modState.completedLessons;
+  const pct = (completedLessons.length / mod.lessons.length) * 100;
+
+  app.innerHTML = `
+    <button class="btn btn-ghost btn-sm mb-4" id="backBtn">← Voltar ao menu</button>
+    <div class="card" style="position: relative; overflow: hidden; margin-bottom: 24px;">
+      <div style="position: absolute; top: -80px; right: -80px; width: 240px; height: 240px; border-radius: 50%; background: ${mod.color}; opacity: 0.1; filter: blur(60px); pointer-events: none;"></div>
+      <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; position: relative;">
+        <div class="module-icon" style="margin: 0; background: ${mod.color}22; color: ${mod.color}; font-size: 32px; width: 64px; height: 64px;">${mod.icon}</div>
+        <div style="flex: 1; min-width: 250px;">
+          ${modState.completed ? '<span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">✓ Concluído</span>' : `<span class="badge" style="color: ${mod.color}; border-color: ${mod.color}66">Módulo</span>`}
+          <h1 style="font-size: 26px; margin: 8px 0;">${mod.title}</h1>
+          <p class="text-muted">${mod.description}</p>
+          <div style="max-width: 320px; margin-top: 12px;">
+            <div class="text-xs text-muted flex-between">
+              <span>Progresso</span>
+              <span>${completedLessons.length}/${mod.lessons.length} lições</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%; background: ${mod.color};"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h2 style="font-size: 18px; margin-bottom: 12px; padding: 0 4px;">Lições do módulo</h2>
+    <div id="lessonsList"></div>
+  `;
+
+  document.getElementById('backBtn').addEventListener('click', render);
+
+  const list = document.getElementById('lessonsList');
+  mod.lessons.forEach((lesson, idx) => {
+    const isCompleted = completedLessons.includes(lesson.id);
+    const isLocked = idx > 0 && !completedLessons.includes(mod.lessons[idx - 1].id);
+    const item = document.createElement('button');
+    item.className = 'lesson-item' + (isCompleted ? ' completed' : '') + (isLocked ? ' locked' : '');
+    item.disabled = isLocked;
+    item.innerHTML = `
+      <div class="lesson-icon" style="background: ${isCompleted ? 'rgba(34,197,94,0.2)' : isLocked ? 'rgba(255,255,255,0.05)' : 'rgba(16,185,129,0.1)'}; color: ${isCompleted ? '#22c55e' : isLocked ? 'var(--fg-muted)' : mod.color};">
+        ${isCompleted ? '✓' : isLocked ? '🔒' : lesson.icon}
+      </div>
+      <div class="lesson-info">
+        <div class="lesson-tag">LIÇÃO ${idx + 1} ${isCompleted ? '• concluída' : ''}</div>
+        <h4>${lesson.title}</h4>
+        <p>${lesson.summary}</p>
+      </div>
+      <div style="text-align: right;">
+        ${!isLocked ? '<div style="color: var(--primary); font-size: 22px;">▶</div>' : ''}
+        <div class="text-xs text-muted" style="margin-top: 4px;">${lesson.quiz.length} questões</div>
+      </div>
+    `;
+    if (!isLocked) {
+      item.addEventListener('click', () => renderLesson(mod, idx));
+    }
+    list.appendChild(item);
+  });
+}
+
+function renderLesson(mod, lessonIdx) {
+  const lesson = mod.lessons[lessonIdx];
+  const hasNext = lessonIdx < mod.lessons.length - 1;
+  app.innerHTML = `
+    <div class="flex-between mb-4">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Voltar ao módulo</button>
+      <div style="display: flex; gap: 8px;">
+        <span class="badge" style="color: ${mod.color}; border-color: ${mod.color}66">${mod.title}</span>
+        <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--fg); border-color: var(--border)">📖 ${lesson.title}</span>
+      </div>
+    </div>
+    <div class="card lesson-content" id="lessonContent" style="--mod-color: ${mod.color}"></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => renderModule(mod.id));
+
+  renderLessonContent(mod, lesson, lessonIdx, hasNext);
+}
+
+function renderLessonContent(mod, lesson, lessonIdx, hasNext) {
+  const container = document.getElementById('lessonContent');
+  container.innerHTML = `
+    <h2 style="font-size: 26px; margin-bottom: 6px;">${lesson.title}</h2>
+    <p class="text-muted" style="margin-bottom: 24px;">${lesson.summary}</p>
+    ${lesson.content.map((sec, idx) => `
+      <section>
+        <h3><span class="num">${idx + 1}</span> ${sec.heading}</h3>
+        <p>${sec.body}</p>
+        ${sec.example ? `<div class="example-box"><div class="ex-label">EXEMPLO</div><div class="ex-text">${sec.example}</div></div>` : ''}
+      </section>
+    `).join('')}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 12px;">
+      <p class="text-sm text-muted">Estudou todo o conteúdo? Teste seus conhecimentos!</p>
+      <button class="btn btn-primary" id="startQuizBtn">✓ Iniciar quiz (${lesson.quiz.length} questões)</button>
+    </div>
+  `;
+  document.getElementById('startQuizBtn').addEventListener('click', () => renderQuiz(mod, lesson, lessonIdx, hasNext, 0, 0));
+}
+
+function renderQuiz(mod, lesson, lessonIdx, hasNext, currentQ, score) {
+  const q = lesson.quiz[currentQ];
+  const isLast = currentQ === lesson.quiz.length - 1;
+  const progressPct = ((currentQ) / lesson.quiz.length) * 100;
+
+  app.innerHTML = `
+    <div class="flex-between mb-4">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Voltar ao módulo</button>
+      <div style="display: flex; gap: 8px;">
+        <span class="badge" style="color: ${mod.color}; border-color: ${mod.color}66">${mod.title}</span>
+        <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--fg); border-color: var(--border)">📝 Quiz</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="quiz-meta">
+        <span>Questão ${currentQ + 1} de ${lesson.quiz.length}</span>
+        <span style="color: var(--primary); font-weight: 500;">Acertos: ${score}</span>
+      </div>
+      <div class="quiz-progress"><div style="width: ${progressPct}%"></div></div>
+      <div class="quiz-question">${q.q}</div>
+      <div id="options"></div>
+      <div id="explain"></div>
+      <div id="nextArea" style="display: none; margin-top: 16px; text-align: right;">
+        <button class="btn btn-primary" id="nextBtn">${isLast ? 'Ver resultado' : 'Próxima questão'} →</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => renderModule(mod.id));
+
+  const opts = document.getElementById('options');
+  q.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.innerHTML = `<div class="opt-letter">${String.fromCharCode(65 + idx)}</div><span>${opt}</span>`;
+    btn.addEventListener('click', () => handleAnswer(idx));
+    opts.appendChild(btn);
+  });
+
+  function handleAnswer(selectedIdx) {
+    const buttons = opts.querySelectorAll('.quiz-option');
+    buttons.forEach((b, i) => {
+      b.disabled = true;
+      if (i === q.correct) b.classList.add('correct');
+      else if (i === selectedIdx) b.classList.add('wrong');
+    });
+    const correct = selectedIdx === q.correct;
+    const newScore = correct ? score + 1 : score;
+    const explain = document.getElementById('explain');
+    explain.innerHTML = `
+      <div class="quiz-explain">
+        <div class="ex-title">${correct ? '✓ Correto!' : '⚠ Não é a resposta certa.'}</div>
+        <div class="text-muted">${q.explanation}</div>
+      </div>
+    `;
+    document.getElementById('nextArea').style.display = 'block';
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (isLast) {
+        renderQuizResult(mod, lesson, lessonIdx, hasNext, newScore, lesson.quiz.length);
+      } else {
+        renderQuiz(mod, lesson, lessonIdx, hasNext, currentQ + 1, newScore);
+      }
+    });
+  }
+}
+
+function renderQuizResult(mod, lesson, lessonIdx, hasNext, score, total) {
+  const pct = Math.round((score / total) * 100);
+  const passed = pct >= 60;
+
+  // Marca lição como completa
+  if (passed) {
+    completeLesson(mod.id, lesson.id, score * 10);
+    if (!hasNext) {
+      completeModule(mod.id);
+      const achMap = {
+        intro: 'Conhecedor de SO',
+        structures: 'Arquiteto de Kernels',
+        virtualization: 'Mestre da Virtualização'
+      };
+      if (achMap[mod.id]) addAchievement(achMap[mod.id]);
+    }
+  }
+
+  app.innerHTML = `
+    <div class="flex-between mb-4">
+      <button class="btn btn-ghost btn-sm" id="backBtn">← Voltar ao módulo</button>
+    </div>
+    <div class="card result-card">
+      <div class="result-icon ${passed ? '' : 'fail'}">${passed ? '🏆' : '📚'}</div>
+      <h3>${passed ? 'Parabéns!' : 'Continue praticando!'}</h3>
+      <p class="text-muted">Você acertou <strong style="color: var(--fg)">${score}</strong> de <strong style="color: var(--fg)">${total}</strong> questões</p>
+      <div class="result-pct" style="${passed ? '' : 'color: var(--accent-amber)'}">${pct}%</div>
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+        <button class="btn" id="retryBtn">↻ Tentar novamente</button>
+        ${hasNext ? '<button class="btn btn-primary" id="nextLessonBtn">Próxima lição →</button>' : '<button class="btn btn-primary" id="backModuleBtn">← Voltar ao módulo</button>'}
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => renderModule(mod.id));
+  document.getElementById('retryBtn').addEventListener('click', () => renderQuiz(mod, lesson, lessonIdx, hasNext, 0, 0));
+  if (hasNext) {
+    document.getElementById('nextLessonBtn').addEventListener('click', () => renderLesson(mod, lessonIdx + 1));
+  } else {
+    document.getElementById('backModuleBtn').addEventListener('click', () => renderModule(mod.id));
+  }
+}
+
+// ---------- MÓDULO LINUX ----------
+function renderLinuxModule() {
+  app.innerHTML = `
+    <button class="btn btn-ghost btn-sm mb-4" id="backBtn">← Voltar ao menu</button>
+    <div class="card" style="position: relative; overflow: hidden; margin-bottom: 24px;">
+      <div style="position: absolute; top: -80px; right: -80px; width: 240px; height: 240px; border-radius: 50%; background: #10b981; opacity: 0.1; filter: blur(60px); pointer-events: none;"></div>
+      <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; position: relative;">
+        <div class="module-icon" style="margin: 0; background: rgba(16,185,129,0.2); color: #10b981; font-size: 32px; width: 64px; height: 64px;">💻</div>
+        <div style="flex: 1; min-width: 250px;">
+          ${state.modules.linux.completed ? '<span class="badge" style="background: rgba(34,197,94,0.15); color: #22c55e; border-color: rgba(34,197,94,0.3)">✓ Concluído</span>' : '<span class="badge" style="color: #10b981; border-color: rgba(16,185,129,0.5)">Módulo Interativo</span>'}
+          <h1 style="font-size: 26px; margin: 8px 0;">Terminal Linux — Exploração Prática</h1>
+          <p class="text-muted">Aprenda comandos Linux em um ambiente seguro. Execute o tutorial guiado digitando <code class="inline">tutorial</code> ou explore livremente.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabTerminal">💻 Terminal</button>
+      <button class="tab" id="tabGuide">📖 Guia de Comandos</button>
+    </div>
+
+    <div id="tabContent"></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', render);
+  document.getElementById('tabTerminal').addEventListener('click', () => switchTab('terminal'));
+  document.getElementById('tabGuide').addEventListener('click', () => switchTab('guide'));
+  switchTab('terminal');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'terminal') {
+    document.getElementById('tabTerminal').classList.add('active');
+    renderTerminalTab();
+  } else {
+    document.getElementById('tabGuide').classList.add('active');
+    renderGuideTab();
+  }
+}
+
+function renderGuideTab() {
+  const grouped = {};
+  COMMANDS.forEach(c => {
+    if (!grouped[c.category]) grouped[c.category] = [];
+    grouped[c.category].push(c);
+  });
+  const content = document.getElementById('tabContent');
+  content.innerHTML = `
+    <div class="card">
+      <h2 style="font-size: 20px; margin-bottom: 4px;">Referência de Comandos</h2>
+      <p class="text-sm text-muted mb-4">Todos os comandos suportados pelo simulador, organizados por categoria.</p>
+      ${Object.entries(grouped).map(([cat, cmds]) => {
+        const meta = CMD_CATEGORIES[cat];
+        return `
+          <div class="cmd-category">
+            <div class="cmd-cat-title">
+              <div class="cmd-cat-icon" style="background: ${meta.color}22; color: ${meta.color}">${meta.icon}</div>
+              ${meta.label}
+            </div>
+            <div class="cmd-grid">
+              ${cmds.map(c => `
+                <div class="cmd-item">
+                  <div><code>${c.name}</code><span class="syntax">${c.syntax}</span></div>
+                  <p>${c.description}</p>
+                  ${c.examples.map(ex => `<span class="example">$ ${ex}</span>`).join('')}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ---------- TERMINAL LINUX INTERATIVO ----------
+let termState = {
+  fs: null,
+  cwd: '/home/aluno',
+  history: [],
+  historyIdx: -1,
+  tutorialActive: false,
+  tutorialStep: 0
+};
+
+function renderTerminalTab() {
+  if (!termState.fs) termState.fs = createInitialFS();
+  const content = document.getElementById('tabContent');
+  content.innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="term-dots"><span></span><span></span><span></span></div>
+          <div class="term-title" id="termTitle">aluno@simulator: /home/aluno</div>
+          <div class="term-tag">bash</div>
+        </div>
+        <div class="terminal-body" id="termBody">
+          <div class="term-line system">SimulatorOS 1.0 - Terminal Linux Interativo. Digite "help" para ver comandos, "tutorial" para o tutorial guiado.</div>
+          <div class="term-line system">Usuario: aluno | Home: /home/aluno</div>
+        </div>
+      </div>
+      <div class="card" style="padding: 18px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <span style="color: var(--accent-amber)">💡</span>
+          <h3 style="font-size: 15px; font-weight: 600;">Como começar</h3>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="padding: 12px; border-radius: 8px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);">
+            <div style="font-weight: 600; color: #10b981; font-size: 13px; margin-bottom: 4px;">1. Tutorial guiado</div>
+            <div class="text-sm text-muted">Digite <code class="inline">tutorial</code> no terminal para iniciar 10 desafios guiados.</div>
+          </div>
+          <div style="padding: 12px; border-radius: 8px; background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2);">
+            <div style="font-weight: 600; color: #06b6d4; font-size: 13px; margin-bottom: 4px;">2. Exploração livre</div>
+            <div class="text-sm text-muted">Use qualquer comando. Digite <code class="inline">help</code> para ver todos os suportados.</div>
+          </div>
+          <div style="padding: 12px; border-radius: 8px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);">
+            <div style="font-weight: 600; color: #f59e0b; font-size: 13px; margin-bottom: 4px;">3. Dicas úteis</div>
+            <ul class="text-sm text-muted" style="list-style: none; padding: 0;">
+              <li>• Use ↑/↓ para navegar no histórico</li>
+              <li>• <code class="inline">cd</code> sem argumentos volta ao home</li>
+              <li>• <code class="inline">~</code> = /home/aluno</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  renderTerminalInput();
+}
+
+function renderTerminalInput() {
+  const body = document.getElementById('termBody');
+  const form = document.createElement('form');
+  form.className = 'term-input-row';
+  form.id = 'termForm';
+  form.innerHTML = `
+    <span class="term-prompt" id="termPrompt">${getPrompt()}</span>
+    <input type="text" class="term-input" id="termInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
+  `;
+  body.appendChild(form);
+  document.getElementById('termTitle').textContent = `aluno@simulator: ${termState.cwd}`;
+  const input = document.getElementById('termInput');
+  input.focus();
+  input.addEventListener('keydown', handleTermKey);
+  form.addEventListener('submit', e => { e.preventDefault(); submitTerm(); });
+  body.scrollTop = body.scrollHeight;
+}
+
+function getPrompt() {
+  return `aluno@simulator:${termState.cwd}$`;
+}
+
+function handleTermKey(e) {
+  const input = document.getElementById('termInput');
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (termState.history.length === 0) return;
+    if (termState.historyIdx === -1) termState.historyIdx = termState.history.length - 1;
+    else termState.historyIdx = Math.max(0, termState.historyIdx - 1);
+    input.value = termState.history[termState.historyIdx];
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (termState.historyIdx === -1) return;
+    termState.historyIdx++;
+    if (termState.historyIdx >= termState.history.length) {
+      termState.historyIdx = -1;
+      input.value = '';
+    } else {
+      input.value = termState.history[termState.historyIdx];
+    }
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    autocompleteTerm();
+  }
+}
+
+function autocompleteTerm() {
+  const input = document.getElementById('termInput');
+  const parts = input.value.split(/\s+/);
+  const last = parts[parts.length - 1] || '';
+  const dirPath = last.includes('/') ? resolvePath(termState.cwd, last) : termState.cwd;
+  const node = getNode(termState.fs, dirPath || termState.cwd);
+  if (node && node.type === 'dir' && node.children) {
+    const prefix = last.includes('/') ? last.split('/').pop() : last;
+    const matches = Object.keys(node.children).filter(n => n.startsWith(prefix));
+    if (matches.length === 1) {
+      parts[parts.length - 1] = last.includes('/')
+        ? last.slice(0, last.lastIndexOf('/') + 1) + matches[0]
+        : matches[0];
+      input.value = parts.join(' ');
+    }
+  }
+}
+
+function termPrint(text, type = 'output') {
+  const body = document.getElementById('termBody');
+  const line = document.createElement('div');
+  line.className = 'term-line ' + type;
+  line.textContent = text;
+  body.appendChild(line);
+}
+
+function termPrintHTML(html, type = 'output') {
+  const body = document.getElementById('termBody');
+  const line = document.createElement('div');
+  line.className = 'term-line ' + type;
+  line.innerHTML = html;
+  body.appendChild(line);
+}
+
+function submitTerm() {
+  const input = document.getElementById('termInput');
+  const cmd = input.value;
+  // Remove o form atual
+  const form = document.getElementById('termForm');
+  if (form) form.remove();
+  // Mostra o prompt + comando como linha
+  termPrint(`${getPrompt()} ${cmd}`, 'input');
+  if (cmd.trim()) {
+    termState.history.push(cmd);
+    termState.historyIdx = -1;
+    executeCommand(cmd);
+  }
+  renderTerminalInput();
+}
+
+function executeCommand(rawCmd) {
+  const cmd = rawCmd.trim();
+  if (!cmd) return;
+  const parts = cmd.split(/\s+/);
+  const c = parts[0];
+  const args = parts.slice(1);
+
+  let output = '';
+  let sideEffect = null;
+  let shouldClear = false;
+
+  switch (c) {
+    case 'pwd':
+      output = termState.cwd;
+      break;
+    case 'cd': {
+      const target = args[0] || '~';
+      const path = resolvePath(termState.cwd, target);
+      if (!path) { output = `cd: ${target}: arquivo ou diretorio inexistente`; termPrint(output, 'error'); return; }
+      const node = getNode(termState.fs, path);
+      if (!node) { output = `cd: ${target}: arquivo ou diretorio inexistente`; termPrint(output, 'error'); return; }
+      if (node.type !== 'dir') { output = `cd: ${target}: nao e um diretorio`; termPrint(output, 'error'); return; }
+      termState.cwd = path;
+      break;
+    }
+    case 'ls': {
+      const showLong = args.some(a => a === '-l' || a === '-la' || a === '-al');
+      const showAll = args.some(a => a === '-a' || a === '-la' || a === '-al');
+      const pathArg = args.find(a => !a.startsWith('-'));
+      const targetPath = pathArg ? resolvePath(termState.cwd, pathArg) : termState.cwd;
+      if (!targetPath) { output = `ls: nao foi possivel acessar`; break; }
+      const node = getNode(termState.fs, targetPath);
+      if (!node) { output = `ls: nao foi possivel acessar '${pathArg}': Arquivo ou diretorio inexistente`; break; }
+      if (node.type === 'file') {
+        output = showLong ? `${node.permissions} 1 ${node.owner} ${node.owner} ${String(node.size).padStart(6)} Jan  1 12:00 ${node.name}` : node.name;
+      } else {
+        const children = Object.values(node.children || {});
+        const visible = showAll ? children : children.filter(ch => !ch.name.startsWith('.'));
+        if (showLong) {
+          output = visible.map(ch => `${ch.permissions} 1 ${ch.owner} ${ch.owner} ${String(ch.size).padStart(6)} Jan  1 12:00 ${ch.name}${ch.type === 'dir' ? '/' : ''}`).join('\n');
+        } else {
+          output = visible.map(ch => ch.type === 'dir' ? ch.name + '/' : ch.name).join('   ');
+        }
+      }
+      break;
+    }
+    case 'cat': {
+      if (args.length === 0) { output = 'cat: argumento ausente'; break; }
+      const results = [];
+      for (const arg of args) {
+        const path = resolvePath(termState.cwd, arg);
+        if (!path) { results.push(`cat: ${arg}: arquivo inexistente`); continue; }
+        const node = getNode(termState.fs, path);
+        if (!node) { results.push(`cat: ${arg}: arquivo inexistente`); continue; }
+        if (node.type === 'dir') { results.push(`cat: ${arg}: e um diretorio`); continue; }
+        results.push(node.content || '');
+      }
+      output = results.join('\n');
+      break;
+    }
+    case 'echo': {
+      const fullArg = args.join(' ');
+      const redirMatch = fullArg.match(/^(.*?)\s*(>>|>)\s*(\S+)$/);
+      if (redirMatch) {
+        const [, textPart, op, filename] = redirMatch;
+        let text = textPart.trim();
+        if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) text = text.slice(1, -1);
+        const filePath = resolvePath(termState.cwd, filename);
+        if (!filePath) { output = `echo: ${filename}: caminho invalido`; break; }
+        const existing = getNode(termState.fs, filePath);
+        const newContent = op === '>>' && existing && existing.type === 'file' ? (existing.content || '') + text + '\n' : text + '\n';
+        const newNode = { name: filename.split('/').pop() || filename, type: 'file', content: newContent, permissions: '-rw-r--r--', owner: 'aluno', size: newContent.length };
+        sideEffect = () => {
+          const newFs = cloneFS(termState.fs);
+          setNode(newFs, filePath, newNode);
+          termState.fs = newFs;
+        };
+      } else {
+        let text = fullArg;
+        if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) text = text.slice(1, -1);
+        output = text;
+      }
+      break;
+    }
+    case 'grep': {
+      if (args.length < 2) { output = 'uso: grep PADRAO ARQUIVO'; break; }
+      const pattern = args[0];
+      const filename = args[1];
+      const path = resolvePath(termState.cwd, filename);
+      if (!path) { output = `grep: ${filename}: arquivo inexistente`; break; }
+      const node = getNode(termState.fs, path);
+      if (!node) { output = `grep: ${filename}: arquivo inexistente`; break; }
+      if (node.type !== 'file') { output = `grep: ${filename}: e um diretorio`; break; }
+      const content = node.content || '';
+      const linesArr = content.split('\n');
+      const matches = linesArr.filter(l => l.includes(pattern));
+      output = matches.length === 0 ? '' : matches.join('\n');
+      break;
+    }
+    case 'head':
+    case 'tail': {
+      let n = 10;
+      const filtered = [];
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-n' && args[i + 1]) { n = parseInt(args[i + 1], 10) || 10; i++; }
+        else if (!args[i].startsWith('-')) filtered.push(args[i]);
+      }
+      if (filtered.length === 0) { output = `${c}: arquivo nao especificado`; break; }
+      const path = resolvePath(termState.cwd, filtered[0]);
+      if (!path) { output = `${c}: ${filtered[0]}: arquivo inexistente`; break; }
+      const node = getNode(termState.fs, path);
+      if (!node || node.type !== 'file') { output = `${c}: ${filtered[0]}: nao e um arquivo`; break; }
+      const linesArr = (node.content || '').split('\n');
+      output = (c === 'head' ? linesArr.slice(0, n) : linesArr.slice(-n)).join('\n');
+      break;
+    }
+    case 'mkdir': {
+      const recursive = args.includes('-p');
+      const targets = args.filter(a => !a.startsWith('-'));
+      if (targets.length === 0) { output = 'uso: mkdir [-p] DIRETORIO'; break; }
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        for (const t of targets) {
+          const path = resolvePath(termState.cwd, t);
+          if (!path) continue;
+          if (recursive) {
+            const partsArr = path.split('/').filter(Boolean);
+            let current = newFs;
+            for (const part of partsArr) {
+              if (!current.children) current.children = {};
+              if (!current.children[part]) {
+                current.children[part] = { name: part, type: 'dir', children: {}, permissions: 'drwxr-xr-x', owner: 'aluno', size: 4096 };
+              }
+              current = current.children[part];
+            }
+          } else {
+            const parent = path.split('/').slice(0, -1).join('/') || '/';
+            const parentNode = getNode(newFs, parent);
+            if (!parentNode || parentNode.type !== 'dir') { termPrint(`mkdir: nao foi possivel criar o diretorio '${t}': Arquivo inexistente`, 'error'); continue; }
+            const name = path.split('/').pop();
+            if (parentNode.children[name]) { termPrint(`mkdir: nao foi possivel criar o diretorio '${t}': Arquivo existe`, 'error'); continue; }
+            parentNode.children[name] = { name, type: 'dir', children: {}, permissions: 'drwxr-xr-x', owner: 'aluno', size: 4096 };
+          }
+        }
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'rmdir': {
+      if (args.length === 0) { output = 'uso: rmdir DIRETORIO'; break; }
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        for (const t of args) {
+          const path = resolvePath(termState.cwd, t);
+          if (!path) { termPrint(`rmdir: falhou ao remover '${t}': Arquivo inexistente`, 'error'); continue; }
+          const node = getNode(newFs, path);
+          if (!node || node.type !== 'dir') { termPrint(`rmdir: falhou ao remover '${t}': Nao e um diretorio`, 'error'); continue; }
+          if (Object.keys(node.children || {}).length > 0) { termPrint(`rmdir: falhou ao remover '${t}': Diretorio nao vazio`, 'error'); continue; }
+          removeNode(newFs, path);
+        }
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'touch': {
+      if (args.length === 0) { output = 'uso: touch ARQUIVO'; break; }
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        for (const t of args) {
+          const path = resolvePath(termState.cwd, t);
+          if (!path) continue;
+          if (getNode(newFs, path)) continue;
+          const name = path.split('/').pop();
+          setNode(newFs, path, { name, type: 'file', content: '', permissions: '-rw-r--r--', owner: 'aluno', size: 0 });
+        }
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'rm': {
+      const recursive = args.some(a => a === '-r' || a === '-rf' || a === '-fr');
+      const force = args.some(a => a === '-f' || a === '-rf' || a === '-fr');
+      const targets = args.filter(a => !a.startsWith('-'));
+      if (targets.length === 0) { output = 'uso: rm [-r] [-f] ARQUIVO'; break; }
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        for (const t of targets) {
+          const path = resolvePath(termState.cwd, t);
+          if (!path) { if (!force) termPrint(`rm: nao foi possivel remover '${t}': Arquivo inexistente`, 'error'); continue; }
+          const node = getNode(newFs, path);
+          if (!node) { if (!force) termPrint(`rm: nao foi possivel remover '${t}': Arquivo inexistente`, 'error'); continue; }
+          if (node.type === 'dir' && !recursive) { termPrint(`rm: nao foi possivel remover '${t}': E um diretorio (use -r)`, 'error'); continue; }
+          removeNode(newFs, path);
+        }
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'cp': {
+      const recursive = args.includes('-r');
+      const targets = args.filter(a => !a.startsWith('-'));
+      if (targets.length < 2) { output = 'uso: cp [-r] ORIGEM DESTINO'; break; }
+      const [src, dst] = targets;
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        const srcPath = resolvePath(termState.cwd, src);
+        if (!srcPath) { termPrint(`cp: nao foi possivel stat '${src}': Arquivo inexistente`, 'error'); return; }
+        const srcNode = getNode(newFs, srcPath);
+        if (!srcNode) { termPrint(`cp: nao foi possivel stat '${src}': Arquivo inexistente`, 'error'); return; }
+        if (srcNode.type === 'dir' && !recursive) { termPrint(`cp: -r nao especificado; omitindo diretorio '${src}'`, 'error'); return; }
+        const cloneNode = (n, newName) => ({ ...JSON.parse(JSON.stringify(n)), name: newName });
+        const dstPath = resolvePath(termState.cwd, dst);
+        if (!dstPath) { termPrint(`cp: nao foi possivel criar '${dst}'`, 'error'); return; }
+        const dstNode = getNode(newFs, dstPath);
+        if (dstNode && dstNode.type === 'dir') {
+          dstNode.children[srcNode.name] = cloneNode(srcNode, srcNode.name);
+        } else {
+          const finalName = dstPath.split('/').pop();
+          setNode(newFs, dstPath, cloneNode(srcNode, finalName));
+        }
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'mv': {
+      const targets = args.filter(a => !a.startsWith('-'));
+      if (targets.length < 2) { output = 'uso: mv ORIGEM DESTINO'; break; }
+      const [src, dst] = targets;
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        const srcPath = resolvePath(termState.cwd, src);
+        if (!srcPath) { termPrint(`mv: nao foi possivel stat '${src}': Arquivo inexistente`, 'error'); return; }
+        const srcNode = getNode(newFs, srcPath);
+        if (!srcNode) { termPrint(`mv: nao foi possivel stat '${src}': Arquivo inexistente`, 'error'); return; }
+        const cloneNode = (n, newName) => ({ ...JSON.parse(JSON.stringify(n)), name: newName });
+        const dstPath = resolvePath(termState.cwd, dst);
+        const dstNode = getNode(newFs, dstPath || '');
+        if (dstNode && dstNode.type === 'dir') {
+          dstNode.children[srcNode.name] = cloneNode(srcNode, srcNode.name);
+        } else if (dstPath) {
+          const finalName = dstPath.split('/').pop();
+          setNode(newFs, dstPath, cloneNode(srcNode, finalName));
+        }
+        removeNode(newFs, srcPath);
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'chmod': {
+      if (args.length < 2) { output = 'uso: chmod PERMISSOES ARQUIVO'; break; }
+      const [mode, ...files] = args;
+      sideEffect = () => {
+        const newFs = cloneFS(termState.fs);
+        for (const f of files) {
+          const path = resolvePath(termState.cwd, f);
+          if (!path) continue;
+          const node = getNode(newFs, path);
+          if (!node) { termPrint(`chmod: nao foi possivel acessar '${f}': Arquivo inexistente`, 'error'); continue; }
+          let newPerms = node.permissions || (node.type === 'dir' ? 'drwxr-xr-x' : '-rw-r--r--');
+          const permsArr = newPerms.split('');
+          if (mode.startsWith('+') || mode.startsWith('-')) {
+            const op = mode[0];
+            const who = mode[1];
+            const perm = mode[2];
+            const whoIndex = who === 'u' ? 1 : who === 'g' ? 4 : who === 'o' ? 7 : -1;
+            if (whoIndex > 0 && perm) {
+              const permMap = { r: 0, w: 1, x: 2 };
+              const permIdx = permMap[perm];
+              if (permIdx !== undefined) {
+                const target = whoIndex + permIdx;
+                if (op === '+') permsArr[target] = perm;
+                else permsArr[target] = '-';
+              }
+            }
+            newPerms = permsArr.join('');
+          } else if (/^\d{3,4}$/.test(mode)) {
+            const m = mode.padStart(4, '0').slice(-4);
+            const [, u, g, o] = m.split('').map(c => parseInt(c, 10));
+            const typeChar = node.type === 'dir' ? 'd' : '-';
+            const toPerms = n => (n & 4 ? 'r' : '-') + (n & 2 ? 'w' : '-') + (n & 1 ? 'x' : '-');
+            newPerms = typeChar + toPerms(u) + toPerms(g) + toPerms(o);
+          }
+          node.permissions = newPerms;
+        }
+        termState.fs = newFs;
+      };
+      break;
+    }
+    case 'whoami':
+      output = 'aluno';
+      break;
+    case 'date':
+      output = new Date().toString();
+      break;
+    case 'uname':
+      output = args.includes('-a') ? 'Linux simulator 5.15.0-simulator #1 SMP Thu Jan 1 12:00:00 UTC 2026 x86_64 GNU/Linux' : 'Linux';
+      break;
+    case 'clear':
+      shouldClear = true;
+      break;
+    case 'history':
+      output = termState.history.map((h, i) => `${i + 1}  ${h}`).join('\n');
+      break;
+    case 'help':
+      output = COMMANDS.map(c => `${c.name.padEnd(10)}  ${c.description}`).join('\n');
+      break;
+    case 'tutorial':
+      termState.tutorialActive = true;
+      termState.tutorialStep = 0;
+      termPrint('Tutorial iniciado! Siga as instrucoes abaixo.', 'success');
+      const t0 = TUTORIALS[0];
+      termPrint(`\n[Tutorial] Passo 1/${TUTORIALS.length}: ${t0.title}\n${t0.description}\nDica: ${t0.hint}`, 'system');
+      return;
+    default:
+      termPrint(`comando nao encontrado: ${c}. Digite "help" para ver comandos disponiveis.`, 'error');
+      return;
+  }
+
+  if (sideEffect) sideEffect();
+  if (shouldClear) {
+    document.getElementById('termBody').innerHTML = '';
+    return;
+  }
+  if (output) termPrint(output, 'output');
+
+  // Verifica progresso do tutorial
+  if (termState.tutorialActive && termState.tutorialStep < TUTORIALS.length) {
+    const step = TUTORIALS[termState.tutorialStep];
+    if (step.validate(cmd, output, { cwd: termState.cwd })) {
+      termPrint(`\n✓ Passo ${termState.tutorialStep + 1} concluido: ${step.title}`, 'success');
+      const next = termState.tutorialStep + 1;
+      if (next < TUTORIALS.length) {
+        termState.tutorialStep = next;
+        const nextStep = TUTORIALS[next];
+        termPrint(`\n[Tutorial] Passo ${next + 1}/${TUTORIALS.length}: ${nextStep.title}\n${nextStep.description}\nDica: ${nextStep.hint}`, 'system');
+      } else {
+        termPrint('\n🎉 Tutorial completo! Voce dominou os comandos basicos de Linux.', 'success');
+        termState.tutorialActive = false;
+        completeLesson('linux', 'tutorial-complete', 100);
+        addAchievement('Mestre do Terminal Linux');
+        completeModule('linux');
+      }
+    }
+  }
+}
+
+// ---------- UTIL ----------
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+// ---------- INICIALIZAÇÃO ----------
+render();
+</script>
+</body>
+</html>
