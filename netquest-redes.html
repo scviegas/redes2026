@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetQuest · Jogo de Redes de Computadores</title>
+<meta name="description" content="Jogo educativo para aprender Redes de Computadores: conceitos básicos, tipos de redes, meios de transmissão, protocolos, modelo OSI e atrasos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060a1a;--card:rgba(255,255,255,.055);--card2:rgba(255,255,255,.1);--border:rgba(255,255,255,.14);--txt:#eef2ff;--muted:#9aa3c7;--cyan:#22d3ee;--blue:#60a5fa;--violet:#a78bfa;--good:#34d399;--bad:#fb7185;--gold:#fbbf24}
+body{font-family:'Poppins','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;background:radial-gradient(1100px 700px at 85% -10%,rgba(64,84,255,.22),transparent 60%),radial-gradient(900px 650px at -10% 110%,rgba(34,211,238,.12),transparent 60%),var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+#net-bg{position:fixed;inset:0;z-index:0;opacity:.5;pointer-events:none}
+#app{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:22px 16px 56px}
+.screen{display:none}.screen.active{display:block;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:none}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.shake{animation:shake .4s}
+.glass{background:var(--card);border:1px solid var(--border);border-radius:20px;backdrop-filter:blur(12px)}
+.btn{cursor:pointer;border:none;border-radius:14px;font-weight:700;font-family:inherit;font-size:1rem;padding:12px 22px;transition:.18s;color:var(--txt)}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--blue) 55%,var(--violet));color:#04122b;box-shadow:0 8px 24px rgba(34,211,238,.22)}
+.btn-primary:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--cyan);background:rgba(34,211,238,.08)}
+.btn-sm{padding:8px 14px;font-size:.9rem;border-radius:11px}
+.hero{text-align:center;padding:34px 22px 26px;margin-bottom:18px}
+.hero-badge{display:inline-block;font-size:.8rem;letter-spacing:.4px;color:#04122b;background:linear-gradient(90deg,var(--cyan),var(--violet));padding:5px 14px;border-radius:99px;font-weight:700;margin-bottom:14px}
+.hero h1{font-size:clamp(2rem,6vw,3rem);font-weight:800}
+.grad{background:linear-gradient(90deg,var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{color:var(--muted);max-width:660px;margin:10px auto 0;line-height:1.6;font-size:.98rem}
+.hero-sub b{color:var(--txt)}
+.hero-cta{margin-top:16px}
+.stats-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:8px}
+.stat-chip{background:var(--card);border:1px solid var(--border);border-radius:99px;padding:8px 16px;font-size:.9rem;font-weight:600}
+.section-t{margin:22px 0 12px;font-size:1.15rem}
+.howto-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:8px}
+.howto-card{padding:14px 16px;font-size:.88rem;line-height:1.5;color:var(--muted)}
+.howto-card b{display:block;color:var(--txt);margin-bottom:4px;font-size:.95rem}
+.levels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.lvl-card{padding:18px;text-align:left;cursor:pointer;transition:.2s;color:var(--txt);position:relative;font-family:inherit}
+.lvl-card:not(.locked):hover{transform:translateY(-4px);border-color:rgba(34,211,238,.55);box-shadow:0 14px 30px rgba(34,211,238,.12)}
+.lvl-card.locked{opacity:.5;cursor:not-allowed;filter:grayscale(.6)}
+.lvl-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.lvl-ico{font-size:1.7rem}
+.lvl-week{font-size:.72rem;font-weight:700;color:var(--cyan);background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);padding:3px 10px;border-radius:99px}
+.lvl-name{font-weight:800;font-size:1.05rem;margin-bottom:4px}
+.lvl-desc{color:var(--muted);font-size:.85rem;line-height:1.45;min-height:38px}
+.lvl-meta{display:flex;justify-content:space-between;margin-top:12px;font-size:.9rem}
+.stars-txt{color:#5b6485;letter-spacing:2px}
+.stars-txt.has{color:var(--gold)}
+.best-txt{color:var(--muted);font-size:.82rem}
+.home-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:26px}
+.footer-note{text-align:center;color:#57608b;font-size:.8rem;margin-top:26px}
+.topbar{display:flex;align-items:center;gap:14px;padding:12px 16px;margin-bottom:14px}
+.tb-info{flex:1;min-width:0}
+.tb-level{font-weight:800;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-hearts{font-size:.95rem;margin-top:2px}
+.tb-score{font-weight:800;font-size:1.05rem;color:var(--cyan);white-space:nowrap}
+.q-meta{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 8px;font-size:.85rem;color:var(--muted)}
+.q-count{font-weight:600}
+.timer-num{font-weight:800;color:var(--txt);min-width:34px;text-align:right}
+.timer-track{height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;margin-bottom:16px}
+.timer-fill{height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,var(--good),var(--cyan));transition:width .12s linear}
+.timer-fill.low{background:linear-gradient(90deg,#fb923c,var(--bad))}
+.q-card{padding:24px}
+.q-text{font-size:1.18rem;font-weight:700;line-height:1.55;margin-bottom:16px}
+.hint-txt{margin:10px 0;padding:10px 14px;border-radius:12px;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.35);color:#fde68a;font-size:.92rem;line-height:1.5}
+.btn-hint{margin-bottom:14px;font-size:.85rem}
+#answers{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card2);border:1.5px solid var(--border);border-radius:14px;padding:13px 15px;color:var(--txt);font-size:.98rem;font-family:inherit;cursor:pointer;transition:.15s;line-height:1.45}
+.opt:hover:not(:disabled){border-color:var(--cyan);background:rgba(34,211,238,.09);transform:translateX(4px)}
+.opt:disabled{cursor:default}
+.letter{flex:0 0 32px;height:32px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:.9rem;background:rgba(255,255,255,.08);border:1px solid var(--border)}
+.opt.correct{border-color:var(--good);background:rgba(52,211,153,.16)}
+.opt.correct .letter{background:var(--good);color:#032015;border-color:var(--good)}
+.opt.wrong{border-color:var(--bad);background:rgba(251,113,133,.14);animation:shake .4s}
+.opt.wrong .letter{background:var(--bad);color:#2b040f;border-color:var(--bad)}
+.opt.dim{opacity:.45}
+.opt.selected{border-color:var(--cyan);background:rgba(34,211,238,.12)}
+.opt.matched{border-color:var(--good);background:rgba(52,211,153,.14);opacity:.55;pointer-events:none}
+.feedback{border-radius:16px;padding:16px 18px;margin-top:16px;border:1.5px solid;animation:fadeUp .3s}
+.feedback.ok{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.08)}
+.feedback.no{border-color:rgba(251,113,133,.5);background:rgba(251,113,133,.08)}
+.fb-title{font-weight:800;font-size:1.05rem;margin-bottom:6px}
+.fb-pts{color:var(--good);font-weight:800;margin-bottom:6px}
+.fb-detail{color:var(--muted);font-weight:500;font-size:.85rem}
+.fb-correct{margin-bottom:6px;font-size:.95rem;color:#fecdd3;line-height:1.5}
+.fb-expl{color:var(--muted);font-size:.92rem;line-height:1.55;margin-bottom:14px}
+.fb-expl b{color:#cdd6ff}
+.order-help{color:var(--muted);font-size:.9rem;margin-bottom:12px}
+.slots{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.slot{min-height:48px;border:1.5px dashed var(--border);border-radius:12px;display:flex;align-items:center;padding:8px 14px;font-size:.95rem;font-weight:600;transition:.15s}
+.slot.empty{color:#5b6485;font-weight:700}
+.slot.filled{border-style:solid;border-color:var(--blue);background:rgba(96,165,250,.1);cursor:pointer}
+.slot.filled:hover{border-color:var(--bad)}
+.slot.good{border-color:var(--good);background:rgba(52,211,153,.15);cursor:default}
+.slot.bad{border-color:var(--bad);background:rgba(251,113,133,.12)}
+.pool{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{background:var(--card2);border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--txt);font-family:inherit;font-size:.92rem;font-weight:600;cursor:pointer;transition:.15s}
+.chip:hover{border-color:var(--cyan);background:rgba(34,211,238,.1);transform:translateY(-2px)}
+.match-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.match-col{display:flex;flex-direction:column;gap:10px}
+.result-card{max-width:560px;margin:30px auto;padding:34px 26px;text-align:center}
+.result-ico{font-size:3.4rem;margin-bottom:8px}
+.result-card h2{font-size:1.5rem;margin-bottom:6px}
+.result-stars{font-size:2rem;color:var(--gold);letter-spacing:6px;margin:8px 0}
+.result-msg{color:var(--muted);line-height:1.6;font-size:.95rem;margin-bottom:18px}
+.result-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.stat-box{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px 8px;font-size:.78rem;color:var(--muted)}
+.stat-box span{display:block;font-size:1.3rem;font-weight:800;color:var(--txt);margin-bottom:2px}
+.result-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.final-card{max-width:640px;margin:26px auto;padding:32px 24px;text-align:center}
+.rank-badge{font-size:2rem;font-weight:800;margin:10px 0 4px;background:linear-gradient(90deg,var(--gold),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.rank-msg{color:var(--muted);margin-bottom:18px;line-height:1.5}
+.final-grid{display:flex;flex-direction:column;gap:8px;margin:18px 0 22px;text-align:left}
+.final-row{display:flex;justify-content:space-between;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.page-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.page-top h2{font-size:1.3rem}
+.mat-item{margin-bottom:12px;overflow:hidden}
+.mat-item summary{cursor:pointer;padding:16px 18px;font-weight:700;list-style:none;display:flex;align-items:center;gap:10px}
+.mat-item summary::-webkit-details-marker{display:none}
+.mat-item summary::after{content:'+';margin-left:auto;font-size:1.3rem;color:var(--cyan)}
+.mat-item[open] summary::after{content:'–'}
+.mat-list{padding:2px 20px 18px;color:var(--muted);line-height:1.65;font-size:.93rem;display:flex;flex-direction:column;gap:8px;list-style:disc}
+.mat-list b{color:var(--txt)}
+.mat-list li{margin-left:18px}
+@media(max-width:640px){.q-card{padding:18px}.topbar{flex-wrap:wrap}.match-wrap{gap:8px}.opt{font-size:.9rem;padding:12px}}
+</style>
+</head>
+<body>
+<canvas id="net-bg"></canvas>
+<div id="app">
+  <div id="screen-home" class="screen active"></div>
+  <div id="screen-game" class="screen">
+    <div class="topbar glass">
+      <button class="btn btn-ghost btn-sm" id="btn-exit" title="Voltar ao mapa">✕</button>
+      <div class="tb-info">
+        <div class="tb-level" id="tb-level"></div>
+        <div class="tb-hearts" id="tb-hearts"></div>
+      </div>
+      <div class="tb-score" id="tb-score">0 pts</div>
+    </div>
+    <div class="q-meta"><span class="q-count" id="q-count"></span><span class="timer-num" id="timer-num">30s</span></div>
+    <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+    <div class="q-card glass">
+      <div class="q-text" id="q-text"></div>
+      <div id="hint-wrap"></div>
+      <div id="answers"></div>
+      <div id="fb-area"></div>
+    </div>
+  </div>
+  <div id="screen-result" class="screen"></div>
+  <div id="screen-final" class="screen"></div>
+  <div id="screen-material" class="screen"></div>
+</div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ===== Progresso salvo ===== */
+const SAVE_KEY='netquest_redes_v1';
+let progress=(()=>{try{const p=JSON.parse(localStorage.getItem(SAVE_KEY));if(p&&p.levels)return p}catch(e){}return{levels:{},muted:false}})();
+function saveProgress(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(progress))}catch(e){}}
+
+/* ===== Efeitos sonoros (Web Audio API) ===== */
+const Sfx={ctx:null,muted:false,
+ init(){if(!this.ctx){try{this.ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume()},
+ t(f,d,type,vol,delay){if(this.muted||!this.ctx)return;try{const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type||'sine';o.frequency.value=f;const t0=this.ctx.currentTime+(delay||0);g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(vol||.12,t0+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+d);o.connect(g);g.connect(this.ctx.destination);o.start(t0);o.stop(t0+d+.05)}catch(e){}},
+ click(){this.t(620,.07,'triangle',.06)},
+ good(){this.t(523,.14,'sine',.12);this.t(659,.14,'sine',.12,.1);this.t(784,.22,'sine',.12,.2)},
+ bad(){this.t(196,.28,'sawtooth',.09);this.t(147,.34,'sawtooth',.08,.12)},
+ win(){[523,659,784,1047].forEach((f,i)=>this.t(f,.18,'triangle',.12,i*.13))},
+ lose(){[330,262,196].forEach((f,i)=>this.t(f,.25,'sine',.1,i*.15))}
+};
+document.addEventListener('pointerdown',()=>Sfx.init(),{once:true});
+
+/* ===== Fundo animado: nós de rede conectados ===== */
+(function(){
+ const cv=$('#net-bg'),ctx=cv.getContext('2d');let W,H,nodes=[];
+ function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+ addEventListener('resize',resize);resize();
+ const N=Math.min(70,Math.floor(innerWidth/18));
+ for(let i=0;i<N;i++)nodes.push({x:Math.random()*W,y:Math.random()*H,vx:-.4+Math.random()*.8,vy:-.4+Math.random()*.8,r:1.5+Math.random()*2.2});
+ function step(){
+  ctx.clearRect(0,0,W,H);
+  for(const n of nodes){
+   n.x+=n.vx;n.y+=n.vy;
+   if(n.x<0||n.x>W)n.vx*=-1;if(n.y<0||n.y>H)n.vy*=-1;
+   ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,7);ctx.fillStyle='rgba(96,165,250,.7)';ctx.fill();
+  }
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+   const a=nodes[i],b=nodes[j],dx=a.x-b.x,dy=a.y-b.y,d=dx*dx+dy*dy;
+   if(d<16900){ctx.globalAlpha=1-Math.sqrt(d)/130;ctx.strokeStyle='rgba(34,211,238,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.globalAlpha=1}
+  }
+  requestAnimationFrame(step);
+ }
+ step();
+})();
+
+/* ===== Confete ===== */
+function confetti(){
+ const c=document.createElement('canvas');c.id='confetti';c.style.cssText='position:fixed;inset:0;z-index:50;pointer-events:none';document.body.appendChild(c);
+ const ctx=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+ const cols=['#22d3ee','#a78bfa','#34d399','#fbbf24','#fb7185','#60a5fa'];
+ const ps=Array.from({length:140},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,r:4+Math.random()*6,vy:2+Math.random()*3.5,vx:-1.5+Math.random()*3,col:cols[Math.floor(Math.random()*cols.length)],rot:Math.random()*Math.PI,vr:-.2+Math.random()*.4}));
+ let t=0;const iv=setInterval(()=>{t++;ctx.clearRect(0,0,c.width,c.height);
+  ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*1.6);ctx.restore()});
+  if(t>220){clearInterval(iv);c.remove()}},16);
+}
+
+/* ===== Navegação entre telas ===== */
+function show(id){$$('.screen').forEach(s=>s.classList.remove('active'));$('#'+id).classList.add('active');window.scrollTo(0,0)}
+/* ===== BANCO DE QUESTÕES ===== */
+const LEVELS=[
+{icon:'🌐',title:'Conceitos Básicos',week:'Semana 1',desc:'O que são redes, cliente-servidor, largura de banda e throughput',
+questions:[
+ {type:'mc',q:'O que é uma rede de computadores?',hint:'Pense em vários dispositivos conectados com um objetivo comum.',
+  options:['Um programa antivírus que protege o computador','Dois ou mais dispositivos interconectados capazes de compartilhar dados e recursos','Um tipo de processador usado em servidores','Um sistema operacional exclusivo para servidores'],correct:1,
+  expl:'Uma rede de computadores é um conjunto de dispositivos (computadores, celulares, impressoras, servidores) interconectados por meios físicos ou sem fio, capazes de compartilhar informações e recursos como arquivos, internet e impressoras.'},
+ {type:'mc',q:'Em um modelo cliente-servidor, qual é o papel do cliente?',hint:'Quem pede e quem atende?',
+  options:['Armazenar todos os arquivos da rede','Enviar solicitações de serviços ao servidor','Gerenciar o tráfego entre redes diferentes','Fabricar os endereços IP'],correct:1,
+  expl:'O cliente é quem solicita serviços (ex.: seu navegador pedindo uma página). O servidor é quem fornece o serviço, permanecendo disponível para atender pedidos o tempo todo.'},
+ {type:'tf',q:'Em uma rede P2P (ponto a ponto), cada computador pode atuar como cliente e servidor ao mesmo tempo.',answer:true,
+  expl:'No P2P não há servidor central: cada nó compartilha recursos diretamente com os outros, atuando como cliente e servidor simultaneamente. Exemplos: compartilhamento de arquivos e redes blockchain.'},
+ {type:'mc',q:'Qual das alternativas NÃO é uma vantagem do uso de redes de computadores?',hint:'Redes não alteram o hardware do seu computador.',
+  options:['Compartilhamento de impressoras e arquivos','Comunicação rápida entre usuários (e-mail, mensagens)','Centralização de dados e backups','Aumento automático da velocidade do processador dos computadores'],correct:3,
+  expl:'Redes permitem compartilhar recursos, comunicar pessoas e centralizar dados, mas não alteram o hardware: a velocidade do processador não aumenta por o computador estar conectado a uma rede.'},
+ {type:'mc',q:'A largura de banda (bandwidth) de um enlace representa:',hint:'É a capacidade máxima do "encanamento" por onde passam os bits.',
+  options:['O tempo que um pacote leva para atravessar a rede','A quantidade máxima de dados que pode ser transmitida por unidade de tempo','O número de computadores conectados à rede','A distância máxima entre dois roteadores'],correct:1,
+  expl:'Largura de banda é a capacidade máxima do meio de transmissão, medida em bits por segundo (bps, Kbps, Mbps, Gbps). O tempo de travessia é o atraso, e o desempenho real percebido é o throughput.'},
+ {type:'mc',q:'O que é um host em uma rede?',hint:'É um dispositivo final que possui endereço próprio na rede.',
+  options:['Qualquer dispositivo final com endereço próprio que envia e recebe dados','Apenas os cabos e antenas da rede','O programa usado para navegar na internet','O backup central da empresa'],correct:0,
+  expl:'Hosts (sistemas finais) são os dispositivos na ponta da rede — computadores, celulares, servidores, câmeras — que executam aplicações e possuem endereço na rede.'},
+ {type:'tf',q:'Throughput é a medida real da taxa de transferência percebida, que pode ser menor que a largura de banda do enlace.',answer:true,
+  expl:'A largura de banda é o máximo teórico; o throughput é o que realmente "chega" ao destino, afetado por congestionamento, perdas, distância e qualidade dos equipamentos.'},
+ {type:'mc',q:'Qual componente interliga redes diferentes e escolhe o melhor caminho para os pacotes?',hint:'É ele quem conecta sua casa à internet do provedor.',
+  options:['Hub','Switch','Roteador','Repetidor'],correct:2,
+  expl:'O roteador interliga redes distintas e escolhe rotas (caminhos) para os pacotes chegarem ao destino. O switch conecta dispositivos dentro da mesma rede local.'},
+ {type:'tf',q:'Em uma rede cliente-servidor, os dados e serviços ficam centralizados nos computadores clientes.',answer:false,
+  expl:'Falso! No modelo cliente-servidor os dados e serviços ficam centralizados no SERVIDOR. Os clientes apenas solicitam acesso a esses recursos.'},
+ {type:'mc',q:'Qual modo de comunicação permite transmitir e receber ao mesmo tempo, como em uma ligação telefônica?',hint:'Simplex = um sentido. Half-duplex = alternado. E o terceiro?',
+  options:['Simplex','Half-duplex','Full-duplex','Broadcast'],correct:2,
+  expl:'Simplex: um só sentido (TV aberta). Half-duplex: dois sentidos alternados (walkie-talkie). Full-duplex: dois sentidos simultâneos (ligação telefônica, Ethernet moderna).'}
+]},
+{icon:'🗺️',title:'Tipos de Redes',week:'Semana 1',desc:'PAN, LAN, MAN, WAN, WLAN, VPN, SAN e topologias',
+questions:[
+ {type:'mc',q:'Uma rede instalada dentro de uma única casa ou pequeno escritório é classificada como:',hint:'Local = LAN.',
+  options:['PAN','LAN','MAN','WAN'],correct:1,
+  expl:'LAN (Local Area Network) cobre áreas limitadas — casa, escritório, escola — com alta velocidade e administração de um único dono/organização.'},
+ {type:'mc',q:'A Internet é o maior exemplo do mundo de qual tipo de rede?',hint:'Rede mundial: Wide Area Network.',
+  options:['LAN','WAN','PAN','SAN'],correct:1,
+  expl:'WAN (Wide Area Network) interliga cidades, estados e países. A Internet é a maior WAN do mundo, formada pela interconexão de milhões de redes menores.'},
+ {type:'mc',q:'Conectar fones de ouvido, smartwatch e celular a poucos metros de distância, sem fio, é típico de uma:',hint:'Rede pessoal de curtíssimo alcance.',
+  options:['PAN','MAN','WAN','VLAN'],correct:0,
+  expl:'PAN (Personal Area Network) é a rede pessoal de curtíssimo alcance (alguns metros), geralmente via Bluetooth, ligando acessórios ao seu dispositivo.'},
+ {type:'mc',q:'Uma empresa com filiais em São Paulo, Nova York e Lisboa interligadas utiliza, na verdade:',hint:'Cada filial tem uma rede local; a interligação é global.',
+  options:['PANs conectadas por fibra','LANs interligadas formando uma WAN','Apenas uma grande MAN','Uma única LAN global'],correct:1,
+  expl:'Cada filial possui sua própria LAN; a interligação entre cidades e países forma a WAN, geralmente contratada de operadoras de telecomunicações.'},
+ {type:'mc',q:'A MAN (Metropolitan Area Network) é a rede que cobre:',hint:'O nome já diz: metropolitana.',
+  options:['Uma mesa de trabalho','Uma cidade ou região metropolitana','Todo o planeta','Apenas um cômodo'],correct:1,
+  expl:'MAN interliga redes dentro de uma cidade ou região metropolitana, como os campi de uma universidade na mesma cidade ou a rede de uma prefeitura.'},
+ {type:'tf',q:'Uma WLAN é uma rede local sem fio, geralmente baseada em Wi-Fi.',answer:true,
+  expl:'WLAN = Wireless LAN: a mesma LAN, mas com pontos de acesso Wi-Fi no lugar dos cabos, permitindo conexão de dispositivos móveis.'},
+ {type:'mc',q:'Qual tecnologia cria um túnel seguro e criptografado sobre a internet pública, permitindo acesso remoto à rede da empresa?',hint:'Permite "entrar" na rede corporativa de casa.',
+  options:['VPN','SAN','LAN','FTP'],correct:0,
+  expl:'A VPN (Virtual Private Network) cria um túnel criptografado sobre a internet pública, fazendo o computador remoto agir como se estivesse fisicamente dentro da rede privada.'},
+ {type:'mc',q:'Qual tipo de rede é dedicado ao armazenamento de dados em alto desempenho entre servidores?',hint:'Data centers usam essa rede só para discos e armazenamento.',
+  options:['SAN','PAN','MAN','WLAN'],correct:0,
+  expl:'SAN (Storage Area Network) é uma rede especializada em conectar servidores a sistemas de armazenamento em alta velocidade, muito usada em data centers.'},
+ {type:'mc',q:'Rede corporativa interna que usa tecnologias da internet e é acessível apenas aos funcionários:',hint:'O oposto da internet pública dentro da empresa.',
+  options:['Internet','Extranet','Intranet','Ethernet'],correct:2,
+  expl:'Intranet é a rede interna da organização (acesso restrito). A extranet permite acesso controlado a parceiros e fornecedores. A internet é pública e global.'},
+ {type:'mc',q:'Na topologia em estrela, o que acontece se o dispositivo central (switch) falhar?',hint:'Todos os caminhos passam pelo centro.',
+  options:['Nada, a rede continua funcionando','A rede inteira para de se comunicar','Apenas metade da rede para','A rede vira topologia anel automaticamente'],correct:1,
+  expl:'Na estrela, todos os nós se comunicam através do ponto central. Se ele falha, a comunicação cessa — por isso ambientes críticos usam switches redundantes.'},
+ {type:'tf',q:'A topologia em malha (mesh) oferece múltiplos caminhos entre os nós, aumentando a tolerância a falhas.',answer:true,
+  expl:'Na malha, os nós são interconectados de várias formas: se um enlace cai, os dados seguem por outro caminho. É a topologia mais tolerante a falhas (e a mais cara).'},
+ {type:'match',q:'Relacione cada tipo de rede à sua característica.',instr:'Clique em um item da coluna esquerda e depois no par correspondente da coluna direita.',
+  pairs:[['PAN','Dispositivos pessoais a poucos metros (Bluetooth)'],['LAN','Casa, sala ou escritório'],['MAN','Interliga redes de uma mesma cidade'],['WAN','Interliga cidades, estados e países'],['WLAN','Rede local sem fio via Wi-Fi']],
+  expl:'Escala crescente: PAN (pessoal) → LAN (local) → MAN (metropolitana) → WAN (ampla/mundial). WLAN é a versão sem fio da LAN.'}
+]},
+{icon:'🔌',title:'Meios de Transmissão',week:'Semana 1',desc:'Par trançado, coaxial, fibra óptica e redes sem fio',
+questions:[
+ {type:'mc',q:'Qual meio de transmissão usa pulsos de luz para enviar dados?',hint:'Brilha no backbone da internet.',
+  options:['Par trançado','Cabo coaxial','Fibra óptica','Onda de rádio'],correct:2,
+  expl:'A fibra óptica conduz luz (laser ou LED) pelo núcleo de vidro ou plástico, atingindo taxas enormes (Gbps a Tbps) e distâncias de dezenas a centenas de quilômetros.'},
+ {type:'mc',q:'Qual é a grande vantagem da fibra óptica sobre os cabos metálicos?',hint:'Luz não sofre esse tipo de ruído elétrico.',
+  options:['É mais barata que o par trançado em qualquer cenário','Imunidade a interferências eletromagnéticas','Não precisa de equipamentos para conectar','Transmite eletricidade junto com os dados'],correct:1,
+  expl:'Como a fibra transmite luz e não eletricidade, é imune a interferência eletromagnética, não emite sinais detectáveis e tem baixíssima atenuação — ideal para ambientes ruidosos e longas distâncias.'},
+ {type:'mc',q:'O conector mais usado com cabo de par trançado em redes Ethernet é o:',hint:'Aquele clique característico do cabo de rede.',
+  options:['BNC','RJ-45','RCA','USB-C'],correct:1,
+  expl:'O RJ-45 é o conector padrão dos cabos de par trançado (categorias 5e, 6, 6A...) nas redes locais. O BNC era usado nos antigos cabos coaxiais de rede.'},
+ {type:'mc',q:'Qual é o cenário típico de uso do cabo coaxial hoje em dia?',hint:'Operadoras de TV por assinatura ainda o usam muito.',
+  options:['Backbone entre data centers','Redes de TV a cabo e internet via cabo (DOCSIS)','Fones Bluetooth','Conexão entre prédios com fibra'],correct:1,
+  expl:'O coaxial ainda é muito usado pelas operadoras de TV a cabo e internet a cabo. Nas redes locais, ele foi substituído pelo par trançado.'},
+ {type:'tf',q:'O par trançado é o meio guiado mais barato e mais usado em redes locais (LANs).',answer:true,
+  expl:'Verdadeiro! O par trançado (UTP) domina as LANs por ser barato, fácil de instalar e oferecer até 10 Gbps em distâncias de até 100 metros.'},
+ {type:'mc',q:'O Wi-Fi utiliza qual meio de transmissão?',hint:'Não tem cabo nenhum!',
+  options:['Par trançado','Fibra óptica','Ondas de rádio','Infravermelho'],correct:2,
+  expl:'O Wi-Fi usa ondas de rádio nas faixas de 2,4 GHz, 5 GHz (e 6 GHz no Wi-Fi 6E/7). É um meio NÃO guiado: os dados se propagam pelo ar.'},
+ {type:'mc',q:'Qual meio de transmissão oferece a maior taxa de dados nas longas distâncias?',hint:'Está nos cabos submarinos entre continentes.',
+  options:['Par trançado','Fibra óptica','Rádio AM','Infravermelho'],correct:1,
+  expl:'A fibra tem baixíssima atenuação e altíssima banda — por isso os backbones da internet, os cabos submarinos e a infraestrutura do 5G utilizam fibra óptica.'},
+ {type:'mc',q:'Qual é a grande limitação do infravermelho (usado nos controles remotos)?',hint:'Tente usar o controle com a mão na frente do sensor...',
+  options:['Precisa de linha de visada direta e tem alcance muito curto','Funciona através de paredes','Tem alta imunidade a interferência luminosa','Taxa superior à da fibra óptica'],correct:0,
+  expl:'O infravermelho não atravessa obstáculos e exige visada direta entre emissor e receptor — por isso caiu em desuso para redes e segue em controles remotos.'},
+ {type:'mc',q:'Comunicações via satélite e enlaces entre torres distantes usam principalmente:',hint:'Ondas em linha reta de alta frequência.',
+  options:['Micro-ondas','Cabo coaxial','Par trançado','Ultrassom'],correct:0,
+  expl:'As micro-ondas (terrestres e satelitais) propagam em linha reta e permitem ligar pontos distantes sem cabos. Satélites geoestacionários cobrem áreas enormes, mas com latência alta (~270 ms de ida e volta).'},
+ {type:'tf',q:'Meios guiados são aqueles em que o sinal viaja por um caminho físico sólido, como cabos; os não guiados se propagam pelo ar ou pelo vácuo.',answer:true,
+  expl:'Guiados: par trançado, coaxial e fibra óptica. Não guiados: rádio, micro-ondas e infravermelho — o sinal se espalha livremente pelo espaço.'},
+ {type:'tf',q:'A fibra óptica conduz os dados por meio de pulsos elétricos de alta tensão.',answer:false,
+  expl:'Falso! A fibra óptica conduz LUZ, não eletricidade. É justamente isso que a torna imune a interferência eletromagnética e capaz de alcançar taxas gigantescas.'}
+]},
+{icon:'📜',title:'Protocolos',week:'Semana 2',desc:'TCP, UDP, HTTP, DNS, DHCP e as portas famosas',
+questions:[
+ {type:'mc',q:'O que é um protocolo de rede?',hint:'É o "idioma" comum entre os dispositivos.',
+  options:['Um tipo de cabo de rede','Um conjunto de regras que define a comunicação entre dispositivos','Um programa de antivírus','A senha de acesso à rede'],correct:1,
+  expl:'Protocolo é um conjunto de regras que define o formato, a ordem das mensagens e as ações (quem responde, quando retransmitir etc.). Sem protocolos, os dispositivos não se entendem.'},
+ {type:'mc',q:'Qual protocolo traduz nomes como www.google.com em endereços IP?',hint:'É a "agenda telefônica" da internet.',
+  options:['DHCP','DNS','FTP','SMTP'],correct:1,
+  expl:'O DNS (Domain Name System) converte nomes fáceis de lembrar em endereços IP numéricos que as máquinas usam para se localizar.'},
+ {type:'mc',q:'Qual protocolo distribui automaticamente endereços IP aos dispositivos que entram na rede?',hint:'É por ele que seu celular "conecta" no Wi-Fi sem configurar nada.',
+  options:['DNS','HTTP','DHCP','TCP'],correct:2,
+  expl:'O DHCP (Dynamic Host Configuration Protocol) entrega IP, máscara, gateway e servidores DNS automaticamente a cada dispositivo que se conecta.'},
+ {type:'mc',q:'Qual é a principal diferença entre HTTP e HTTPS?',hint:'Repare no cadeado do navegador.',
+  options:['HTTPS é mais lento e caiu em desuso','HTTPS criptografa a comunicação usando TLS/SSL','HTTP só funciona em redes locais','São nomes diferentes para o mesmo protocolo'],correct:1,
+  expl:'HTTPS = HTTP + camada de segurança TLS: os dados trafegam criptografados (cadeado no navegador), protegendo senhas e informações contra interceptação.'},
+ {type:'mc',q:'Qual protocolo é o clássico usado para transferir arquivos entre cliente e servidor?',hint:'O nome significa literalmente "protocolo de transferência de arquivos".',
+  options:['FTP','SMTP','DNS','ARP'],correct:0,
+  expl:'FTP (File Transfer Protocol) é o protocolo clássico de transferência de arquivos; hoje usam-se também SFTP/FTPS, suas versões seguras.'},
+ {type:'mc',q:'O envio de e-mails na internet utiliza principalmente o protocolo:',hint:'Ele "empurra" a mensagem; outros protocolos "puxam" para a caixa de entrada.',
+  options:['POP3','SMTP','DHCP','SNMP'],correct:1,
+  expl:'O SMTP (Simple Mail Transfer Protocol) envia os e-mails entre clientes e servidores. POP3 e IMAP são usados para receber e ler as mensagens no dispositivo.'},
+ {type:'mc',q:'O que torna o TCP um protocolo confiável?',hint:'Ele confirma, reordena e retransmite.',
+  options:['Envia tudo de uma vez, sem confirmação','Confirma o recebimento (ACK), reordena e retransmite segmentos perdidos','Não precisa de endereço IP','Funciona apenas em fibra óptica'],correct:1,
+  expl:'TCP é orientado à conexão: handshake de 3 vias, numeração de segmentos, confirmações e retransmissão — garantindo entrega completa e em ordem. Ideal para web, e-mail e arquivos.'},
+ {type:'mc',q:'Streaming ao vivo e chamadas de vídeo geralmente preferem UDP porque:',hint:'Em vídeo ao vivo, um frame atrasado já virou passado.',
+  options:['É mais confiável que o TCP','É mais rápido, pois não espera confirmações','Criptografa os dados automaticamente','Garante que todos os pacotes cheguem'],correct:1,
+  expl:'O UDP não abre conexão nem retransmite: é leve e veloz. Em vídeo ao vivo, um frame perdido rapidamente fica "antigo" — melhor seguir do que esperar a retransmissão.'},
+ {type:'tf',q:'O protocolo IP é responsável pelo endereçamento e pelo roteamento dos pacotes até o destino.',answer:true,
+  expl:'Verdadeiro! O IP (Internet Protocol) cuida do endereçamento lógico (IPv4/IPv6) e do roteamento: levar cada pacote da origem ao destino atravessando várias redes.'},
+ {type:'mc',q:'O comando "ping" utiliza qual protocolo para testar se um host está alcançável?',hint:'É o protocolo de mensagens de controle e diagnóstico da internet.',
+  options:['ICMP','FTP','SMTP','HTTP'],correct:0,
+  expl:'O ICMP (Internet Control Message Protocol) carrega mensagens de controle e erro. O ping usa ICMP Echo Request/Reply para verificar se um host responde e medir o tempo.'},
+ {type:'mc',q:'As portas famosas: HTTP usa a 80 e HTTPS a 443. Qual porta o FTP usa por padrão (controle)?',hint:'Está entre as portas well-known mais citadas em provas: 21.',
+  options:['21','25','53','110'],correct:0,
+  expl:'Portas clássicas: FTP 21, SSH 22, DNS 53, SMTP 25, HTTP 80, HTTPS 443, POP3 110. A porta identifica o serviço/aplicação dentro do host.'},
+ {type:'match',q:'Relacione cada protocolo à sua função principal.',instr:'Clique em um protocolo da coluna esquerda e depois na função correspondente da coluna direita.',
+  pairs:[['HTTP','Exibir páginas web'],['FTP','Transferir arquivos'],['DNS','Traduzir nomes em endereços IP'],['DHCP','Configurar o IP automaticamente'],['SMTP','Enviar e-mails']],
+  expl:'Cada serviço da internet tem seu protocolo e porta: web (HTTP 80/443), arquivos (FTP 21), nomes (DNS 53), configuração (DHCP), e-mail (SMTP 25).'}
+]},
+{icon:'🏛️',title:'Modelo OSI',week:'Semana 2',desc:'As 7 camadas, as PDUs e quem faz o quê',
+questions:[
+ {type:'order',q:'Você consegue reconstruir o modelo de referência OSI?',instr:'Clique nas camadas na ordem correta: da camada 1 (base) até a camada 7 (topo).',
+  items:['Física','Enlace de Dados','Rede','Transporte','Sessão','Apresentação','Aplicação'],
+  hint:'Lembre do mnemônico: Fique Em Rede Toda Segunda Após o Almoço.',
+  expl:'A pilha OSI, da base ao topo: 1·Física (bits e sinais), 2·Enlace (frames e MAC), 3·Rede (pacotes e IP), 4·Transporte (segmentos, TCP/UDP), 5·Sessão (diálogos), 6·Apresentação (formato e criptografia), 7·Aplicação (serviços como HTTP e DNS).'},
+ {type:'mc',q:'Qual camada do modelo OSI é responsável pela transmissão de bits brutos pelo meio físico?',hint:'É a camada mais "debaixo do asfalto".',
+  options:['Aplicação','Rede','Física','Sessão'],correct:2,
+  expl:'A camada Física (1) cuida dos sinais elétricos, de luz ou de rádio, e define conectores, voltagens e taxas — é ela quem "coloca os bits no meio".'},
+ {type:'mc',q:'Endereços MAC e o funcionamento dos switches pertencem à camada:',hint:'Camada 2: frames entre vizinhos diretos.',
+  options:['Rede','Enlace de Dados','Transporte','Aplicação'],correct:1,
+  expl:'O Enlace (camada 2) organiza os dados em frames, usa endereços MAC e controla o acesso ao meio e a detecção de erros entre dispositivos vizinhos. É a casa dos switches.'},
+ {type:'mc',q:'Endereçamento IP e roteamento entre redes diferentes são funções da camada:',hint:'Onde vivem os roteadores.',
+  options:['Física','Enlace','Rede','Apresentação'],correct:2,
+  expl:'A camada Rede (3) define o endereçamento lógico (IP) e o roteamento dos pacotes entre redes diferentes, usando roteadores.'},
+ {type:'mc',q:'TCP e UDP atuam em qual camada do modelo OSI?',hint:'Portas e conexões ponta a ponta.',
+  options:['Transporte','Sessão','Rede','Aplicação'],correct:0,
+  expl:'A camada Transporte (4) oferece comunicação ponta a ponta entre processos, usando portas: TCP confiável e ordenado, UDP leve e sem conexão.'},
+ {type:'mc',q:'Criptografia e compressão de dados são exemplos de tarefas da camada:',hint:'Ela cuida do FORMATO dos dados.',
+  options:['Sessão','Apresentação','Transporte','Enlace'],correct:1,
+  expl:'A camada Apresentação (6) trata do formato dos dados: tradução/serialização, criptografia e compressão — preparando os dados para a aplicação.'},
+ {type:'mc',q:'A camada que fornece ao usuário os serviços de rede, como HTTP, e-mail e DNS, é a:',hint:'É a camada com a qual seus programas conversam.',
+  options:['Aplicação','Sessão','Transporte','Física'],correct:0,
+  expl:'A camada Aplicação (7) é onde a navegação web (HTTP), o e-mail (SMTP/IMAP), o DNS e demais serviços "falam" com a rede.'},
+ {type:'tf',q:'No modelo OSI, a camada de Sessão gerencia o início, a manutenção e o encerramento de diálogos (sessões) entre aplicações.',answer:true,
+  expl:'Verdadeiro! A Sessão (5) estabelece, administra e encerra as sessões de comunicação, controlando o diálogo entre as aplicações.'},
+ {type:'mc',q:'Qual é a unidade de dados (PDU) da camada de Enlace?',hint:'Bits → frame → pacote → segmento. Qual vem primeiro?',
+  options:['Bit','Frame (quadro)','Pacote','Segmento'],correct:1,
+  expl:'PDUs por camada: Física = bit, Enlace = frame, Rede = pacote, Transporte = segmento (TCP) ou datagrama (UDP), e "dados" nas camadas 5 a 7.'},
+ {type:'mc',q:'Na camada de Transporte, a PDU chama-se:',hint:'O TCP chama assim seus "pedaços" de dados.',
+  options:['Frame','Pacote','Segmento','Bit'],correct:2,
+  expl:'Na Transporte, os dados recebem o nome de segmentos (TCP) ou datagramas (UDP). Depois de encapsulados pela Rede, viram pacotes.'},
+ {type:'mc',q:'O mnemônico em inglês "Please Do Not Throw Sausage Pizza Away" ajuda a lembrar:',hint:'Cada palavra inicial = uma camada, da 1 à 7.',
+  options:['Os passos do handshake TCP','As 7 camadas do OSI (de 1 a 7)','As portas mais usadas','Os tipos de cabo'],correct:1,
+  expl:'Please-Physical, Do-Data Link, Not-Network, Throw-Transport, Sausage-Session, Pizza-Presentation, Away-Application: as 7 camadas, da 1 à 7.'}
+]},
+{icon:'⏱️',title:'Atrasos',week:'Semana 2',desc:'Propagação, transmissão, fila, processamento e jitter',
+questions:[
+ {type:'mc',q:'Quais são os 4 tipos de atraso (delay) que compõem a latência total de um pacote?',hint:'Pense no trajeto: decidir, esperar na fila, empurrar os bits e viajar.',
+  options:['Propagação, transmissão, processamento e fila','Wi-Fi, cabo, fibra e rádio','Upload, download, ping e jitter','TCP, UDP, IP e ICMP'],correct:0,
+  expl:'Em cada nó: processamento (analisar cabeçalho e checar erros), fila (esperar a vez), transmissão (empurrar os bits no enlace, L/R) e propagação (viajar pelo meio, d/s).'},
+ {type:'mc',q:'O atraso de PROPAGAÇÃO depende principalmente de:',hint:'É física pura: distância e velocidade do sinal.',
+  options:['Do tamanho do pacote e da largura de banda','Da distância e da velocidade de propagação no meio','Do número de roteadores','Do navegador utilizado'],correct:1,
+  expl:'d_prop = d / s: distância física dividida pela velocidade do sinal no meio (~2×10<sup>8</sup> m/s na fibra, ~3×10<sup>8</sup> m/s no vácuo). Não depende do tamanho do pacote nem da banda.'},
+ {type:'mc',q:'O atraso de TRANSMISSÃO (L/R) é calculado como:',hint:'Quantos bits dividido por quantos bits por segundo.',
+  options:['Distância ÷ velocidade da luz','Tamanho do pacote ÷ taxa do enlace','Número de saltos × 2','Jitter × latência'],correct:1,
+  expl:'d_trans = L / R: quantidade de bits (L) dividida pela taxa do enlace (R). Quanto maior a banda, mais rápido o pacote é "empurrado" para o meio.'},
+ {type:'mc',q:'Um pacote de 1.000 bytes (8.000 bits) é enviado por um enlace de 1 Mbps. Qual é o atraso de transmissão?',hint:'L/R = 8.000 ÷ 1.000.000... em segundos.',
+  options:['8 ms','8 s','0,8 ms','80 ms'],correct:0,
+  expl:'L/R = 8.000 bits ÷ 1.000.000 bits/s = 0,008 s = 8 ms. Note: dobrar a banda (2 Mbps) cortaria esse atraso pela metade.'},
+ {type:'mc',q:'Em qual situação o atraso de FILA (queueing) cresce muito?',hint:'Congestionamento!',
+  options:['Quando o enlace está ocioso','Quando a taxa de chegada de pacotes supera a capacidade de saída do roteador','Quando o cabo é de fibra','Quando o pacote é pequeno'],correct:1,
+  expl:'Se os pacotes chegam mais rápido do que o roteador consegue transmitir, a fila cresce — e pode até transbordar (perdas). É o atraso mais variável do caminho.'},
+ {type:'tf',q:'A latência de um enlace via satélite geoestacionário é alta porque o sinal precisa percorrer cerca de 36.000 km até o satélite e depois voltar.',answer:true,
+  expl:'Satélites GEO estão a ~35.786 km de altitude. O sinal sobe e desce, gerando ~250-300 ms de atraso de propagação só em um trajeto — perceptível em ligações e jogos online.'},
+ {type:'mc',q:'O que é jitter?',hint:'Não é o atraso em si, mas a oscilação dele.',
+  options:['A velocidade máxima de download','A variação do atraso entre pacotes ao longo do tempo','O tamanho médio dos pacotes','O número de roteadores no caminho'],correct:1,
+  expl:'Jitter é a variação do atraso entre pacotes. Em chamadas e streaming, alto jitter causa engasgos; por isso usamos buffers para suavizar a reprodução.'},
+ {type:'mc',q:'A latência total (fim a fim) de um pacote é, aproximadamente:',hint:'Soma tudo ao longo do caminho.',
+  options:['A soma dos atrasos de processamento, fila, transmissão e propagação em cada nó','Apenas a distância dividida pela banda','O tamanho do arquivo dividido pelo ping','Sempre 1 ms'],correct:0,
+  expl:'A cada roteador adicionam-se processamento + fila + transmissão + propagação. A latência fim a fim é a soma de todos esses atrasos ao longo do caminho completo.'},
+ {type:'tf',q:'Aumentar a largura de banda reduz o atraso de transmissão, mas NÃO altera o atraso de propagação.',answer:true,
+  expl:'Verdadeiro! Banda maior (R maior) esvazia o pacote no enlace mais rápido (L/R menor), mas o sinal continua viajando à mesma velocidade física pelo meio (d/s).'},
+ {type:'mc',q:'A ferramenta "traceroute" é útil para:',hint:'Ela revela o caminho hop a hop.',
+  options:['Medir o atraso e listar os roteadores (saltos) no caminho até um destino','Trocar a senha do Wi-Fi','Criptografar os pacotes','Aumentar a banda do enlace'],correct:0,
+  expl:'O traceroute mostra cada salto (roteador) até o destino e o tempo (RTT) para alcançá-lo — ótimo para descobrir ONDE o atraso está acontecendo.'}
+]}
+];
+
+/* ===== MATERIAL DE APOIO ===== */
+const MATERIAL=[
+{icon:'🌐',title:'Semana 1 · Conceitos Básicos',items:[
+ '<b>Rede de computadores:</b> conjunto de dispositivos interconectados por meios guiados ou não guiados, capazes de compartilhar dados e recursos.',
+ '<b>Modos de comunicação:</b> simplex (um só sentido), half-duplex (dois sentidos alternados) e full-duplex (dois sentidos simultâneos).',
+ '<b>Cliente-servidor:</b> o cliente solicita serviços; o servidor os fornece e permanece disponível. <b>P2P:</b> cada nó é cliente e servidor ao mesmo tempo.',
+ '<b>Largura de banda:</b> capacidade máxima teórica do enlace (bps, Kbps, Mbps, Gbps). <b>Throughput:</b> taxa real percebida, afetada por congestionamento e perdas.',
+ '<b>Componentes:</b> hosts (dispositivos finais), enlaces (meios), switches (conectam hosts na rede local) e roteadores (conectam redes diferentes e escolhem rotas).',
+ '<b>Vantagens das redes:</b> compartilhamento de recursos e arquivos, comunicação rápida, centralização de dados e backups e redução de custos.']},
+{icon:'🗺️',title:'Semana 1 · Tipos de Redes',items:[
+ '<b>PAN</b> (Personal): alcance pessoal, poucos metros — Bluetooth.',
+ '<b>LAN</b> (Local): casa, escritório, escola — alta velocidade, um único administrador.',
+ '<b>MAN</b> (Metropolitan): cidade ou região metropolitana — campi universitários, órgãos públicos.',
+ '<b>WAN</b> (Wide): cidades, países, o mundo — a Internet é a maior WAN.',
+ '<b>WLAN:</b> LAN sem fio (Wi-Fi). <b>SAN:</b> rede dedicada a armazenamento em data centers. <b>VPN:</b> túnel criptografado sobre a internet pública.',
+ '<b>Internet × Intranet × Extranet:</b> pública e global × interna e restrita aos funcionários × acesso controlado a parceiros.',
+ '<b>Topologias:</b> estrela (nó central/switch), barramento, anel, malha (múltiplos caminhos, tolerante a falhas) e híbrida.']},
+{icon:'🔌',title:'Semana 1 · Meios de Transmissão',items:[
+ '<b>Guiados:</b> o sinal viaja por caminho físico (cabos). <b>Não guiados:</b> propagação pelo ar ou pelo vácuo.',
+ '<b>Par trançado (UTP/STP):</b> o mais barato e comum em LANs; conector RJ-45; até 10 Gbps em até 100 m; os pares entrelaçados reduzem o crosstalk.',
+ '<b>Cabo coaxial:</b> mais blindado que o par trançado; hoje usado em TV a cabo e internet a cabo (DOCSIS).',
+ '<b>Fibra óptica:</b> transmite luz; taxas gigantescas (Gbps–Tbps), longas distâncias e imunidade a interferência eletromagnética; backbones e cabos submarinos.',
+ '<b>Rádio:</b> Wi-Fi (2,4/5/6 GHz), redes celulares e Bluetooth — o meio não guiado mais usado.',
+ '<b>Micro-ondas:</b> enlaces terrestres em linha de visada e satélites; satélites GEO (~36.000 km) cobrem continentes, mas com latência alta.',
+ '<b>Infravermelho:</b> curtíssimo alcance e exige linha de visada (controles remotos).',
+ '<b>Critérios de escolha:</b> custo × taxa × distância × imunidade a interferência × facilidade de instalação.']},
+{icon:'📜',title:'Semana 2 · Protocolos',items:[
+ '<b>Protocolo:</b> conjunto de regras que define o formato, a ordem e as ações das mensagens trocadas entre dispositivos.',
+ '<b>TCP:</b> orientado a conexão (handshake de 3 vias), confiável, ordenado e com retransmissão — web, e-mail e arquivos.',
+ '<b>UDP:</b> sem conexão, leve e rápido, sem garantias — streaming, jogos, chamadas e DNS.',
+ '<b>HTTP/HTTPS (80/443):</b> web; o HTTPS adiciona criptografia TLS.',
+ '<b>FTP (21):</b> transferência de arquivos. <b>SSH (22):</b> acesso remoto seguro. <b>DNS (53):</b> nomes → IPs. <b>SMTP (25):</b> envio de e-mail; <b>POP3 (110)/IMAP:</b> recebimento.',
+ '<b>DHCP:</b> entrega automática de IP, máscara, gateway e DNS. <b>IP:</b> endereçamento lógico e roteamento (IPv4/IPv6). <b>ICMP:</b> diagnóstico (ping).',
+ '<b>Porta:</b> número que identifica o serviço/aplicação no host (0–65535; well-known até 1023).']},
+{icon:'🏛️',title:'Semana 2 · Modelo OSI',items:[
+ '<b>1·Física</b> (bits, sinais, cabos) → <b>2·Enlace</b> (frames, MAC, switches) → <b>3·Rede</b> (pacotes, IP, roteadores) → <b>4·Transporte</b> (segmentos, TCP/UDP, portas) → <b>5·Sessão</b> (diálogos) → <b>6·Apresentação</b> (formato, criptografia, compressão) → <b>7·Aplicação</b> (HTTP, DNS...).',
+ '<b>PDUs:</b> bit → frame → pacote → segmento → dados.',
+ 'Mnemônico (da camada 1 à 7): <b>"Fique Em Rede Toda Segunda Após o Almoço"</b>.',
+ 'Analogia postal: envelope (dados), endereço (IP/MAC), estradas e caminhões (enlaces) e centrais de distribuição (roteadores).',
+ 'O modelo TCP/IP usado na prática tem 4 camadas: Acesso à rede, Internet, Transporte e Aplicação.']},
+{icon:'⏱️',title:'Semana 2 · Atrasos',items:[
+ '<b>4 componentes:</b> processamento (roteador analisa cabeçalho/erros), fila (espera a vez), transmissão (empurra os bits no enlace) e propagação (viaja pelo meio).',
+ '<b>d_trans = L / R</b> (bits do pacote ÷ taxa do enlace). Ex.: 8.000 bits em 1 Mbps = 8 ms.',
+ '<b>d_prop = d / s</b> (distância ÷ velocidade no meio; fibra ≈ 2×10<sup>8</sup> m/s).',
+ '<b>Latência fim a fim:</b> soma dos 4 atrasos em cada nó do caminho. <b>RTT:</b> tempo de ida e volta (ping).',
+ '<b>Jitter:</b> variação do atraso entre pacotes — crítico em voz e vídeo.',
+ 'Banda maior reduz d_trans, mas <b>não</b> altera d_prop. Satélite GEO ≈ 250–300 ms de propagação.',
+ 'Ferramentas: <b>ping</b> (alcançabilidade + RTT) e <b>traceroute</b> (saltos e atrasos hop a hop).']}
+];
+/* ===== MOTOR DO JOGO ===== */
+let G={li:0,qs:[],qi:0,score:0,hearts:3,streak:0,correct:0,wrong:0,answered:false,cur:null,timer:null,timeLeft:0,totalTime:30};
+
+function stopTimer(){if(G.timer){clearInterval(G.timer);G.timer=null}}
+
+function updateTimerUI(){
+ const pct=Math.max(0,G.timeLeft/G.totalTime*100);
+ const f=$('#timer-fill');if(!f)return;
+ f.style.width=pct+'%';
+ f.classList.toggle('low',pct<30);
+ $('#timer-num').textContent=Math.ceil(G.timeLeft)+'s';
+}
+function startTimer(sec){
+ stopTimer();G.timeLeft=sec;G.totalTime=sec;updateTimerUI();
+ G.timer=setInterval(()=>{
+  if(G.answered)return;
+  G.timeLeft=Math.max(0,G.timeLeft-.1);
+  updateTimerUI();
+  if(G.timeLeft<=0){stopTimer();onTimeout()}
+ },100);
+}
+
+function renderTopbar(){
+ const L=LEVELS[G.li];
+ $('#tb-level').textContent=L.icon+' Nível '+(G.li+1)+' · '+L.title;
+ $('#tb-hearts').textContent='❤️'.repeat(G.hearts)+'🖤'.repeat(Math.max(0,3-G.hearts));
+ $('#tb-score').textContent=G.score+' pts';
+}
+
+/* Prepara as questões (embaralha alternativas; copia runtime p/ order e match) */
+function prepQuestions(level){
+ return level.questions.map(q=>{
+  if(q.type==='mc'){
+   const opts=shuffle(q.options.map((t,i)=>({t,ok:i===q.correct})));
+   return Object.assign({},q,{opts});
+  }
+  if(q.type==='tf'){
+   return Object.assign({},q,{type:'mc',isTF:true,opts:[{t:'Verdadeiro',ok:q.answer},{t:'Falso',ok:!q.answer}]});
+  }
+  if(q.type==='order'){
+   return Object.assign({},q,{pool:shuffle(q.items.map((_,i)=>i)),slots:q.items.map(()=>null)});
+  }
+  if(q.type==='match'){
+   return Object.assign({},q,{right:shuffle(q.pairs.map((p,i)=>({t:p[1],li:i}))),matched:0,mistakes:0});
+  }
+  return q;
+ });
+}
+
+function startLevel(li){
+ const L=LEVELS[li];
+ G={li,qs:prepQuestions(L),qi:0,score:0,hearts:3,streak:0,correct:0,wrong:0,answered:false,cur:null,timer:null,timeLeft:0,totalTime:30};
+ renderTopbar();
+ show('screen-game');
+ renderQuestion();
+}
+
+function renderQuestion(){
+ stopTimer();
+ G.answered=false;
+ const q=G.qs[G.qi];G.cur=q;
+ const L=LEVELS[G.li];
+ $('#q-count').textContent='Pergunta '+(G.qi+1)+'/'+G.qs.length+' · '+L.icon+' '+L.title;
+ $('#q-text').textContent=q.q;
+ $('#fb-area').innerHTML='';
+ /* Dica */
+ $('#hint-wrap').innerHTML=q.hint?'<button class="btn btn-ghost btn-hint" id="hint-btn">💡 Dica (custa 5s)</button><div id="hint-txt" class="hint-txt" style="display:none"></div>':'';
+ if(q.hint){$('#hint-btn').onclick=()=>{if(G.answered)return;Sfx.click();$('#hint-txt').innerHTML='💡 '+q.hint;$('#hint-txt').style.display='block';$('#hint-btn').disabled=true;G.timeLeft=Math.max(0,G.timeLeft-5);updateTimerUI()}}
+ /* Área de respostas por tipo */
+ const ans=$('#answers');
+ if(q.type==='mc'){
+  ans.innerHTML=q.opts.map((o,i)=>'<button class="opt" data-i="'+i+'"><span class="letter">'+(q.isTF?(i===0?'V':'F'):'ABCD'[i])+'</span><span>'+o.t+'</span></button>').join('');
+  ans.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answerMC(+b.dataset.i));
+  renderTopbar();
+  startTimer(30);
+ }else if(q.type==='order'){
+  renderOrder(q,ans);
+  renderTopbar();
+  startTimer(Math.max(60,q.items.length*13));
+ }else if(q.type==='match'){
+  renderMatch(q,ans);
+  renderTopbar();
+  startTimer(Math.max(60,q.pairs.length*15));
+ }
+}
+
+/* ===== Múltipla escolha / V ou F ===== */
+function answerMC(i){
+ if(G.answered)return;
+ G.answered=true;stopTimer();
+ const q=G.cur;
+ const btns=[...document.querySelectorAll('#answers .opt')];
+ btns.forEach((b,j)=>{b.disabled=true;if(q.opts[j].ok)b.classList.add('correct');else if(j===i)b.classList.add('wrong');else b.classList.add('dim')});
+ if(q.opts[i].ok)success(100);
+ else fail('A resposta correta é: <b>'+q.opts.find(o=>o.ok).t+'</b>');
+}
+/* ===== Ordenação (ex.: camadas do OSI) ===== */
+function renderOrder(q,ans){
+ ans.innerHTML='<p class="order-help">'+q.instr+'</p><div class="slots" id="slots"></div><div class="pool" id="pool"></div><button class="btn btn-primary" id="check-order" disabled>✅ Verificar ordem</button>';
+ drawOrder();
+ $('#check-order').onclick=()=>{
+  if(G.answered)return;
+  const seq=q.slots;
+  const ok=seq.every((v,i)=>v===i);
+  const slotEls=[...document.querySelectorAll('#slots .slot')];
+  if(ok){
+   slotEls.forEach(s=>{s.classList.remove('filled');s.classList.add('good')});
+   success(150);
+  }else{
+   slotEls.forEach(s=>{s.classList.add('bad')});
+   document.getElementById('slots').classList.add('shake');
+   setTimeout(()=>document.querySelectorAll('#slots .slot').forEach(s=>s.classList.remove('bad')),700);
+   fail('A ordem correta é: <b>'+q.items.join(' → ')+'</b>');
+  }
+ };
+ function drawOrder(){
+  const slotsEl=$('#slots'),poolEl=$('#pool');
+  slotsEl.classList.remove('shake');
+  slotsEl.innerHTML=q.slots.map((idx,si)=>idx===null
+   ?'<div class="slot empty" data-s="'+si+'">'+(si+1)+'º</div>'
+   :'<div class="slot filled" data-s="'+si+'">'+q.items[idx]+'</div>').join('');
+  poolEl.innerHTML=q.pool.map(idx=>'<button class="chip" data-i="'+idx+'">'+q.items[idx]+'</button>').join('');
+  slotsEl.querySelectorAll('.slot.filled').forEach(s=>s.onclick=()=>{
+   if(G.answered)return;
+   const si=+s.dataset.s;
+   q.pool.push(q.slots[si]);q.slots[si]=null;Sfx.click();drawOrder();
+  });
+  poolEl.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+   if(G.answered)return;
+   const idx=+c.dataset.i;
+   q.pool.splice(q.pool.indexOf(idx),1);
+   q.slots[q.slots.indexOf(null)]=idx;
+   Sfx.click();drawOrder();
+  });
+  $('#check-order').disabled=q.slots.some(s=>s===null);
+ }
+}
+
+/* ===== Pareamento (ex.: protocolo ↔ função) ===== */
+function renderMatch(q,ans){
+ ans.innerHTML='<p class="order-help">'+q.instr+'</p><div class="match-wrap">'
+  +'<div class="match-col" id="m-left">'+q.pairs.map((p,i)=>'<button class="opt match-btn" data-l="'+i+'"><span class="letter">'+(i+1)+'</span><span>'+p[0]+'</span></button>').join('')+'</div>'
+  +'<div class="match-col" id="m-right">'+q.right.map((r,j)=>'<button class="opt match-btn" data-r="'+j+'"><span class="letter">'+String.fromCharCode(65+j)+'</span><span>'+r.t+'</span></button>').join('')+'</div>'
+  +'</div>';
+ let selL=null;
+ $$('#m-left .match-btn').forEach(b=>b.onclick=()=>{
+  if(G.answered||b.classList.contains('matched'))return;
+  $$('#m-left .match-btn').forEach(x=>x.classList.remove('selected'));
+  selL=+b.dataset.l;b.classList.add('selected');Sfx.click();
+ });
+ $$('#m-right .match-btn').forEach(b=>b.onclick=()=>{
+  if(G.answered||b.classList.contains('matched'))return;
+  if(selL===null){b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),450);return}
+  const li=q.right[+b.dataset.r].li;
+  if(li===selL){
+   q.matched++;
+   $$('#m-left .match-btn[data-l="'+selL+'"]').forEach(x=>{x.classList.remove('selected');x.classList.add('matched')});
+   b.classList.add('matched');selL=null;Sfx.good();
+   if(q.matched===q.pairs.length)success(150);
+  }else{
+   q.mistakes++;
+   G.timeLeft=Math.max(0,G.timeLeft-4);updateTimerUI();
+   b.classList.add('shake');Sfx.bad();
+   setTimeout(()=>b.classList.remove('shake'),450);
+  }
+ });
+}
+
+/* ===== Tempo esgotado ===== */
+function onTimeout(){
+ if(G.answered)return;
+ G.answered=true;
+ const q=G.cur;
+ if(q.type==='mc'){
+  const btns=[...document.querySelectorAll('#answers .opt')];
+  btns.forEach((b,j)=>{b.disabled=true;if(q.opts[j].ok)b.classList.add('correct');else b.classList.add('dim')});
+  fail('⏰ Tempo esgotado! A resposta correta é: <b>'+q.opts.find(o=>o.ok).t+'</b>');
+ }else if(q.type==='order'){
+  fail('⏰ Tempo esgotado! A ordem correta é: <b>'+q.items.join(' → ')+'</b>');
+ }else{
+  fail('⏰ Tempo esgotado! As ligações corretas eram: <b>'+q.pairs.map(p=>p[0]+' ↔ '+p[1]).join(' · ')+'</b>');
+ }
+}
+
+/* ===== Feedback, pontos e fluxo ===== */
+function feedback(ok,correctHTML){
+ const fb=$('#fb-area');
+ fb.innerHTML='<div class="feedback '+(ok?'ok':'no')+'">'
+  +'<div class="fb-title">'+(ok?'✅ Muito bem!':'❌ Incorreto!')+'</div>'
+  +(ok?'<div class="fb-pts" id="fb-pts"></div>':'<div class="fb-correct">'+correctHTML+'</div>')
+  +'<div class="fb-expl"><b>💡 Para lembrar:</b> '+G.cur.expl+'</div>'
+  +'<button class="btn btn-primary" id="btn-next">Continuar →</button></div>';
+ $('#btn-next').onclick=nextStep;
+}
+function success(base){
+ G.answered=true;stopTimer();
+ G.correct++;G.streak++;
+ const speed=Math.round(50*Math.max(0,G.timeLeft)/G.totalTime);
+ const stBonus=Math.min(4,G.streak-1)*25;
+ const pts=base+speed+stBonus;
+ G.score+=pts;renderTopbar();
+ Sfx.good();feedback(true);
+ $('#fb-pts').innerHTML='+'+pts+' pts <span class="fb-detail">(base '+base+' · velocidade +'+speed+(stBonus?' · sequência 🔥 +'+stBonus:'')+')</span>';
+}
+function fail(correctHTML){
+ G.wrong++;G.hearts--;G.streak=0;
+ renderTopbar();Sfx.bad();
+ feedback(false,correctHTML);
+}
+function nextStep(){
+ if(G.hearts<=0){levelResult(false);return}
+ G.qi++;
+ if(G.qi>=G.qs.length)levelResult(true);
+ else renderQuestion();
+}
+
+/* ===== Resultado do nível ===== */
+function levelResult(passed){
+ stopTimer();
+ const L=LEVELS[G.li],total=G.qs.length;
+ const acc=Math.round(100*G.correct/total);
+ let stars=0;
+ if(passed){
+  stars=Math.max(1,3-G.wrong);
+  const rec=progress.levels[G.li]||{};
+  rec.completed=true;
+  rec.stars=Math.max(rec.stars||0,stars);
+  rec.best=Math.max(rec.best||0,G.score);
+  progress.levels[G.li]=rec;
+  saveProgress();
+ }
+ const starTxt=passed?'★'.repeat(stars)+'☆'.repeat(3-stars):'☆☆☆';
+ const msg=passed
+  ?(stars===3?'Perfeito! Zero erros — domínio total do tema.':'Muito bem! Revise os erros no Material de Apoio e volte para conquistar as 3 estrelas.')
+  :'Seus 3 corações acabaram. Estude o tema no Material de Apoio e tente de novo — você consegue!';
+ let btns='';
+ if(passed){
+  if(G.li<LEVELS.length-1)btns+='<button class="btn btn-primary" onclick="startLevel('+(G.li+1)+')">➡️ Próximo nível</button>';
+  else btns+='<button class="btn btn-primary" onclick="showFinal()">🏆 Resultado final</button>';
+ }else btns+='<button class="btn btn-primary" onclick="startLevel('+G.li+')">🔄 Tentar de novo</button>';
+ btns+='<button class="btn btn-ghost" onclick="goHome()">🗺️ Mapa de níveis</button>';
+ $('#screen-result').innerHTML='<div class="result-card glass">'
+  +'<div class="result-ico">'+(passed?(stars===3?'🏆':stars===2?'🎉':'👍'):'💔')+'</div>'
+  +'<h2>'+(passed?'Nível concluído!':'Fim de jogo...')+'</h2>'
+  +'<div class="result-stars">'+starTxt+'</div>'
+  +'<p class="result-msg">'+msg+'</p>'
+  +'<div class="result-stats">'
+  +'<div class="stat-box"><span>'+G.score+'</span>pts da rodada</div>'
+  +'<div class="stat-box"><span>'+acc+'%</span>de acerto</div>'
+  +'<div class="stat-box"><span>'+G.correct+'/'+total+'</span>questões</div>'
+  +'</div><div class="result-btns">'+btns+'</div></div>';
+ show('screen-result');
+ if(passed){confetti();Sfx.win()}else Sfx.lose();
+}
+/* ===== Tela final (classificação) ===== */
+function showFinal(){
+ stopTimer();
+ const totalQ=LEVELS.reduce((s,l)=>s+l.questions.length,0);
+ const starsSum=LEVELS.reduce((s,_,i)=>s+((progress.levels[i]&&progress.levels[i].stars)||0),0);
+ const bestSum=LEVELS.reduce((s,_,i)=>s+((progress.levels[i]&&progress.levels[i].best)||0),0);
+ const done=LEVELS.every((_,i)=>progress.levels[i]&&progress.levels[i].completed);
+ let rank,rankMsg;
+ if(!done){rank='📡 Aprendiz de Rede';rankMsg='Conclua os 6 níveis para desbloquear sua classificação final!'}
+ else if(starsSum>=16){rank='🏆 Arquiteto de Redes';rankMsg='Domínio lendário! Você já pensa como quem projeta a internet.'}
+ else if(starsSum>=12){rank='🛡️ Administrador de Redes';rankMsg='Excelente! Você domina os conceitos essenciais das redes.'}
+ else if(starsSum>=7){rank='🔧 Técnico de Redes';rankMsg='Boa base! Revise o Material de Apoio e conquiste mais estrelas.'}
+ else{rank='📡 Aprendiz de Rede';rankMsg='Você está no começo da jornada. Revise e jogue novamente!'}
+ const rows=LEVELS.map((l,i)=>{
+  const rec=progress.levels[i]||{};
+  const st=rec.completed?'★'.repeat(rec.stars)+'☆'.repeat(3-rec.stars):'🔒';
+  return '<div class="final-row"><span>'+l.icon+' '+l.title+'</span><span><span class="stars-txt'+(rec.stars?' has':'')+'">'+st+'</span> · '+(rec.best||0)+' pts</span></div>';
+ }).join('');
+ $('#screen-final').innerHTML='<div class="final-card glass">'
+  +'<div style="font-size:2.6rem">🎓</div>'
+  +'<h2>Sua classificação</h2>'
+  +'<div class="rank-badge">'+rank+'</div>'
+  +'<p class="rank-msg">'+rankMsg+'</p>'
+  +'<div class="stats-row" style="margin-bottom:4px">'
+  +'<span class="stat-chip">⭐ '+starsSum+'/'+(LEVELS.length*3)+' estrelas</span>'
+  +'<span class="stat-chip">🏅 '+bestSum+' pts</span>'
+  +'<span class="stat-chip">❓ '+totalQ+' questões</span>'
+  +'</div>'
+  +'<div class="final-grid">'+rows+'</div>'
+  +'<div class="result-btns">'
+  +'<button class="btn btn-primary" onclick="goHome()">🗺️ Voltar ao mapa</button>'
+  +'<button class="btn btn-ghost" onclick="showMaterial()">📖 Revisar material</button>'
+  +'</div></div>';
+ show('screen-final');
+ if(done){confetti();Sfx.win()}
+}
+
+/* ===== Tela inicial (home) ===== */
+function goHome(){renderHome();show('screen-home')}
+function renderHome(){
+ const starsSum=LEVELS.reduce((s,_,i)=>s+((progress.levels[i]&&progress.levels[i].stars)||0),0);
+ const bestSum=LEVELS.reduce((s,_,i)=>s+((progress.levels[i]&&progress.levels[i].best)||0),0);
+ const totalQ=LEVELS.reduce((s,l)=>s+l.questions.length,0);
+ const done=LEVELS.every((_,i)=>progress.levels[i]&&progress.levels[i].completed);
+ const lvlCards=LEVELS.map((l,i)=>{
+  const rec=progress.levels[i];
+  const unlocked=i===0||(progress.levels[i-1]&&progress.levels[i-1].completed);
+  const starsTxt=rec&&rec.stars?'★'.repeat(rec.stars)+'☆'.repeat(3-rec.stars):'☆☆☆';
+  const best=rec&&rec.best?'🏆 '+rec.best+' pts':'—';
+  return '<button class="lvl-card glass'+(unlocked?'':' locked')+'"'+(unlocked?' data-lvl="'+i+'"':' disabled')+'>'
+   +'<div class="lvl-top"><span class="lvl-ico">'+(unlocked?l.icon:'🔒')+'</span><span class="lvl-week">'+l.week+'</span></div>'
+   +'<div class="lvl-name">'+(i+1)+'. '+l.title+'</div>'
+   +'<div class="lvl-desc">'+l.desc+'</div>'
+   +'<div class="lvl-meta"><span class="stars-txt'+(rec&&rec.stars?' has':'')+'">'+starsTxt+'</span><span class="best-txt">'+best+'</span></div>'
+   +'</button>';
+ }).join('');
+ const muteTxt=Sfx.muted?'🔇 Som: mudo':'🔊 Som: ligado';
+ $('#screen-home').innerHTML=
+  '<header class="hero glass">'
+  +'<div class="hero-badge">🎓 QUIZ INTERATIVO · REDES DE COMPUTADORES</div>'
+  +'<h1>🛰️ Net<span class="grad">Quest</span></h1>'
+  +'<p class="hero-sub">Aventure-se pelas <b>Semanas 1 e 2</b>: conceitos básicos, tipos de redes, meios de transmissão, protocolos, <b>modelo OSI</b> e <b>atrasos</b>. Responda as questões, sobreviva com seus corações e torne-se um <b>Arquiteto de Redes</b>!</p>'
+  +(done?'<div class="hero-cta"><button class="btn btn-primary" onclick="showFinal()">🏆 Ver classificação final</button></div>':'')
+  +'</header>'
+  +'<div class="stats-row">'
+  +'<span class="stat-chip">⭐ '+starsSum+'/'+(LEVELS.length*3)+' estrelas</span>'
+  +'<span class="stat-chip">🏅 '+bestSum+' pts acumulados</span>'
+  +'<span class="stat-chip">❓ '+totalQ+' questões</span>'
+  +'<span class="stat-chip">🎓 '+LEVELS.length+' níveis</span>'
+  +'</div>'
+  +'<h3 class="section-t">🎮 Como jogar</h3>'
+  +'<div class="howto-grid">'
+  +'<div class="howto-card glass"><b>🎯 Objetivo</b>Complete os 6 níveis e colete até 18 estrelas, desbloqueando a classificação final.</div>'
+  +'<div class="howto-card glass"><b>❤️ Vidas</b>Cada erro custa um coração. Com 3 erros, o nível termina e você pode tentar de novo.</div>'
+  +'<div class="howto-card glass"><b>⏱️ Rapidez</b>Quanto mais rápido você responder, maior o bônus de pontos (até +50).</div>'
+  +'<div class="howto-card glass"><b>🔥 Sequência</b>Acertos consecutivos geram bônus de até +100 pontos. Dicas custam 5 segundos.</div>'
+  +'</div>'
+  +'<h3 class="section-t">🗺️ Mapa de níveis</h3>'
+  +'<div class="levels-grid">'+lvlCards+'</div>'
+  +'<div class="home-actions">'
+  +'<button class="btn btn-primary" id="btn-material">📖 Material de apoio</button>'
+  +'<button class="btn btn-ghost" id="btn-mute">'+muteTxt+'</button>'
+  +'<button class="btn btn-ghost" id="btn-reset">🗑️ Zerar progresso</button>'
+  +'</div>'
+  +'<p class="footer-note">NetQuest · Jogo educativo de Redes de Computadores — Semanas 1 e 2 (Introdução, Protocolos, Modelo OSI e Atrasos)</p>';
+ $$('#screen-home .lvl-card[data-lvl]').forEach(b=>b.onclick=()=>startLevel(+b.dataset.lvl));
+ $('#btn-material').onclick=showMaterial;
+ $('#btn-mute').onclick=toggleMute;
+ $('#btn-reset').onclick=resetProgress;
+}
+
+/* ===== Material de apoio ===== */
+function showMaterial(){
+ stopTimer();
+ $('#screen-material').innerHTML='<div class="page-top"><button class="btn btn-ghost btn-sm" onclick="goHome()">⬅ Voltar</button><h2>📖 Material de Apoio</h2></div>'
+  +MATERIAL.map(m=>'<details class="glass mat-item"><summary>'+m.icon+' '+m.title+'</summary><ul class="mat-list">'+m.items.map(it=>'<li>'+it+'</li>').join('')+'</ul></details>').join('');
+ show('screen-material');
+}
+
+/* ===== Som e reset ===== */
+function toggleMute(){
+ Sfx.muted=!Sfx.muted;progress.muted=Sfx.muted;saveProgress();
+ $('#btn-mute').textContent=Sfx.muted?'🔇 Som: mudo':'🔊 Som: ligado';
+}
+function resetProgress(){
+ if(confirm('Tem certeza de que deseja zerar TODO o progresso?')){
+  progress={levels:{},muted:progress.muted};saveProgress();renderHome();
+ }
+}
+
+/* ===== Inicialização ===== */
+Sfx.muted=!!progress.muted;
+$('#btn-exit').onclick=()=>{stopTimer();renderHome();show('screen-home')};
+renderHome();
+</script>
+</body>
+</html>
