@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Jogo gamificado de Sistemas Operacionais — Módulo 3: Sincronização de Processos e Módulo 4: Gerenciamento de Memória.">
+<title>KERNEL QUEST · Sincronização &amp; Memória — Módulos 3 e 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#04050d;
+  --bg1:#0a0e21;
+  --cyan:#00f0ff;
+  --purple:#b14aff;
+  --pink:#ff2d95;
+  --gold:#ffc400;
+  --green:#00ff9d;
+  --red:#ff3b5c;
+  --text:#e9edff;
+  --muted:#9aa3c7;
+  --card:rgba(13,17,38,.88);
+  --line:rgba(0,240,255,.22);
+  --font-head:'Orbitron','Rajdhani',sans-serif;
+  --font-body:'Rajdhani','Segoe UI',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(1000px 600px at 85% -10%, rgba(177,74,255,.16), transparent 60%),
+    radial-gradient(900px 500px at -10% 25%, rgba(0,240,255,.13), transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, rgba(255,45,149,.10), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg0));
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:17px;
+  line-height:1.55;
+  overflow-x:hidden;
+}
+#fx{position:fixed;inset:0;z-index:-1;pointer-events:none}
+.grid-overlay{
+  position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,240,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,.045) 1px, transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 30%, #000 30%, transparent 100%);
+          mask-image:radial-gradient(ellipse 90% 70% at 50% 30%, #000 30%, transparent 100%);
+}
+.container{width:min(960px,94vw);margin:0 auto;padding:18px 0 40px}
+
+/* ---------- HUD ---------- */
+.hud{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 14px;margin:0 auto 6px;width:min(960px,94vw);
+  background:rgba(6,8,20,.72);
+  border:1px solid rgba(0,240,255,.18);
+  border-radius:14px;
+  backdrop-filter:blur(10px);
+}
+.brand{font-family:var(--font-head);font-weight:900;font-size:1rem;letter-spacing:.12em;color:var(--text)}
+.brand span{color:var(--cyan);text-shadow:0 0 12px rgba(0,240,255,.8)}
+.hud-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.hud-stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}
+.hud-label{font-size:.62rem;letter-spacing:.22em;color:var(--muted)}
+.hud-value{font-family:var(--font-head);font-weight:700;font-size:1.05rem;color:var(--cyan);text-shadow:0 0 10px rgba(0,240,255,.55)}
+.combo-chip{
+  font-family:var(--font-head);font-weight:700;font-size:.8rem;letter-spacing:.06em;
+  padding:6px 12px;border-radius:999px;color:#0a0d1c;
+  background:linear-gradient(90deg,var(--gold),#ff9d00);
+  box-shadow:0 0 18px rgba(255,196,0,.45);
+  animation:pop .25s ease;
+}
+.combo-chip.x2{background:linear-gradient(90deg,#4dff9d,#00e0b0)}
+.combo-chip.x3{background:linear-gradient(90deg,#7cc4ff,#00f0ff)}
+.combo-chip.x4{background:linear-gradient(90deg,var(--pink),var(--purple));color:#fff}
+.icon-btn{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  color:var(--text);border-radius:10px;padding:6px 10px;cursor:pointer;font-size:1rem;
+  transition:.2s;
+}
+.icon-btn:hover{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.35)}
+
+/* ---------- Telas ---------- */
+.screen{display:none;padding-top:14px}
+.screen.active{display:block;animation:fadeUp .45s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 14px rgba(255,45,149,.35)}50%{box-shadow:0 0 30px rgba(255,45,149,.75)}}
+@keyframes starPop{0%{transform:scale(0) rotate(-40deg);opacity:0}70%{transform:scale(1.35) rotate(8deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes rankIn{0%{transform:scale(.2);opacity:0;filter:blur(8px)}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1;filter:blur(0)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+.kicker{font-family:var(--font-head);font-size:.72rem;letter-spacing:.3em;color:var(--cyan);margin-bottom:10px;text-transform:uppercase}
+.screen-title{font-family:var(--font-head);font-weight:900;font-size:clamp(1.5rem,4vw,2.2rem);letter-spacing:.04em;margin-bottom:6px}
+.screen-sub{color:var(--muted);max-width:640px;margin-bottom:20px}
+.glass{
+  background:var(--card);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  backdrop-filter:blur(8px);
+}
+
+/* ---------- START ---------- */
+#screen-start{text-align:center;padding-top:34px}
+.title{
+  font-family:var(--font-head);font-weight:900;
+  font-size:clamp(2.4rem,8vw,4.6rem);
+  letter-spacing:.06em;line-height:1.05;margin:4px 0 6px;
+  animation:floaty 5s ease-in-out infinite;
+}
+.title .grad{
+  background:linear-gradient(90deg,var(--cyan) 10%,var(--purple) 55%,var(--pink) 95%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 16px rgba(0,240,255,.45));
+}
+.subtitle{font-family:var(--font-head);font-weight:500;font-size:clamp(.85rem,2.4vw,1.15rem);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:22px}
+.story{max-width:660px;margin:0 auto 18px;padding:18px 22px;text-align:left}
+.story p{margin-bottom:8px}
+.story b{color:var(--cyan)}
+.story p:last-child{margin-bottom:0}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
+.chip{
+  font-size:.78rem;font-weight:600;letter-spacing:.08em;
+  padding:7px 14px;border-radius:999px;border:1px solid;
+}
+.chip.mod3{color:var(--cyan);border-color:rgba(0,240,255,.4);background:rgba(0,240,255,.07)}
+.chip.mod4{color:var(--purple);border-color:rgba(177,74,255,.45);background:rgba(177,74,255,.08)}
+.chip.boss{color:var(--pink);border-color:rgba(255,45,149,.45);background:rgba(255,45,149,.08)}
+.start-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.best-line{color:var(--muted);font-size:.95rem}
+.best-line b{color:var(--gold);font-family:var(--font-head)}
+
+/* ---------- Botões ---------- */
+.btn{
+  font-family:var(--font-head);font-weight:700;letter-spacing:.1em;
+  border:none;border-radius:12px;cursor:pointer;
+  padding:13px 26px;font-size:.95rem;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{
+  color:#04121a;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  box-shadow:0 0 22px rgba(0,240,255,.35), 0 4px 18px rgba(0,0,0,.4);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(0,240,255,.6), 0 6px 20px rgba(0,0,0,.4)}
+.btn-ghost{
+  color:var(--text);background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.22);
+}
+.btn-ghost:hover{border-color:var(--cyan);box-shadow:0 0 14px rgba(0,240,255,.3)}
+.btn-danger{color:var(--red);background:transparent;border:1px solid rgba(255,59,92,.45)}
+.btn-danger:hover{background:rgba(255,59,92,.1)}
+.btn-lg{padding:16px 34px;font-size:1.1rem}
+.btn-sm{padding:8px 16px;font-size:.8rem}
+.btn:focus-visible,.opt:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+/* ---------- MAPA ---------- */
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:20px}
+.mission-card{
+  position:relative;padding:18px 18px 15px;cursor:pointer;overflow:hidden;
+  border:1px solid rgba(0,240,255,.24);
+  background:linear-gradient(160deg, rgba(0,240,255,.09), rgba(255,255,255,.02) 45%), rgba(13,17,38,.93);
+  border-radius:16px;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s;
+}
+.mission-card::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+}
+.mission-card.mod4::before{background:linear-gradient(90deg,var(--purple),var(--pink))}
+.mission-card.boss{border-color:rgba(255,45,149,.5);background:linear-gradient(160deg, rgba(255,45,149,.12), rgba(177,74,255,.06) 50%), rgba(24,11,28,.93)}
+.mission-card.boss::before{background:linear-gradient(90deg,var(--pink),var(--purple))}
+.mission-card.boss:not(.locked){animation:glowPulse 2.4s ease-in-out infinite}
+.mission-card:not(.locked):hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,240,255,.22);border-color:var(--cyan)}
+.mission-card.boss:not(.locked):hover{box-shadow:0 10px 30px rgba(255,45,149,.3);border-color:var(--pink)}
+.mission-card.locked{cursor:not-allowed;opacity:.45;filter:grayscale(.7)}
+.mc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mc-icon{font-size:1.7rem}
+.mc-num{font-family:var(--font-head);font-size:.66rem;letter-spacing:.24em;color:var(--muted)}
+.mc-name{font-family:var(--font-head);font-weight:700;font-size:1.02rem;margin-bottom:2px}
+.mc-topic{color:var(--muted);font-size:.86rem;margin-bottom:10px;min-height:2.4em}
+.mc-foot{display:flex;align-items:center;justify-content:space-between}
+.mc-status{font-size:.74rem;font-weight:700;letter-spacing:.14em;color:var(--cyan);text-transform:uppercase}
+.mc-status.done{color:var(--green)}
+.mc-status.lock{color:var(--muted)}
+.mc-status.boss{color:var(--pink)}
+.mc-stars{color:#3a4160;font-size:.95rem;letter-spacing:.1em}
+.mc-stars .on{color:var(--gold);text-shadow:0 0 8px rgba(255,196,0,.7)}
+.map-actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* ---------- JOGO ---------- */
+.game-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.game-mission{font-family:var(--font-head);font-weight:700;font-size:1rem;color:var(--cyan);letter-spacing:.06em}
+.game-mission.boss{color:var(--pink)}
+.game-counter{font-family:var(--font-head);font-size:.85rem;color:var(--muted);letter-spacing:.14em}
+.progress{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:16px}
+.progress-fill{
+  height:100%;width:0%;border-radius:99px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  box-shadow:0 0 12px rgba(0,240,255,.6);
+  transition:width .4s ease;
+}
+.qtag{
+  display:inline-block;font-family:var(--font-head);font-size:.64rem;font-weight:700;
+  letter-spacing:.26em;color:var(--purple);
+  border:1px solid rgba(177,74,255,.45);border-radius:6px;
+  padding:5px 10px;margin-bottom:10px;text-transform:uppercase;
+  background:rgba(177,74,255,.08);
+}
+.qcard{padding:20px 22px;font-size:1.12rem;font-weight:500;margin-bottom:16px}
+.qcard code{color:var(--cyan);background:rgba(0,240,255,.09);padding:1px 6px;border-radius:6px;font-size:.95em}
+.opts{display:grid;gap:11px}
+.opt{
+  display:flex;align-items:center;gap:14px;text-align:left;
+  width:100%;padding:14px 16px;cursor:pointer;
+  font-family:var(--font-body);font-size:1.02rem;font-weight:500;color:var(--text);
+  background:rgba(16,21,44,.78);
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:13px;
+  transition:border-color .18s, background .18s, transform .18s, box-shadow .18s;
+}
+.opt .letter{
+  flex:0 0 34px;height:34px;display:grid;place-items:center;
+  font-family:var(--font-head);font-weight:700;font-size:.85rem;color:var(--cyan);
+  border:1px solid rgba(0,240,255,.4);border-radius:9px;background:rgba(0,240,255,.07);
+}
+.opt:not(:disabled):hover{border-color:var(--cyan);background:rgba(0,240,255,.07);transform:translateX(5px);box-shadow:0 0 16px rgba(0,240,255,.22)}
+.opt:disabled{cursor:default}
+.opt.correct{
+  border-color:var(--green);background:rgba(0,255,157,.1);
+  box-shadow:0 0 18px rgba(0,255,157,.35);
+  animation:pop .3s ease;
+}
+.opt.correct .letter{color:#042a1c;background:var(--green);border-color:var(--green)}
+.opt.wrong{
+  border-color:var(--red);background:rgba(255,59,92,.1);
+  animation:shake .4s ease;
+}
+.opt.wrong .letter{color:#2a040b;background:var(--red);border-color:var(--red)}
+.opt.dim{opacity:.45}
+
+/* ---------- Feedback ---------- */
+.feedback{
+  margin-top:16px;padding:16px 18px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  border-left:5px solid var(--cyan);
+  background:rgba(255,255,255,.04);
+  animation:fadeUp .35s ease both;
+}
+.feedback.ok{border-left-color:var(--green)}
+.feedback.bad{border-left-color:var(--red)}
+.fb-head{font-family:var(--font-head);font-weight:700;font-size:1rem;margin-bottom:8px}
+.feedback.ok .fb-head{color:var(--green)}
+.feedback.bad .fb-head{color:var(--red)}
+.fb-gain{display:inline-block;margin-left:8px;font-size:.8rem;color:#04121a;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:99px;padding:3px 10px}
+.fb-answer{color:var(--muted);font-size:.92rem;margin-bottom:8px}
+.fb-answer b{color:var(--text)}
+.fb-expl{color:#c9cfee;margin-bottom:14px;font-size:1rem}
+.fb-expl code{color:var(--cyan);background:rgba(0,240,255,.09);padding:1px 6px;border-radius:6px;font-size:.95em}
+
+/* ---------- Resultado da missão ---------- */
+#screen-result{text-align:center;padding-top:30px}
+.stars-big{font-size:3rem;letter-spacing:.3em;margin:10px 0 18px;min-height:1.2em}
+.stars-big .st{color:#333a55;display:inline-block}
+.stars-big .st.on{color:var(--gold);text-shadow:0 0 18px rgba(255,196,0,.8);animation:starPop .5s ease both}
+.stars-big .st.on:nth-child(2){animation-delay:.15s}
+.stars-big .st.on:nth-child(3){animation-delay:.3s}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;max-width:620px;margin:0 auto 18px;text-align:center}
+.stat-card{padding:16px 10px}
+.stat-val{font-family:var(--font-head);font-weight:900;font-size:1.6rem;color:var(--cyan);text-shadow:0 0 12px rgba(0,240,255,.5)}
+.stat-val.gold{color:var(--gold);text-shadow:0 0 12px rgba(255,196,0,.5)}
+.stat-val.green{color:var(--green);text-shadow:0 0 12px rgba(0,255,157,.5)}
+.stat-label{font-size:.7rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.bonus-banner{
+  display:inline-block;margin:0 auto 18px;padding:10px 20px;border-radius:12px;
+  font-family:var(--font-head);font-weight:700;letter-spacing:.08em;color:#1a0a04;
+  background:linear-gradient(90deg,var(--gold),#ff9d00);
+  box-shadow:0 0 24px rgba(255,196,0,.5);
+  animation:pop .4s ease both;
+}
+.res-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ---------- Final ---------- */
+#screen-final{text-align:center;padding-top:26px}
+.rank-wrap{margin:8px 0 20px}
+.rank-letter{
+  font-family:var(--font-head);font-weight:900;font-size:clamp(4.5rem,15vw,7.5rem);line-height:1;
+  background:linear-gradient(180deg,var(--cyan),var(--purple));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 26px rgba(0,240,255,.55));
+  animation:rankIn .8s ease both;
+}
+.rank-name{font-family:var(--font-head);font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;font-size:clamp(.8rem,2.6vw,1.05rem);margin-top:6px}
+.module-bars{max-width:620px;margin:0 auto 16px;text-align:left;display:grid;gap:12px}
+.mbar-label{display:flex;justify-content:space-between;font-size:.86rem;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.mbar-label b{color:var(--text);font-family:var(--font-head)}
+.mbar{height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.mbar-fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--purple));box-shadow:0 0 10px rgba(0,240,255,.5);transition:width 1s ease .3s}
+.mbar-fill.boss{background:linear-gradient(90deg,var(--pink),var(--purple));box-shadow:0 0 10px rgba(255,45,149,.5)}
+
+.foot{margin-top:34px;text-align:center;color:#5c6488;font-size:.8rem;letter-spacing:.06em}
+
+/* ---------- Modal ---------- */
+.modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:rgba(3,4,10,.8);backdrop-filter:blur(6px);padding:18px}
+.modal[hidden]{display:none}
+.modal-card{max-width:520px;width:100%;padding:26px 28px;animation:fadeUp .3s ease both;border-color:rgba(0,240,255,.35)}
+.modal-card h3{font-family:var(--font-head);letter-spacing:.1em;margin-bottom:14px;color:var(--cyan)}
+.modal-card ul{list-style:none;margin-bottom:18px}
+.modal-card li{padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.09);color:#cdd4f2}
+.modal-card li:last-child{border-bottom:none}
+.modal-card li b{color:var(--cyan)}
+.modal-card li .p{color:var(--gold);font-weight:700}
+.modal-actions{text-align:center}
+
+@media (max-width:560px){
+  body{font-size:16px}
+  .hud{padding:8px 10px}
+  .brand{font-size:.82rem}
+  .story{text-align:left}
+  .qcard{padding:16px}
+  .opt{padding:12px 13px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<header class="hud" id="hud" hidden>
+  <div class="brand">KERNEL<span>QUEST</span></div>
+  <div class="hud-right">
+    <div class="hud-stat" id="hud-score-wrap" hidden>
+      <span class="hud-label">PONTOS</span>
+      <span class="hud-value" id="hud-score">0</span>
+    </div>
+    <div class="combo-chip" id="hud-combo" hidden>🔥 COMBO x2</div>
+    <button class="icon-btn" id="btn-sound" title="Ativar/desativar som" aria-label="Som">🔊</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- TELA INICIAL -->
+  <section class="screen active" id="screen-start" aria-label="Tela inicial">
+    <p class="kicker">// Sistemas Operacionais · Módulos 3 &amp; 4</p>
+    <h1 class="title">KERNEL<span class="grad">QUEST</span></h1>
+    <p class="subtitle">Sincronização de Processos &amp; Gerenciamento de Memória</p>
+    <div class="story glass">
+      <p>🚨 <b>Alerta no núcleo do sistema!</b> Condições de corrida infectaram os processos, deadlocks travaram as filas de recursos e a memória virtual está em colapso, paginando sem parar...</p>
+      <p>Você é o agente escalado para restaurar a ordem. Complete as <b>6 missões</b>, encare o <b>Chefão Final</b> e torne-se uma lenda do kernel. 💾⚡</p>
+    </div>
+    <div class="chips">
+      <span class="chip mod3">MÓDULO 3 · Sincronização — 4 missões</span>
+      <span class="chip mod4">MÓDULO 4 · Memória — 2 missões</span>
+      <span class="chip boss">👾 CHEFÃO FINAL</span>
+    </div>
+    <div class="start-actions">
+      <button class="btn btn-primary btn-lg" id="btn-start">▶ INICIAR OPERAÇÃO</button>
+      <button class="btn btn-ghost" id="btn-howto">COMO JOGAR</button>
+    </div>
+    <p class="best-line" id="best-line"></p>
+  </section>
+
+  <!-- MAPA DE MISSÕES -->
+  <section class="screen" id="screen-map" aria-label="Mapa de missões">
+    <h2 class="screen-title">🗺️ MAPA DE MISSÕES</h2>
+    <p class="screen-sub">Complete uma missão para desbloquear a próxima. Sem tempo e sem vidas — o objetivo é dominar o conteúdo. Você pode refazer missões a qualquer momento.</p>
+    <div class="map-grid" id="map-grid"></div>
+    <div class="map-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-back-start">← Início</button>
+      <button class="btn btn-danger btn-sm" id="btn-reset">Zerar progresso</button>
+    </div>
+  </section>
+
+  <!-- JOGO -->
+  <section class="screen" id="screen-game" aria-label="Pergunta">
+    <div class="game-top">
+      <div class="game-mission" id="game-mission">M1 · Zona de Exclusão</div>
+      <div class="game-counter" id="game-counter">Q 1/3</div>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="qtag" id="qtag">M1 · SEÇÃO CRÍTICA</div>
+    <div class="qcard glass" id="qtext"></div>
+    <div class="opts" id="opts"></div>
+    <div class="feedback" id="feedback" hidden>
+      <div class="fb-head" id="fb-head"></div>
+      <p class="fb-answer" id="fb-answer"></p>
+      <p class="fb-expl" id="fb-expl"></p>
+      <button class="btn btn-primary" id="btn-continue">CONTINUAR ▸</button>
+    </div>
+  </section>
+
+  <!-- RESULTADO DA MISSÃO -->
+  <section class="screen" id="screen-result" aria-label="Resultado da missão">
+    <p class="kicker" id="res-kicker">// Missão concluída</p>
+    <h2 class="screen-title" id="res-name">—</h2>
+    <div class="stars-big" id="res-stars"></div>
+    <div class="stats-grid" id="res-stats"></div>
+    <div class="bonus-banner" id="res-bonus" hidden></div>
+    <div class="res-actions">
+      <button class="btn btn-primary" id="btn-res-next">VOLTAR AO MAPA ▸</button>
+    </div>
+  </section>
+
+  <!-- RELATÓRIO FINAL -->
+  <section class="screen" id="screen-final" aria-label="Relatório final">
+    <p class="kicker">// Relatório final de operação</p>
+    <h2 class="screen-title">SISTEMA RESTAURADO ✔</h2>
+    <div class="rank-wrap">
+      <div class="rank-letter" id="fin-rank">S</div>
+      <div class="rank-name" id="fin-rank-name">LENDA DO KERNEL</div>
+    </div>
+    <div class="stats-grid" id="fin-stats"></div>
+    <div class="module-bars" id="fin-bars"></div>
+    <p class="best-line" id="fin-best"></p>
+    <div class="res-actions">
+      <button class="btn btn-primary" id="btn-again">↻ NOVA OPERAÇÃO</button>
+      <button class="btn btn-ghost" id="btn-final-map">MAPA DE MISSÕES</button>
+    </div>
+  </section>
+
+  <footer class="foot">Atividade gamificada · Sistemas Operacionais · Módulos 3 &amp; 4 — Sincronização de Processos e Gerenciamento de Memória</footer>
+</main>
+
+<!-- MODAL COMO JOGAR -->
+<div class="modal" id="modal-howto" hidden role="dialog" aria-modal="true" aria-label="Como jogar">
+  <div class="modal-card glass">
+    <h3>🎮 COMO JOGAR</h3>
+    <ul>
+      <li>💠 <b>27 questões</b> de múltipla escolha em 6 missões + Chefão Final.</li>
+      <li>✔ Acerto: <span class="p">100 pts</span> (Chefão: <span class="p">150 pts</span>).</li>
+      <li>🔥 Acertos seguidos aumentam o combo: <span class="p">x2</span> a partir do 2º, <span class="p">x3</span> a partir do 5º, <span class="p">x4</span> a partir do 8º.</li>
+      <li>🏆 Missão perfeita (100%): bônus de <span class="p">+300 pts</span>.</li>
+      <li>⭐ Desempenho na missão rende de 0 a 3 estrelas e desbloqueia a próxima.</li>
+      <li>📚 Cada resposta vem com explicação didática — errar também é aprender.</li>
+      <li>⌨️ Atalhos: teclas <b>1–4</b> ou <b>A–D</b> respondem; <b>Enter</b> continua.</li>
+    </ul>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-howto-close">ENTENDI ▸</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ============================================================
+   KERNEL QUEST — Banco de questões (Módulos 3 e 4)
+   ============================================================ */
+const MISSIONS = [
+  {
+    id: 1, name: 'Zona de Exclusão', topic: 'Seção Crítica', icon: '🚧',
+    module: 3, brief: 'Race conditions e o protocolo da seção crítica.',
+    questions: [
+      {
+        q: 'Em um sistema multithread, duas threads executam simultaneamente <code>contador++</code> sobre a mesma variável global. O valor final de <code>contador</code> varia de execução para execução. Como se chama essa situação?',
+        opts: [
+          'Starvation (inanição) da thread de menor prioridade',
+          'Race condition (condição de corrida) sobre o dado compartilhado',
+          'Deadlock entre as duas threads',
+          'Inversão de prioridade no escalonador'
+        ],
+        ans: 1,
+        exp: 'Race condition: dois ou mais processos/threads acessam e manipulam dados compartilhados concorrentemente, e o resultado depende da ordem de execução. A solução é garantir que operações sobre dados compartilhados sejam atômicas — ou seja, executem dentro de uma seção crítica.'
+      },
+      {
+        q: 'Um processo solicita entrada na seção crítica e, embora ela esteja livre, outros processos que chegaram depois entram repetidamente antes dele, adiando-o indefinidamente. Qual requisito do protocolo da seção crítica está sendo violado?',
+        opts: [
+          'Exclusão mútua — apenas um processo por vez dentro da seção',
+          'Progresso — a escolha do próximo não pode ser adiada para sempre',
+          'Espera limitada (bounded waiting) — limite finito de ultrapassagens',
+          'Atomicidade das variáveis compartilhadas'
+        ],
+        ans: 2,
+        exp: 'Espera limitada (bounded waiting): depois que um processo pede para entrar, deve existir um limite finito no número de vezes que outros processos entram na seção crítica antes dele. A violação caracteriza starvation. Exclusão mútua trata do acesso concorrente; progresso trata da decisão quando a seção está vazia.'
+      },
+      {
+        q: 'Sobre a solução de Peterson para o problema da seção crítica, é correto afirmar:',
+        opts: [
+          'Usa apenas uma variável de trava global, sem controlar a vez de cada processo',
+          'Combina o array <code>flag[]</code> (interesse em entrar) com a variável <code>turn</code> (vez), garantindo exclusão mútua, progresso e espera limitada',
+          'Funciona somente em sistemas não preemptivos',
+          'Garante exclusão mútua, mas nunca satisfaz a espera limitada'
+        ],
+        ans: 1,
+        exp: 'A solução de Peterson foi elaborada para dois processos: <code>flag[i] = true</code> declara interesse e <code>turn = j</code> cede a vez. Ela satisfaz os três requisitos do protocolo. Funciona em sistemas preemptivos, embora exija busy waiting — por isso é usada como base conceitual, não em produção.'
+      }
+    ]
+  },
+  {
+    id: 2, name: 'Circuitos de Controle', topic: 'Semáforos', icon: '🚦',
+    module: 3, brief: 'Operações wait/signal, tipos de semáforo e armadilhas.',
+    questions: [
+      {
+        q: 'Um semáforo binário <code>S</code> é inicializado com 1. Um processo executa <code>wait(S)</code>, faz seu trabalho e depois executa <code>signal(S)</code>. Qual o valor final de <code>S</code> e o que o trecho entre as duas operações garante?',
+        opts: [
+          '0; o trecho executa em exclusão mútua',
+          '1; nenhuma proteção adicional é criada',
+          '0; todos os demais processos ficam bloqueados para sempre',
+          '−1; o processo entrou em deadlock'
+        ],
+        ans: 0,
+        exp: '<code>wait(S)</code> decrementa o valor (1 → 0) e <code>signal(S)</code> incrementa (0 → 1). Enquanto S vale 0, qualquer outro processo que execute <code>wait(S)</code> fica bloqueado — logo, o trecho entre as duas operações roda em exclusão mútua.'
+      },
+      {
+        q: 'Qual é a diferença central entre um semáforo de contagem (counting semaphore) e um semáforo binário?',
+        opts: [
+          'O de contagem pode assumir valores em um intervalo arbitrário; o binário assume apenas 0 ou 1',
+          'O de contagem é mais rápido; o binário é mais seguro',
+          'O de contagem serve só para exclusão mútua; o binário só para ordenação de eventos',
+          'São sinônimos — apenas nomes diferentes para a mesma estrutura'
+        ],
+        ans: 0,
+        exp: 'Semáforo de contagem: valor em um intervalo — ideal para contar recursos disponíveis (ex.: N posições livres de um buffer). Binário: apenas 0/1, equivalente a um mutex. Qual um pode ser implementado com o outro; a escolha depende do problema.'
+      },
+      {
+        q: 'Um processo que executa <code>while (S &lt;= 0); // espera</code> dentro de <code>wait(S)</code> fica girando em laço, consumindo CPU apenas para testar o semáforo. Esse comportamento se chama:',
+        opts: [
+          'Thrashing — o sistema pagina em excesso',
+          'Busy waiting (espera ocupada); o semáforo implementado assim é chamado de spinlock',
+          'Convoy effect no escalonador',
+          'Fragmentação interna do semáforo'
+        ],
+        ans: 1,
+        exp: 'Busy waiting desperdiça ciclos de CPU enquanto o processo espera. Quando a espera é feita girando em laço, o semáforo recebe o nome de spinlock. Em multiprocessadores, spinlocks podem ser vantajosos quando a espera esperada é muito curta — evitar a sobrecarga de bloquear/despertar o processo.'
+      },
+      {
+        q: 'Uma thread de ALTA prioridade bloqueia em um semáforo mantido por uma thread de BAIXA prioridade; essa, por sua vez, é preterida pelo escalonador em favor de uma thread de prioridade MÉDIA. Que problema é esse e qual a solução clássica?',
+        opts: [
+          'Deadlock; aplicando o algoritmo do Banqueiro',
+          'Inversão de prioridade (priority inversion); herança de prioridade (priority inheritance)',
+          'Thrashing; reduzindo o grau de multiprogramação',
+          'Race condition; usando a solução de Peterson'
+        ],
+        ans: 1,
+        exp: 'É a inversão de prioridade: a thread de prioridade média impede indiretamente que a de baixa libere o recurso, atrasando a de alta. Na herança de prioridade, quem detém o recurso herda temporariamente a prioridade mais alta dos que esperam. Caso real: a missão Mars Pathfinder (1997).'
+      }
+    ]
+  },
+  {
+    id: 3, name: 'Clássicos Imortais', topic: 'Problemas Clássicos de Sincronização', icon: '🍽️',
+    module: 3, brief: 'Produtor-consumidor, leitores-escritores e filósofos jantando.',
+    questions: [
+      {
+        q: 'No problema produtor-consumidor com buffer limitado, o esquema clássico usa os semáforos <code>mutex</code>, <code>empty</code> e <code>full</code>. Qual deles conta as posições VAZIAS disponíveis no buffer?',
+        opts: [
+          '<code>full</code>, inicializado com o tamanho do buffer',
+          '<code>empty</code>, inicializado com o tamanho do buffer',
+          '<code>mutex</code>, inicializado com 0',
+          'Nenhum: as posições vazias são contadas pelo produtor manualmente'
+        ],
+        ans: 1,
+        exp: '<code>empty</code> começa com N (capacidade) e é decrementado pelo produtor em cada inserção. <code>full</code> começa em 0 e conta as posições ocupadas. <code>mutex</code> (inicializado com 1) apenas garante exclusão mútua no acesso à estrutura do buffer.'
+      },
+      {
+        q: 'No problema dos leitores-escritores, a solução clássica com o contador <code>readcount</code> e o semáforo <code>wrt</code> impõe qual política de acesso?',
+        opts: [
+          'Vários leitores podem ler simultaneamente, mas o escritor tem acesso exclusivo',
+          'Um único leitor por vez, mas vários escritores podem escrever juntos',
+          'Leitura e escrita devem sempre ocorrer em pares sincronizados',
+          'Escritores têm prioridade absoluta sobre leitores'
+        ],
+        ans: 0,
+        exp: 'Como leitura não altera os dados, múltiplos leitores podem coexistir — o primeiro leitor executa <code>wait(wrt)</code> e o último sai com <code>signal(wrt)</code>. O escritor precisa de exclusividade total. Nessa versão básica, escritores podem sofrer starvation; variantes adicionam semáforos para equilibrar as partes.'
+      },
+      {
+        q: 'O problema dos 5 filósofos que jantam (com um garfo entre cada par) ilustra principalmente:',
+        opts: [
+          'A necessidade de substituição de páginas em memória virtual',
+          'O custo do busy waiting em semáforos',
+          'A dificuldade de alocar múltiplos recursos entre vários processos sem deadlock ou starvation',
+          'A anomalia de Belady em algoritmos de substituição'
+        ],
+        ans: 2,
+        exp: 'Cada garfo é um recurso e cada filósofo, um processo que precisa de DOIS recursos para avançar. A solução ingênua (todos pegam o garfo esquerdo ao mesmo tempo) leva a deadlock; outras geram starvation. O problema é o laboratório clássico para estratégias de aquisição de múltiplos recursos — como ordenação de recursos ou pegar garfos apenas quando ambos estiverem livres.'
+      }
+    ]
+  },
+  {
+    id: 4, name: 'Loop Mortal', topic: 'Deadlocks', icon: '💀',
+    module: 3, brief: 'Condições de Coffman, grafos de recursos e métodos de tratamento.',
+    questions: [
+      {
+        q: 'Quais são as QUATRO condições necessárias para a existência de um deadlock?',
+        opts: [
+          'Exclusão mútua, posse e espera, não-preempção e espera circular',
+          'Paginação, segmentação, swapping e compactação',
+          'Exclusão mútua, preempção total, race condition e thrashing',
+          'Escalonamento FIFO, aging, prioridade estática e round-robin'
+        ],
+        ans: 0,
+        exp: 'São as condições de Coffman: (1) exclusão mútua — recurso usado por um processo por vez; (2) posse e espera — segura recursos enquanto espera outros; (3) não-preempção — recursos não podem ser tomados à força; (4) espera circular — cadeia circular de processos esperando. Todas devem valer SIMULTANEAMENTE; quebrar qualquer uma elimina o deadlock.'
+      },
+      {
+        q: 'Em um grafo de alocação de recursos onde cada tipo de recurso possui UMA única instância, o que um ciclo no grafo indica?',
+        opts: [
+          'Nada — ciclos são situações normais de concorrência',
+          'Que o sistema está em um estado seguro',
+          'Deadlock: com uma instância por tipo, ciclo é condição necessária E suficiente',
+          'Que haverá thrashing nos próximos instantes'
+        ],
+        ans: 2,
+        exp: 'Com uma instância por tipo de recurso, ciclo ⟺ deadlock. Já com MÚLTIPLAS instâncias, o ciclo é necessário mas não suficiente: pode existir um processo fora do ciclo capaz de progredir e liberar recursos, desfazendo a espera.'
+      },
+      {
+        q: 'A técnica de prevenção de deadlock que EXIGE que todo processo solicite todos os seus recursos de uma só vez, antes de começar a executar, ataca qual das condições do deadlock?',
+        opts: [
+          'Exclusão mútua — tornando todos os recursos compartilháveis',
+          'Posse e espera (hold and wait) — proíbe esperar por recursos enquanto segura outros',
+          'Não-preempção — permitindo tomar recursos à força',
+          'Espera circular — impondo ordenação total dos tipos de recursos'
+        ],
+        ans: 1,
+        exp: 'Se o processo só pode pedir tudo de uma vez, ele nunca segura um recurso enquanto espera outro — quebrando a condição de posse e espera. Desvantagens: baixa utilização de recursos (ficam alocados sem uso) e possível starvation. A espera circular é atacada por outra técnica: numerar os recursos e exigir requisição em ordem crescente.'
+      },
+      {
+        q: 'O algoritmo do Banqueiro (Banker\u2019s Algorithm) pertence a qual método de tratamento de deadlocks?',
+        opts: [
+          'Prevenção — quebra estruturalmente uma das quatro condições',
+          'Impedimento (avoidance) — analisa cada requisição e nunca deixa o sistema entrar em estado inseguro',
+          'Detecção e recuperação — deixa o deadlock ocorrer e depois o desfaz',
+          'Ignorar o problema — o chamado algoritmo do avestruz'
+        ],
+        ans: 1,
+        exp: 'O algoritmo do Banqueiro é a técnica clássica de IMPEDIMENTO (evitação): cada processo declara antecipadamente sua demanda máxima, e o sistema só atende requisições que mantenham um estado seguro — isto é, uma sequência em que todos os processos ainda podem terminar, mesmo na pior alocação.'
+      }
+    ]
+  },
+  {
+    id: 5, name: 'Mapa de Endereços', topic: 'Memória Principal', icon: '🗺️',
+    module: 4, brief: 'MMU, alocação contígua, fragmentação e paginação.',
+    questions: [
+      {
+        q: 'Em um sistema com realocação por registrador base (relocation register), qual é o papel da MMU (Memory Management Unit)?',
+        opts: [
+          'Traduzir cada endereço lógico gerado pela CPU, somando o valor do registrador base para gerar o endereço físico',
+          'Comprimir automaticamente os buracos da memória (compactação)',
+          'Substituir páginas pelo algoritmo LRU',
+          'Criptografar o conteúdo da memória principal'
+        ],
+        ans: 0,
+        exp: 'A CPU gera endereços LÓGICOS (virtuais); a MMU os converte em endereços FÍSICOS na hora do acesso. Com registrador base, a tradução é: endereço físico = endereço lógico + base. O programa do usuário nunca enxerga endereços físicos — essencial para proteção e realocação.'
+      },
+      {
+        q: 'Em um sistema de alocação contígua de tamanho variável, surgem pequenos buracos espalhados entre os processos: a soma do espaço livre seria suficiente para um novo processo, mas não há um buraco contíguo grande o bastante. Isso é:',
+        opts: [
+          'Fragmentação interna, resolvida com paginação',
+          'Fragmentação externa, atenuada por compactação ou evitada com paginação',
+          'Thrashing, resolvido com o modelo do working set',
+          'Colapso do TLB'
+        ],
+        ans: 1,
+        exp: 'Fragmentação EXTERNA: o espaço livre total é suficiente, mas está pulverizado em buracos não contíguos. Soluções: compactação (juntar os buracos — cara) ou paginação (memória física não contígua, eliminando o problema externo). A fragmentação INTERNA é outra coisa: desperdício DENTRO do bloco alocado, quando ele é maior que o pedido.'
+      },
+      {
+        q: 'Em um sistema de paginação com páginas de 2.048 bytes, o endereço lógico 10.000 corresponde a qual página e qual deslocamento (offset)?',
+        opts: [
+          'Página 4, offset 1.808',
+          'Página 5, offset 1.808',
+          'Página 4, offset 2.048',
+          'Página 3, offset 1.808'
+        ],
+        ans: 0,
+        exp: 'Divide-se o endereço pelo tamanho da página: 10.000 ÷ 2.048 → quociente 4 (página), resto 1.808 (offset). Verificação: 4 × 2.048 + 1.808 = 10.000 ✔. A tabela de páginas mapeia a página 4 para uma moldura (frame) física, e o offset é somado ao início dessa moldura.'
+      },
+      {
+        q: 'Qual afirmação sobre a tabela de páginas INVERTIDA (inverted page table) está correta?',
+        opts: [
+          'Existe uma entrada para cada página de cada processo, como nas tabelas tradicionais',
+          'Existe uma entrada para cada MOLDURA física da memória, indicando qual processo e página a ocupam',
+          'Ela elimina a necessidade de TLB em qualquer cenário',
+          'Ela elimina completamente os page faults'
+        ],
+        ans: 1,
+        exp: 'Tabelas tradicionais têm uma entrada por página LÓGICA de cada processo — consomem muita memória. A invertida inverte a lógica: uma entrada por MOLDURA FÍSICA, economizando espaço. O custo: a busca pode demorar (usa-se hash) e compartilhar memória entre processos fica mais difícil.'
+      },
+      {
+        q: 'Um processo de 8 KB chega e encontra buracos livres de 6 KB, 9 KB e 20 KB (nesta ordem). Qual algoritmo de alocação o colocaria no buraco de 9 KB, o menor que o acomoda?',
+        opts: [
+          'First fit — primeiro buraco suficiente na ordem da lista',
+          'Best fit — busca o menor buraco que acomoda o processo',
+          'Worst fit — aloca sempre no maior buraco disponível',
+          'Quick fit — usa listas separadas por tamanho muito grandes'
+        ],
+        ans: 1,
+        exp: 'Best fit escolhe o menor buraco suficiente: 9 KB. First fit pegaria o primeiro suficiente — aqui também 9 KB por coincidência da ordem, mas em geral first fit é mais rápido (não precisa varrer tudo) e, na prática, costuma ser o melhor compromisso em tempo e utilização. Worst fit escolheria 20 KB.'
+      }
+    ]
+  },
+  {
+    id: 6, name: 'Dimensão Virtual', topic: 'Memória Virtual', icon: '🌀',
+    module: 4, brief: 'Paginação por demanda, page fault e substituição de páginas.',
+    questions: [
+      {
+        q: 'Um processo referencia uma página cujo bit válido-inválido marca <code>i</code> (inválido / não residente). O que acontece em um sistema com paginação por demanda?',
+        opts: [
+          'O programa termina imediatamente com erro de proteção de memória',
+          'Ocorre um page fault: trap ao SO, que carrega a página do disco, atualiza a tabela de páginas e reinicia a instrução',
+          'A MMU cria a página na área de swap automaticamente, sem notificar o SO',
+          'O TLB é esvaziado e o processo segue normalmente'
+        ],
+        ans: 1,
+        exp: 'Page fault: o hardware gera uma trap para o SO, que localiza a página no armazenamento secundário, encontra uma moldura livre (ou substitui uma página), carrega a página, atualiza a tabela e REINICIA a instrução interrompida. Para o processo, tudo é transparente — essa é a essência da memória virtual.'
+      },
+      {
+        q: 'Acesso à memória: 100 ns; tempo de serviço de um page fault: 8 ms; taxa de falhas p = 0,001 (0,1%). O tempo efetivo de acesso (EMAT) é aproximadamente:',
+        opts: [
+          '≈ 8.100 ns',
+          '≈ 810 ns',
+          '≈ 180 ns',
+          '≈ 80.100 ns'
+        ],
+        ans: 0,
+        exp: 'EMAT = (1 − p) × acesso + p × falta = 0,999 × 100 + 0,001 × 8.000.000 = 99,9 + 8.000 ≈ 8.100 ns (≈ 8,1 µs). Conclusão poderosa: apenas 0,1% de page faults degrada o acesso em cerca de 80 vezes — o desempenho é dominado pelas falhas, daí a importância de bons algoritmos de substituição.'
+      },
+      {
+        q: 'Ao aumentar o número de molduras de um processo, o número de page faults AUMENTOU, usando o mesmo algoritmo de substituição. Qual par algoritmo + fenômeno explica isso?',
+        opts: [
+          'LRU com thrashing',
+          'FIFO com a anomalia de Belady',
+          'Ótimo (OPT) com envelhecimento de bits',
+          'Second chance com working set'
+        ],
+        ans: 1,
+        exp: 'Anomalia de Belady: com FIFO, mais molduras podem gerar MAIS falhas em certas strings de referência. Algoritmos de pilha — como LRU e o Ótimo — nunca sofrem a anomalia, pois o conjunto de páginas em memória com m molduras sempre está contido no conjunto com m + 1 molduras.'
+      },
+      {
+        q: 'A utilização da CPU despencou, o grau de multiprogramação subiu e quase todo o tempo do disco vai para swapping. Diagnóstico e tratamento?',
+        opts: [
+          'Race condition — adicionar mutexes nas estruturas críticas',
+          'Thrashing — o processo não tem molduras suficientes; reduzir o grau de multiprogramação e adotar o modelo do conjunto de trabalho (working set)',
+          'Deadlock — executar o algoritmo de detecção e abortar processos',
+          'Fragmentação externa — compactar a memória física'
+        ],
+        ans: 1,
+        exp: 'É o thrashing: o processo não tem molduras para seu conjunto de trabalho (páginas ativas), falha o tempo todo e a CPU fica ociosa esperando paginação — o SO responde aumentando a multiprogramação, agravando o problema. Tratamento: working set / controle por frequência de page faults, ajustando o grau de multiprogramação.'
+      }
+    ]
+  },
+  {
+    id: 7, name: 'O Kernel Final', topic: 'Chefão — Módulos 3 e 4', icon: '👾',
+    module: 0, boss: true, brief: 'Desafio supremo: os tópicos mais traiçoeiros dos dois módulos.',
+    questions: [
+      {
+        q: 'No produtor-consumidor, o consumidor ficou assim: <code>wait(mutex); wait(full); …signal(mutex); signal(empty);</code>. O que pode acontecer quando o buffer está VAZIO?',
+        opts: [
+          'Nada — essa é a ordem correta das operações',
+          'O consumidor bloqueia em <code>wait(full)</code> segurando o mutex; o produtor bloqueia em <code>wait(mutex)</code> — espera circular: DEADLOCK',
+          'O produtor sobrescreve dados não consumidos',
+          'Ocorre race condition no contador readcount'
+        ],
+        ans: 1,
+        exp: 'Regra de ouro: os semáforos de RECURSO (<code>full</code>/<code>empty</code>) vêm ANTES do mutex. Bloquear enquanto segura o mutex impede o outro lado de operar no buffer — espera circular clássica entre consumidor e produtor. A ordem correta do consumidor é: <code>wait(full) → wait(mutex) → … → signal(mutex) → signal(empty)</code>.'
+      },
+      {
+        q: 'Acesso ao TLB: 20 ns; acesso à memória: 100 ns; taxa de acerto do TLB: 80%. Considerando a busca na tabela de páginas em caso de falta, o tempo efetivo de acesso à memória é:',
+        opts: [
+          '140 ns',
+          '120 ns',
+          '130 ns',
+          '160 ns'
+        ],
+        ans: 0,
+        exp: 'Com acerto: TLB + memória = 20 + 100 = 120 ns. Com falta: TLB + tabela de páginas + memória = 20 + 100 + 100 = 220 ns. EMAT = 0,8 × 120 + 0,2 × 220 = 96 + 44 = 140 ns. Por isso o hit ratio do TLB é crítico para o desempenho da paginação.'
+      },
+      {
+        q: 'String de referências: 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5 — com 3 molduras e substituição LRU. Quantos page faults ocorrem?',
+        opts: [
+          '10',
+          '9',
+          '12',
+          '7'
+        ],
+        ans: 0,
+        exp: 'LRU descarta a página usada há mais tempo. Trace: 1, 2, 3 (3 faltas) → 4 descarta 1 (4ª) → 1 descarta 2 (5ª) → 2 descarta 3 (6ª) → 5 descarta 4 (7ª) → 1 e 2 são acertos → 3 descarta 5 (8ª) → 4 descarta 1 (9ª) → 5 descarta 2 (10ª). Total: 10 faltas. (Com FIFO seriam 9 — e com 4 molduras o FIFO pioraria para 10: anomalia de Belady!)'
+      },
+      {
+        q: 'Qual afirmação diferencia corretamente SEGMENTAÇÃO de PAGINAÇÃO?',
+        opts: [
+          'Ambas dividem a memória em blocos de tamanho fixo, invisíveis ao programador',
+          'A segmentação reflete a visão lógica do programador — blocos de tamanho variável (código, pilha, dados) — e pode sofrer fragmentação externa; a paginação usa blocos fixos e transparentes ao usuário',
+          'A paginação sofre fragmentação externa; a segmentação sofre apenas fragmentação interna',
+          'A segmentação elimina a necessidade de qualquer estrutura de mapeamento de endereços'
+        ],
+        ans: 1,
+        exp: 'Paginação: unidades FIXAS (páginas/molduras), transparentes ao usuário, sem fragmentação externa — mas sem significado lógico. Segmentação: unidades LÓGICAS de tamanho variável, visíveis ao programador, que facilitam proteção e compartilhamento por tipo (ex.: segmento de código somente leitura) — porém sofre fragmentação externa, como a alocação contígua.'
+      }
+    ]
+  }
+];
+
+/* ============================================================
+   KERNEL QUEST — Engine
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+/* ---------- armazenamento local ---------- */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+
+/* ---------- estado ---------- */
+const state = {
+  best: LS.get('kq34_best', 0),
+  stars: LS.get('kq34_stars', new Array(MISSIONS.length).fill(null)),
+  unlocked: LS.get('kq34_unlocked', 1),
+  muted: LS.get('kq34_muted', false),
+  run: null,
+  cur: null
+};
+
+/* ---------- áudio (WebAudio, sem arquivos externos) ---------- */
+let actx = null;
+function ac(){
+  if(!actx){ try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+  if(actx && actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function beep(freq, dur, type, gain, delay){
+  if(state.muted) return;
+  const c = ac(); if(!c) return;
+  dur = dur || .09; type = type || 'square'; gain = gain || .035; delay = delay || 0;
+  const t = c.currentTime + delay;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + dur + .02);
+}
+const sfx = {
+  click(){ beep(520, .05, 'square', .022); },
+  correct(){ beep(660, .08, 'square', .04); beep(880, .12, 'square', .04, .08); },
+  wrong(){ beep(190, .22, 'sawtooth', .045); beep(140, .26, 'sawtooth', .04, .08); },
+  combo(){ [523, 659, 784, 1046].forEach((f, i) => beep(f, .07, 'triangle', .035, i * .06)); },
+  win(){ [523, 659, 784, 1046, 1318].forEach((f, i) => beep(f, .12, 'triangle', .04, i * .09)); },
+  boss(){ [220, 196, 175, 147].forEach((f, i) => beep(f, .18, 'sawtooth', .04, i * .14)); }
+};
+
+/* ---------- utilidades ---------- */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function multiplier(streak){
+  if(streak >= 8) return 4;
+  if(streak >= 5) return 3;
+  if(streak >= 2) return 2;
+  return 1;
+}
+
+/* ---------- telas ---------- */
+const screens = {
+  start: $('#screen-start'), map: $('#screen-map'), game: $('#screen-game'),
+  result: $('#screen-result'), final: $('#screen-final')
+};
+function show(name){
+  Object.keys(screens).forEach(k => screens[k].classList.toggle('active', k === name));
+  $('#hud').hidden = (name === 'start');
+  $('#hud-score-wrap').hidden = !state.run;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function updateHUD(){
+  $('#hud-score').textContent = state.run ? state.run.score : 0;
+  const chip = $('#hud-combo');
+  const st = state.run ? state.run.streak : 0;
+  const mult = multiplier(st);
+  if(st >= 2){
+    chip.hidden = false;
+    chip.textContent = '🔥 COMBO x' + mult + ' · ' + st;
+    chip.className = 'combo-chip x' + Math.min(mult, 4);
+    chip.style.animation = 'none'; void chip.offsetWidth; chip.style.animation = '';
+  } else {
+    chip.hidden = true;
+  }
+}
+
+/* ---------- mapa ---------- */
+function renderMap(){
+  const grid = $('#map-grid');
+  grid.innerHTML = '';
+  MISSIONS.forEach((m, i) => {
+    const locked = i >= state.unlocked;
+    const stars = state.stars[i];
+    const done = stars !== null;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'mission-card' + (m.module === 4 ? ' mod4' : '') + (m.boss ? ' boss' : '') + (locked ? ' locked' : '');
+    card.setAttribute('aria-label', 'Missão ' + m.id + ': ' + m.name + (locked ? ' (bloqueada)' : ''));
+    const starHtml = [0, 1, 2].map(s => '<span class="' + (done && s < stars ? 'on' : '') + '">★</span>').join('');
+    const status = locked
+      ? '<span class="mc-status lock">🔒 Bloqueada</span>'
+      : done
+        ? '<span class="mc-status done">✔ Concluída</span>'
+        : '<span class="mc-status' + (m.boss ? ' boss' : '') + '">▶ ' + (m.boss ? 'Encarar o chefão' : 'Disponível') + '</span>';
+    card.innerHTML =
+      '<div class="mc-top"><span class="mc-icon">' + m.icon + '</span>' +
+      '<span class="mc-num">MISSÃO ' + m.id + (m.boss ? ' · CHEFÃO' : '') + '</span></div>' +
+      '<div class="mc-name">' + m.name + '</div>' +
+      '<div class="mc-topic">' + m.topic + ' · ' + m.questions.length + ' questões<br><small>' + m.brief + '</small></div>' +
+      '<div class="mc-foot">' + status + '<span class="mc-stars">' + starHtml + '</span></div>';
+    card.addEventListener('click', () => {
+      if(locked){ sfx.wrong(); return; }
+      sfx.click();
+      startMission(i);
+    });
+    grid.appendChild(card);
+  });
+}
+
+/* ---------- partida ---------- */
+function newRun(){
+  state.run = {
+    score: 0, streak: 0, maxStreak: 0,
+    attempts: new Array(MISSIONS.length).fill(null)
+  };
+  updateHUD();
+  renderMap();
+  show('map');
+}
+function startMission(mi){
+  const m = MISSIONS[mi];
+  state.cur = {
+    mi, m,
+    questions: shuffle(m.questions).map(q => {
+      const opts = shuffle(q.opts.map((txt, idx) => ({ txt: txt, correct: idx === q.ans })));
+      return { q: q.q, exp: q.exp, opts: opts };
+    }),
+    qi: 0, correctCount: 0, missionPoints: 0, answered: false
+  };
+  if(m.boss) sfx.boss(); else sfx.click();
+  show('game');
+  renderQuestion();
+}
+function renderQuestion(){
+  const c = state.cur;
+  const q = c.questions[c.qi];
+  c.answered = false;
+  $('#game-mission').textContent = c.m.icon + ' M' + c.m.id + ' · ' + c.m.name;
+  $('#game-mission').classList.toggle('boss', !!c.m.boss);
+  $('#game-counter').textContent = 'Q ' + (c.qi + 1) + '/' + c.questions.length;
+  $('#progress-fill').style.width = ((c.qi / c.questions.length) * 100) + '%';
+  $('#qtag').textContent = 'M' + c.m.id + ' · ' + c.m.topic;
+  $('#qtext').innerHTML = q.q;
+  const box = $('#opts');
+  box.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  q.opts.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'opt';
+    b.innerHTML = '<span class="letter">' + letters[i] + '</span><span>' + o.txt + '</span>';
+    b.addEventListener('click', () => choose(i));
+    box.appendChild(b);
+  });
+  $('#feedback').hidden = true;
+  updateHUD();
+}
+function choose(i){
+  const c = state.cur;
+  if(!c || c.answered) return;
+  c.answered = true;
+  const q = c.questions[c.qi];
+  const ok = q.opts[i].correct;
+  $$('#opts .opt').forEach((el, idx) => {
+    el.disabled = true;
+    if(q.opts[idx].correct) el.classList.add('correct');
+    else if(idx === i) el.classList.add('wrong');
+    else el.classList.add('dim');
+  });
+  const run = state.run;
+  let gain = 0, mult = 1;
+  if(ok){
+    run.streak++;
+    run.maxStreak = Math.max(run.maxStreak, run.streak);
+    mult = multiplier(run.streak);
+    gain = (c.m.boss ? 150 : 100) * mult;
+    run.score += gain;
+    c.correctCount++;
+    c.missionPoints += gain;
+    sfx.correct();
+    if(run.streak >= 2) setTimeout(sfx.combo, 190);
+  } else {
+    run.streak = 0;
+    sfx.wrong();
+  }
+  updateHUD();
+  const fb = $('#feedback');
+  const head = $('#fb-head');
+  if(ok){
+    head.innerHTML = '✔ CORRETO! <span class="fb-gain">+' + gain + ' pts' + (mult > 1 ? ' · COMBO x' + mult : '') + '</span>';
+    $('#fb-answer').innerHTML = '';
+  } else {
+    const ci = q.opts.findIndex(o => o.correct);
+    head.textContent = '✘ RESPOSTA ERRADA';
+    $('#fb-answer').innerHTML = 'Resposta correta: <b>' + 'ABCD'[ci] + ') ' + q.opts[ci].txt + '</b>';
+  }
+  $('#fb-expl').innerHTML = q.exp;
+  fb.hidden = false;
+  fb.className = 'feedback ' + (ok ? 'ok' : 'bad');
+  $('#progress-fill').style.width = (((c.qi + 1) / c.questions.length) * 100) + '%';
+  $('#btn-continue').textContent = (c.qi + 1 >= c.questions.length) ? 'FINALIZAR MISSÃO ▸' : 'CONTINUAR ▸';
+  $('#btn-continue').focus();
+}
+function nextQuestion(){
+  const c = state.cur;
+  if(!c || !c.answered) return;
+  c.qi++;
+  if(c.qi < c.questions.length){ sfx.click(); renderQuestion(); }
+  else finishMission();
+}
+function finishMission(){
+  const c = state.cur, m = c.m;
+  const total = c.questions.length;
+  const pct = c.correctCount / total;
+  const stars = pct === 1 ? 3 : (pct >= .75 ? 2 : (pct >= .5 ? 1 : 0));
+  const perfect = c.correctCount === total;
+  if(perfect){ state.run.score += 300; c.missionPoints += 300; }
+  state.run.attempts[c.mi] = { correct: c.correctCount, total: total };
+  const prev = state.stars[c.mi];
+  if(prev === null || stars > prev) state.stars[c.mi] = stars;
+  state.unlocked = Math.max(state.unlocked, Math.min(MISSIONS.length, c.mi + 2));
+  LS.set('kq34_stars', state.stars);
+  LS.set('kq34_unlocked', state.unlocked);
+  if(state.run.score > state.best){ state.best = state.run.score; LS.set('kq34_best', state.best); }
+  updateHUD();
+  $('#res-kicker').textContent = m.boss ? '// Chefão derrotado' : '// Missão concluída';
+  $('#res-name').textContent = m.icon + ' ' + m.name;
+  $('#res-stars').innerHTML = [0, 1, 2].map(s => '<span class="st ' + (s < stars ? 'on' : '') + '">★</span>').join('');
+  $('#res-stats').innerHTML =
+    '<div class="stat-card glass"><div class="stat-val' + (pct === 1 ? ' green' : '') + '">' + c.correctCount + '/' + total + '</div><div class="stat-label">Acertos</div></div>' +
+    '<div class="stat-card glass"><div class="stat-val gold">+' + c.missionPoints + '</div><div class="stat-label">Pontos na missão</div></div>' +
+    '<div class="stat-card glass"><div class="stat-val">' + Math.round(pct * 100) + '%</div><div class="stat-label">Precisão</div></div>';
+  const bonus = $('#res-bonus');
+  bonus.hidden = !perfect;
+  bonus.textContent = '🏆 MISSÃO PERFEITA · BÔNUS +300 PTS';
+  $('#btn-res-next').textContent = (c.mi === MISSIONS.length - 1) ? 'VER RELATÓRIO FINAL ▸' : 'VOLTAR AO MAPA ▸';
+  if(perfect) sfx.win(); else if(pct >= .5) sfx.combo(); else sfx.wrong();
+  show('result');
+  if(m.boss) setTimeout(confetti, 400);
+}
+
+/* ---------- relatório final ---------- */
+function showFinal(){
+  const r = state.run;
+  if(!r) { newRun(); return; }
+  const attempts = r.attempts.filter(a => a);
+  const correct = attempts.reduce((s, a) => s + a.correct, 0);
+  const total = attempts.reduce((s, a) => s + a.total, 0);
+  const pct = total ? Math.round(correct / total * 100) : 0;
+  const ranks = [
+    [95, 'S', 'Lenda do Kernel'],
+    [85, 'A', 'Engenheiro de Sistemas Sênior'],
+    [70, 'B', 'Desenvolvedor de Confiança'],
+    [50, 'C', 'Estagiário Promissor'],
+    [0,  'D', 'Reinicie o Sistema e Tente de Novo']
+  ];
+  const rk = ranks.find(x => pct >= x[0]);
+  const letterEl = $('#fin-rank');
+  letterEl.textContent = rk[1];
+  letterEl.style.animation = 'none'; void letterEl.offsetWidth; letterEl.style.animation = '';
+  $('#fin-rank-name').textContent = rk[2];
+  const isRecord = r.score > state.best;
+  if(isRecord){ state.best = r.score; LS.set('kq34_best', state.best); }
+  $('#fin-stats').innerHTML =
+    '<div class="stat-card glass"><div class="stat-val gold">' + r.score + '</div><div class="stat-label">Pontuação</div></div>' +
+    '<div class="stat-card glass"><div class="stat-val">' + correct + '/' + total + '</div><div class="stat-label">Acertos</div></div>' +
+    '<div class="stat-card glass"><div class="stat-val">' + pct + '%</div><div class="stat-label">Precisão geral</div></div>' +
+    '<div class="stat-card glass"><div class="stat-val green">x' + multiplier(r.maxStreak) + '</div><div class="stat-label">Melhor combo</div></div>';
+  const m3 = { c: 0, t: 0 }, m4 = { c: 0, t: 0 };
+  MISSIONS.forEach((m, i) => {
+    const a = r.attempts[i];
+    if(!a) return;
+    if(m.module === 3){ m3.c += a.correct; m3.t += a.total; }
+    else if(m.module === 4){ m4.c += a.correct; m4.t += a.total; }
+  });
+  const boss = r.attempts[MISSIONS.length - 1] || { correct: 0, total: 0 };
+  const bar = (label, c, t, bossStyle) =>
+    '<div><div class="mbar-label"><span>' + label + '</span><b>' + c + '/' + t + ' · ' + (t ? Math.round(c / t * 100) : 0) + '%</b></div>' +
+    '<div class="mbar"><div class="mbar-fill' + (bossStyle ? ' boss' : '') + '" style="width:' + (t ? (c / t * 100) : 0) + '%"></div></div></div>';
+  $('#fin-bars').innerHTML =
+    bar('MÓDULO 3 · Sincronização de Processos', m3.c, m3.t) +
+    bar('MÓDULO 4 · Gerenciamento de Memória', m4.c, m4.t) +
+    bar('👾 CHEFÃO FINAL', boss.correct, boss.total, true);
+  $('#fin-best').innerHTML = isRecord
+    ? '🏆 <b>NOVO RECORDE!</b> Pontuação máxima registrada: ' + state.best + ' pts'
+    : 'Melhor pontuação registrada: <b>' + state.best + '</b> pts';
+  show('final');
+  sfx.win();
+  if(pct >= 70) setTimeout(confetti, 350);
+}
+
+/* ---------- eventos ---------- */
+$('#btn-start').addEventListener('click', () => { sfx.click(); newRun(); });
+$('#btn-howto').addEventListener('click', () => { sfx.click(); $('#modal-howto').hidden = false; });
+$('#btn-howto-close').addEventListener('click', () => { sfx.click(); $('#modal-howto').hidden = true; });
+$('#modal-howto').addEventListener('click', e => { if(e.target === e.currentTarget) $('#modal-howto').hidden = true; });
+$('#btn-back-start').addEventListener('click', () => { sfx.click(); renderStartBest(); show('start'); });
+$('#btn-res-next').addEventListener('click', () => {
+  sfx.click();
+  if(state.cur && state.cur.mi === MISSIONS.length - 1) showFinal();
+  else { renderMap(); show('map'); }
+});
+$('#btn-again').addEventListener('click', () => { sfx.click(); newRun(); });
+$('#btn-final-map').addEventListener('click', () => { sfx.click(); newRun(); });
+$('#btn-continue').addEventListener('click', nextQuestion);
+$('#btn-reset').addEventListener('click', () => {
+  if(confirm('Zerar TODO o progresso (estrelas, missões desbloqueadas e recorde)?')){
+    state.stars = new Array(MISSIONS.length).fill(null);
+    state.unlocked = 1;
+    state.best = 0;
+    LS.set('kq34_stars', state.stars);
+    LS.set('kq34_unlocked', state.unlocked);
+    LS.set('kq34_best', 0);
+    renderStartBest();
+    newRun();
+  }
+});
+function renderSound(){ $('#btn-sound').textContent = state.muted ? '🔇' : '🔊'; }
+$('#btn-sound').addEventListener('click', () => {
+  state.muted = !state.muted;
+  LS.set('kq34_muted', state.muted);
+  renderSound();
+  if(!state.muted) sfx.click();
+});
+function renderStartBest(){
+  $('#best-line').innerHTML = state.best > 0
+    ? 'Melhor pontuação registrada: <b>' + state.best + '</b> pts'
+    : 'Nenhum recorde ainda — seja o primeiro a gravar seu nome no kernel.';
+}
+
+/* ---------- teclado ---------- */
+document.addEventListener('keydown', e => {
+  const modal = $('#modal-howto');
+  if(!modal.hidden){
+    if(e.key === 'Escape' || e.key === 'Enter') modal.hidden = true;
+    return;
+  }
+  if(screens.start.classList.contains('active')){
+    if(e.key === 'Enter' && (!document.activeElement || document.activeElement.tagName !== 'BUTTON')) newRun();
+    return;
+  }
+  if(!screens.game.classList.contains('active') || !state.cur) return;
+  if(!state.cur.answered){
+    let idx = -1;
+    if(/^[1-4]$/.test(e.key)) idx = parseInt(e.key, 10) - 1;
+    else if(/^[a-dA-D]$/.test(e.key)) idx = 'abcd'.indexOf(e.key.toLowerCase());
+    if(idx >= 0 && idx < 4) choose(idx);
+  } else if(e.key === 'Enter' || e.key === ' '){
+    e.preventDefault();
+    nextQuestion();
+  }
+});
+
+/* ---------- partículas + confete (canvas) ---------- */
+const cvs = $('#fx'), ctx = cvs.getContext('2d');
+let W, H, particles = [], confettiPieces = [];
+function resize(){ W = cvs.width = window.innerWidth; H = cvs.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+particles = Array.from({ length: 46 }, () => ({
+  x: Math.random() * W, y: Math.random() * H,
+  r: Math.random() * 1.8 + .4,
+  vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 - .08,
+  c: ['#00f0ff', '#b14aff', '#ff2d95'][Math.floor(Math.random() * 3)],
+  a: Math.random() * .5 + .15
+}));
+function confetti(){
+  const colors = ['#00f0ff', '#b14aff', '#ff2d95', '#ffc400', '#00ff9d'];
+  for(let i = 0; i < 140; i++){
+    confettiPieces.push({
+      x: Math.random() * W, y: -20 - Math.random() * H * .3,
+      w: Math.random() * 8 + 4, h: Math.random() * 5 + 3,
+      vy: Math.random() * 2.4 + 1.6, vx: (Math.random() - .5) * 1.6,
+      rot: Math.random() * Math.PI, vr: (Math.random() - .5) * .18,
+      c: colors[Math.floor(Math.random() * colors.length)],
+      life: 1
+    });
+  }
+}
+function loop(){
+  if(!document.hidden){
+    ctx.clearRect(0, 0, W, H);
+    for(const p of particles){
+      p.x += p.vx; p.y += p.vy;
+      if(p.x < -10) p.x = W + 10; else if(p.x > W + 10) p.x = -10;
+      if(p.y < -10) p.y = H + 10; else if(p.y > H + 10) p.y = -10;
+      ctx.globalAlpha = p.a;
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+    }
+    confettiPieces = confettiPieces.filter(p => p.life > 0);
+    for(const p of confettiPieces){
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.vy += .015;
+      if(p.y > H + 30) p.life = 0;
+      ctx.save();
+      ctx.globalAlpha = .9;
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- inicialização ---------- */
+renderStartBest();
+renderSound();
+</script>
+</body>
+</html>
