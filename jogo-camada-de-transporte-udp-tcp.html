@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Missão Transporte — UDP × TCP | Jogo da Camada de Transporte</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111a2e; --panel2:#0e1626; --line:#22304f;
+    --txt:#e2e8f0; --mut:#94a3b8;
+    --udp:#f59e0b; --udp2:#fb923c;
+    --tcp:#38bdf8; --tcp2:#22d3ee;
+    --ok:#4ade80; --bad:#f87171; --gold:#fbbf24;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(56,189,248,.14), transparent 60%),
+      radial-gradient(900px 480px at 5% 110%, rgba(245,158,11,.12), transparent 60%),
+      var(--bg);
+    color:var(--txt);
+    font-family:'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size:17px; line-height:1.55; min-height:100vh;
+  }
+  /* ============ pacotes flutuando ao fundo ============ */
+  .floaties{position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0}
+  .floaties span{
+    position:absolute; bottom:-50px; font-size:26px; opacity:.10;
+    animation:floatUp 16s linear infinite; animation-delay:var(--d);
+  }
+  @keyframes floatUp{ to{ transform:translateY(-115vh) rotate(24deg) } }
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 22px; background:rgba(11,18,32,.82); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{font-weight:800; letter-spacing:.3px}
+  .brand .tag{font-size:.72em; color:var(--mut); font-weight:600; margin-left:6px}
+  .hud-right{display:flex; align-items:center; gap:10px}
+  .hud{background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.4);
+       padding:6px 14px; border-radius:999px; font-size:.92em}
+  .icon-btn{background:var(--panel); color:var(--txt); border:1px solid var(--line);
+       border-radius:10px; font-size:1.05em; padding:6px 10px; cursor:pointer}
+  .icon-btn:hover{border-color:var(--tcp)}
+
+  main{position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:26px 22px 60px}
+
+  .screen{display:none}
+  .screen.active{display:block; animation:fadeIn .3s ease}
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+
+  /* ============ menu ============ */
+  .hero{text-align:center; padding:26px 0 10px}
+  .hero h1{font-size:clamp(1.9rem, 4.6vw, 3.2rem); line-height:1.15; letter-spacing:-.5px}
+  .grad{background:linear-gradient(90deg, var(--udp2), var(--tcp2));
+        -webkit-background-clip:text; background-clip:text; color:transparent}
+  .lead{max-width:820px; margin:16px auto 0; color:var(--mut); font-size:1.05em}
+  .lead .u{color:var(--udp2)} .lead .t{color:var(--tcp)}
+  .menu-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:18px; margin-top:30px}
+  .card{
+    display:flex; flex-direction:column; gap:8px; text-align:left;
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:22px 24px; color:var(--txt); cursor:pointer;
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+    font-family:inherit; font-size:1em;
+  }
+  .card:hover{transform:translateY(-4px)}
+  .card .emoji{font-size:2em}
+  .card b{font-size:1.25em}
+  .card small{color:var(--mut); font-size:.92em}
+  .udp-card:hover{border-color:var(--udp); box-shadow:0 8px 30px rgba(245,158,11,.18)}
+  .tcp-card:hover{border-color:var(--tcp); box-shadow:0 8px 30px rgba(56,189,248,.18)}
+  .quiz-card:hover{border-color:var(--gold); box-shadow:0 8px 30px rgba(251,191,36,.15)}
+  .learn-card:hover{border-color:var(--ok); box-shadow:0 8px 30px rgba(74,222,128,.15)}
+  .hint{margin-top:26px; text-align:center; color:var(--mut); font-size:.95em;
+        background:var(--panel2); border:1px dashed var(--line); border-radius:14px; padding:14px 18px}
+
+  /* ============ cabeçalho das telas de jogo ============ */
+  .game-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px}
+  .game-head h2{font-size:clamp(1.3rem, 2.6vw, 1.9rem)}
+  .btn-back{background:transparent; border:1px solid var(--line); color:var(--mut);
+    border-radius:10px; padding:8px 14px; cursor:pointer; font-family:inherit}
+  .btn-back:hover{color:var(--txt); border-color:var(--tcp)}
+  .brief{color:var(--mut); margin-bottom:14px; font-size:.98em}
+  .brief b{color:var(--txt)}
+
+  .hud-bar{background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    padding:10px 16px; margin-bottom:12px; font-size:.98em}
+
+  .stage-wrap{display:flex; flex-direction:column; gap:12px}
+  .game-stage{position:relative; background:var(--panel2); border:1px solid var(--line);
+    border-radius:16px; overflow:hidden}
+  canvas{display:block}
+
+  .btn-big{
+    width:100%; padding:16px 20px; border:none; border-radius:14px; cursor:pointer;
+    font-family:inherit; font-size:1.15em; font-weight:800; letter-spacing:.4px; color:#0b1220;
+    transition:filter .12s ease, transform .08s ease;
+  }
+  .btn-big:active{transform:scale(.985)}
+  .btn-big.udp{background:linear-gradient(90deg, var(--udp), var(--udp2))}
+  .btn-big.tcp{background:linear-gradient(90deg, var(--tcp), var(--tcp2))}
+  .btn-big:disabled{filter:grayscale(.6) brightness(.7); cursor:not-allowed}
+  .hidden{display:none !important}
+
+  .end-panel{
+    background:var(--panel2); border:1px solid var(--line); border-radius:16px;
+    padding:22px 24px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center;
+  }
+  .overlay h3{font-size:1.5em}
+  .overlay .insight{
+    max-width:640px; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.35);
+    border-radius:12px; padding:12px 16px; font-size:.95em; text-align:left;
+  }
+  .row{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:6px}
+  .btn{
+    background:var(--panel); color:var(--txt); border:1px solid var(--line);
+    border-radius:12px; padding:10px 18px; cursor:pointer; font-family:inherit; font-size:1em; font-weight:600;
+  }
+  .btn:hover{border-color:var(--tcp)}
+  .btn.udp:hover{border-color:var(--udp)}
+  .btn.gold:hover{border-color:var(--gold)}
+  .btn.tcp{border-color:rgba(56,189,248,.5)}
+  .btn.udp{border-color:rgba(245,158,11,.5)}
+
+  /* ============ TCP ============ */
+  .cards-row{display:flex; flex-wrap:wrap; gap:12px; justify-content:center}
+  .hs-card{
+    display:flex; flex-direction:column; gap:4px; min-width:180px;
+    background:var(--panel); color:var(--txt); border:1px solid var(--tcp);
+    border-radius:14px; padding:14px 18px; cursor:pointer; font-family:inherit; font-size:1em;
+  }
+  .hs-card b{font-size:1.1em}
+  .hs-card span{color:var(--mut); font-size:.85em}
+  .hs-card:hover{background:rgba(56,189,248,.1)}
+  .hs-card.done{opacity:.4; border-color:var(--ok); cursor:default}
+  .hs-card.shake{animation:shake .35s ease}
+  @keyframes shake{ 25%{transform:translateX(-6px)} 50%{transform:translateX(6px)} 75%{transform:translateX(-4px)} }
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{border:1px solid var(--line); border-radius:999px; padding:5px 12px;
+    font-size:.82em; font-weight:700; color:var(--mut); background:var(--panel2)}
+  .chip.flying{color:var(--tcp2); border-color:var(--tcp); animation:pulse 1s ease infinite}
+  .chip.lost{color:var(--bad); border-color:var(--bad)}
+  .chip.acked{color:var(--ok); border-color:var(--ok)}
+  @keyframes pulse{ 50%{opacity:.55} }
+
+  .window-line{display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:.95em; color:var(--mut)}
+  .window-line b{color:var(--tcp2); font-size:1.1em}
+  .wblocks{display:flex; gap:5px}
+  .wblock{width:26px; height:26px; border-radius:6px; border:1px solid var(--line); background:transparent;
+    transition:background .2s ease}
+  .wblock.on{background:linear-gradient(180deg, var(--tcp), var(--tcp2)); border-color:var(--tcp2);
+    box-shadow:0 0 10px rgba(34,211,238,.5)}
+
+  .game-msg{min-height:1.6em; color:#fcd34d; font-size:.98em}
+
+  /* ============ revisão / tabelas ============ */
+  .learn-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:14px 0 22px}
+  .learn-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 20px}
+  .learn-card h3{margin-bottom:10px; font-size:1.1em}
+  .learn-card p{color:var(--mut); font-size:.93em}
+  .learn-card p b{color:var(--txt)}
+  .learn-card.udp{border-top:3px solid var(--udp)}
+  .learn-card.tcp{border-top:3px solid var(--tcp)}
+  .learn-card:first-child{border-top:3px solid var(--ok)}
+  .cmp{width:100%; border-collapse:collapse; margin:10px 0 20px; font-size:.95em}
+  .cmp th, .cmp td{border:1px solid var(--line); padding:10px 14px; text-align:left}
+  .cmp th{background:var(--panel2); font-size:.9em}
+  .cmp td:first-child{color:var(--mut); font-weight:700; width:32%}
+  .cmp .u-col{color:var(--udp2)} .cmp .t-col{color:var(--tcp2)}
+  .src{color:var(--mut); font-size:.85em; margin:8px 0 18px}
+  .center{justify-content:center}
+
+  /* ============ quiz ============ */
+  #quiz-box, #quiz-result{background:var(--panel); border:1px solid var(--line);
+    border-radius:18px; padding:26px 28px; margin-top:8px}
+  .quiz-progress{color:var(--mut); font-size:.9em; margin-bottom:12px}
+  #quiz-q{font-size:1.25em; font-weight:700; margin-bottom:18px}
+  #quiz-opts{display:flex; flex-direction:column; gap:10px}
+  .opt{
+    text-align:left; background:var(--panel2); color:var(--txt);
+    border:1px solid var(--line); border-radius:12px; padding:13px 16px;
+    cursor:pointer; font-family:inherit; font-size:1em; transition:border-color .12s ease, background .12s ease;
+  }
+  .opt:hover:not(:disabled){border-color:var(--tcp)}
+  .opt:disabled{cursor:default; opacity:.75}
+  .opt.right{border-color:var(--ok); background:rgba(74,222,128,.14); opacity:1; font-weight:700}
+  .opt.wrong{border-color:var(--bad); background:rgba(248,113,113,.12); opacity:1}
+  #quiz-expl{margin-top:16px; background:var(--panel2); border-left:4px solid var(--gold);
+    border-radius:10px; padding:12px 16px; font-size:.95em; color:var(--mut)}
+  #quiz-expl b{color:var(--txt)}
+  #quiz-next{margin-top:16px}
+  .big-score{font-size:2.6em; font-weight:800; color:var(--gold); margin:8px 0}
+  .mut{color:var(--mut); font-size:.92em}
+
+  /* ============ placar final ============ */
+  .end-box{background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:28px; text-align:center; margin:12px 0 26px}
+  #end-title{font-size:1.6em; font-weight:800}
+  h3.sub{margin:6px 0 10px}
+
+  @media (max-width:760px){
+    .menu-grid{grid-template-columns:1fr}
+    .learn-grid{grid-template-columns:1fr}
+    main{padding:18px 14px 50px}
+  }
+</style>
+</head>
+<body>
+
+<div class="floaties" aria-hidden="true">
+  <span style="--d:0s;  left:6%">📦</span>
+  <span style="--d:3s;  left:18%">🛣️</span>
+  <span style="--d:6s;  left:32%">📦</span>
+  <span style="--d:1.5s;left:47%">📡</span>
+  <span style="--d:8s;  left:60%">📦</span>
+  <span style="--d:4.5s;left:73%">🛣️</span>
+  <span style="--d:10s; left:85%">📦</span>
+  <span style="--d:7s;  left:94%">📡</span>
+</div>
+
+<header class="topbar">
+  <div class="brand">🌐 Missão Transporte <span class="tag">Camada de Transporte · UDP × TCP</span></div>
+  <div class="hud-right">
+    <div class="hud">⭐ Pontos: <b id="hud-score">0</b></div>
+    <button id="btn-sound" class="icon-btn" title="Ligar/desligar som">🔊</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ==================== MENU ==================== -->
+  <section id="screen-menu" class="screen active">
+    <div class="hero">
+      <h1>Batalha da <span class="grad">Camada de Transporte</span></h1>
+      <p class="lead">Dois protocolos, dois estilos: <b class="u">UDP</b> dispara datagramas sem pedir licença
+        (rápido, mas sem garantias) e <b class="t">TCP</b> confirma cada passo (confiável, porém conversador).
+        Jogue os dois modos e enfrente o quiz final!</p>
+    </div>
+    <div class="menu-grid">
+      <button class="card udp-card" onclick="startUdp()">
+        <span class="emoji">🚀</span>
+        <b>Modo UDP</b>
+        <small>Entregue o máximo de datagramas em 25 segundos — sem handshake, sem ACK, sem retransmissão.
+        O que se perder no caminho, perdeu de vez.</small>
+      </button>
+      <button class="card tcp-card" onclick="startTcp()">
+        <span class="emoji">🔗</span>
+        <b>Modo TCP</b>
+        <small>Estabeleça a conexão com o handshake de 3 tempos e entregue 8 segmentos com ACKs,
+        retransmissão e janela de congestionamento.</small>
+      </button>
+      <button class="card quiz-card" onclick="startQuiz()">
+        <span class="emoji">🧠</span>
+        <b>Quiz Final</b>
+        <small>10 questões sobre a Camada de Transporte, UDP e TCP — cada resposta vem com explicação
+        do conteúdo estudado.</small>
+      </button>
+      <button class="card learn-card" onclick="showScreen('screen-learn')">
+        <span class="emoji">📚</span>
+        <b>Revisão rápida</b>
+        <small>O resumo da teoria em 3 cartões + tabela comparativa UDP × TCP. Ideal para abrir a apresentação.</small>
+      </button>
+    </div>
+    <p class="hint">💡 Para apresentar em sala: abra o arquivo no navegador e aperte <b>F11</b> (tela cheia).
+      Roteiro sugerido: <b>1)</b> Revisão rápida → <b>2)</b> Modo UDP → <b>3)</b> Modo TCP → <b>4)</b> Quiz com a turma.
+      Funciona 100% offline, basta um navegador.</p>
+  </section>
+
+  <!-- ==================== REVISÃO ==================== -->
+  <section id="screen-learn" class="screen">
+    <div class="game-head">
+      <h2>📚 Revisão rápida — Camada de Transporte</h2>
+      <button class="btn-back" onclick="showScreen('screen-menu')">← Menu</button>
+    </div>
+    <div class="learn-grid">
+      <div class="learn-card">
+        <h3>🌐 Camada de Transporte</h3>
+        <p>Quando o usuário usa uma aplicação de rede, os dados precisam chegar de um host a outro.
+        Quem faz o <b>transporte lógico</b> é a camada de Transporte — a transmissão <b>física</b> é papel
+        da camada de Enlace. Sua função central: <b>entregar dados de um processo (que roda em uma porta)
+        do host origem para um processo (em outra porta) do host destino</b>. Existem dois tipos de serviço:
+        <b>orientado</b> e <b>não orientado à conexão</b> — o primeiro garante entrega sem erros e na ordem
+        de envio; o segundo, não.</p>
+      </div>
+      <div class="learn-card udp">
+        <h3>🚀 UDP — User Datagram Protocol</h3>
+        <p>Protocolo de transporte <b>não orientado à conexão</b>: não mantém uma conexão entre remetente
+        e destinatário. É <b>não confiável</b> — nada garante que os segmentos enviados cheguem corretamente
+        ao destino. Oferece apenas a principal função da camada de Transporte (entrega porta → porta).
+        Em troca, é escolhido <b>pela agilidade na transmissão das informações</b>.</p>
+      </div>
+      <div class="learn-card tcp">
+        <h3>🔗 TCP — Transmission Control Protocol</h3>
+        <p><b>Orientado à conexão</b> e confiável: oferece <b>controle de erros, retransmissão de mensagens
+        erradas, controle de fluxo, controle de congestionamento e sequenciamento</b> das mensagens.
+        Para isso, diversas informações vão junto nas mensagens — há <b>muito overhead</b>, mais volume
+        trafegando na rede e um protocolo bem mais complexo que o UDP. É o <b>coração do conjunto TCP/IP</b>
+        e fica entre a camada de aplicativos e a camada de rede.</p>
+      </div>
+    </div>
+    <table class="cmp">
+      <tr><th>Característica</th><th class="u-col">🚀 UDP</th><th class="t-col">🔗 TCP</th></tr>
+      <tr><td>Tipo de conexão</td><td>Não orientado à conexão</td><td>Orientado à conexão (handshake de 3 tempos)</td></tr>
+      <tr><td>Confiabilidade</td><td>Não confiável — sem garantia de entrega</td><td>Confiável — controle de erros e retransmissão</td></tr>
+      <tr><td>Ordem dos dados</td><td>Não garantida</td><td>Garantida (sequenciamento)</td></tr>
+      <tr><td>Fluxo e congestionamento</td><td>Não controla</td><td>Controla fluxo e congestionamento</td></tr>
+      <tr><td>Velocidade e overhead</td><td>Muito rápido, pouca sobrecarga</td><td>Mais lento, muito overhead (mais volume na rede)</td></tr>
+      <tr><td>Exemplos comuns de uso</td><td>Voz e vídeo ao vivo, jogos online, DNS</td><td>Navegação na web, e-mail, transferência de arquivos</td></tr>
+    </table>
+    <p class="src">Conteúdo baseado no material de estudo da unidade (Camada de Transporte, UDP e TCP) e no
+      e-book indicado: RAEDER, Mateus. <i>Redes de computadores: conceitos, aplicações e tipos de transporte</i>, Cap. 3.</p>
+    <div class="row">
+      <button class="btn" onclick="showScreen('screen-menu')">← Voltar ao menu</button>
+      <button class="btn udp" onclick="startUdp()">🚀 Começar pelo Modo UDP</button>
+    </div>
+  </section>
+
+  <!-- ==================== MODO UDP ==================== -->
+  <section id="screen-udp" class="screen">
+    <div class="game-head">
+      <h2>🚀 Modo UDP — Datagramas à solta</h2>
+      <button class="btn-back" onclick="showScreen('screen-menu')">← Menu</button>
+    </div>
+    <p class="brief">Você é o host origem. Clique em <b>ENVIAR DATAGRAMA</b> (ou aperte <b>barra de espaço</b>) o mais
+      rápido que conseguir. O UDP não faz handshake, não espera ACK e <b>não retransmite nada</b> — alguns datagramas
+      simplesmente vão se perder no caminho.</p>
+    <div id="udp-hud" class="hud-bar">…</div>
+    <div class="stage-wrap">
+      <div class="game-stage">
+        <canvas id="udp-canvas" data-h="270"></canvas>
+      </div>
+      <div id="udp-over" class="end-panel hidden"></div>
+      <button id="udp-send" class="btn-big udp" onclick="udp.send()">📨 ENVIAR DATAGRAMA &nbsp;[espaço]</button>
+    </div>
+  </section>
+
+  <!-- ==================== MODO TCP ==================== -->
+  <section id="screen-tcp" class="screen">
+    <div class="game-head">
+      <h2>🔗 Modo TCP — Conexão confiável</h2>
+      <button class="btn-back" onclick="showScreen('screen-menu')">← Menu</button>
+    </div>
+    <p class="brief">Aqui nada se perde para sempre: primeiro o <b>handshake de 3 tempos</b> abre a conexão; depois cada
+      segmento exige um <b>ACK</b> de confirmação. Perdeu o segmento? <b>TIMEOUT e retransmissão</b> (o TCP mantinha
+      uma cópia!). Cada ACK aumenta a <b>janela de congestionamento</b>; cada perda derruba a janela.</p>
+    <div class="stage-wrap">
+      <div id="tcp-cards" class="cards-row"></div>
+      <div class="game-stage">
+        <canvas id="tcp-canvas" data-h="250"></canvas>
+      </div>
+      <div id="tcp-over" class="end-panel hidden"></div>
+      <div id="tcp-chips" class="chips"></div>
+      <div class="window-line">Janela de congestionamento: <b id="tcp-window-num">1</b>
+        <div id="tcp-window-blocks" class="wblocks"></div>
+      </div>
+      <p id="tcp-msg" class="game-msg">…</p>
+      <button id="tcp-send" class="btn-big tcp hidden" onclick="tcp.sendSeg()">📨 ENVIAR SEGMENTO</button>
+    </div>
+  </section>
+
+  <!-- ==================== QUIZ ==================== -->
+  <section id="screen-quiz" class="screen">
+    <div class="game-head">
+      <h2>🧠 Quiz Final — UDP × TCP</h2>
+      <button class="btn-back" onclick="showScreen('screen-menu')">← Menu</button>
+    </div>
+    <div id="quiz-box">
+      <p id="quiz-progress" class="quiz-progress">Questão 1 de 10</p>
+      <p id="quiz-q">…</p>
+      <div id="quiz-opts"></div>
+      <p id="quiz-expl" class="hidden"></p>
+      <button id="quiz-next" class="btn hidden" onclick="nextQuestion()">Próxima questão ➡️</button>
+    </div>
+    <div id="quiz-result" class="hidden"></div>
+  </section>
+
+  <!-- ==================== PLACAR FINAL ==================== -->
+  <section id="screen-end" class="screen">
+    <h2>🏁 Placar final</h2>
+    <div class="end-box">
+      <p id="end-title">🎓 Aprendiz de Protocolos</p>
+      <p class="big-score">⭐ <span id="end-score">0</span> pontos</p>
+      <p class="mut">Pontos vêm de: datagramas entregues no modo UDP (+5 cada), handshake TCP completo (+50),
+        segmentos confirmados no modo TCP (+25 cada) e quiz (+30 por acerto).</p>
+      <div class="row">
+        <button class="btn" onclick="resetScore(); showScreen('screen-menu');">🔄 Recomeçar do zero</button>
+        <button class="btn" onclick="showScreen('screen-menu')">← Menu (manter pontos)</button>
+      </div>
+    </div>
+    <h3 class="sub">📦 Resumo para fechar a apresentação — UDP × TCP</h3>
+    <table class="cmp">
+      <tr><th>Característica</th><th class="u-col">🚀 UDP</th><th class="t-col">🔗 TCP</th></tr>
+      <tr><td>Tipo de conexão</td><td>Não orientado à conexão</td><td>Orientado à conexão (handshake de 3 tempos)</td></tr>
+      <tr><td>Confiabilidade</td><td>Não confiável — sem garantia de entrega</td><td>Confiável — controle de erros e retransmissão</td></tr>
+      <tr><td>Ordem dos dados</td><td>Não garantida</td><td>Garantida (sequenciamento)</td></tr>
+      <tr><td>Fluxo e congestionamento</td><td>Não controla</td><td>Controla fluxo e congestionamento</td></tr>
+      <tr><td>Velocidade e overhead</td><td>Muito rápido, pouca sobrecarga</td><td>Mais lento, muito overhead (mais volume na rede)</td></tr>
+      <tr><td>Exemplos comuns de uso</td><td>Voz e vídeo ao vivo, jogos online, DNS</td><td>Navegação na web, e-mail, transferência de arquivos</td></tr>
+    </table>
+    <p class="src">Para revisar antes de apresentar, consulte o e-book da unidade: RAEDER, Mateus.
+      <i>Redes de computadores: conceitos, aplicações e tipos de transporte</i>, Cap. 3, seções 1.1 a 1.2.4.</p>
+  </section>
+
+</main>
+
+<script>
+'use strict';
+
+/* ==================== utilidades ==================== */
+const $ = (sel) => document.querySelector(sel);
+const rand = (min, max) => Math.random() * (max - min) + min;
+
+let totalScore = 0;
+function addScore(n){
+  totalScore += n;
+  $('#hud-score').textContent = totalScore;
+}
+function resetScore(){
+  totalScore = 0;
+  $('#hud-score').textContent = 0;
+}
+
+/* ==================== som (WebAudio, sem arquivos) ==================== */
+let soundOn = true;
+let audioCtx = null;
+function beep(freq, dur, type, vol){
+  if(!soundOn) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.12, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (dur || 0.08));
+    o.connect(g).connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + (dur || 0.08));
+  }catch(e){ /* áudio indisponível: segue sem som */ }
+}
+function sfx(kind){
+  if(kind === 'send')  beep(520, 0.06, 'square', 0.07);
+  else if(kind === 'ok'){ beep(740, 0.09, 'sine', 0.12); }
+  else if(kind === 'fail') beep(170, 0.18, 'sawtooth', 0.09);
+  else if(kind === 'click') beep(420, 0.04, 'square', 0.05);
+  else if(kind === 'win'){
+    beep(660, 0.1, 'sine', 0.12);
+    setTimeout(() => beep(880, 0.12, 'sine', 0.12), 110);
+    setTimeout(() => beep(1170, 0.16, 'sine', 0.12), 240);
+  }
+}
+$('#btn-sound').addEventListener('click', () => {
+  soundOn = !soundOn;
+  $('#btn-sound').textContent = soundOn ? '🔊' : '🔇';
+});
+
+/* ==================== canvas ==================== */
+function fitCanvas(cv){
+  const w = Math.max(320, Math.floor(cv.parentElement.getBoundingClientRect().width));
+  const h = parseInt(cv.dataset.h || '270', 10);
+  cv.width = w;
+  cv.height = h;
+  cv.style.width = w + 'px';
+  cv.style.height = h + 'px';
+  return {w, h};
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* ==================== troca de telas ==================== */
+function showScreen(id){
+  if(udp.running) udp.stop();
+  if(tcp.running) tcp.stop();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function startUdp(){ udp.start(); }
+function startTcp(){ tcp.start(); }
+
+/* ==================== MODO UDP ==================== */
+const udp = {
+  running:false, raf:0, timer:0,
+  cv:null, ctx:null, W:0, H:0,
+  packets:[], bursts:[],
+  sent:0, delivered:0, lost:0, timeLeft:25,
+  lastSend:0, counter:0,
+
+  start(){
+    showScreen('screen-udp');
+    this.cv = $('#udp-canvas');
+    this.ctx = this.cv.getContext('2d');
+    const dim = fitCanvas(this.cv);
+    this.W = dim.w; this.H = dim.h;
+    this.packets = []; this.bursts = [];
+    this.sent = 0; this.delivered = 0; this.lost = 0;
+    this.timeLeft = 25; this.counter = 0;
+    this.running = true; this.lastSend = 0;
+    $('#udp-over').classList.add('hidden');
+    $('#udp-send').disabled = false;
+    this.hud();
+    clearInterval(this.timer);
+    this.timer = setInterval(() => {
+      this.timeLeft--;
+      this.hud();
+      if(this.timeLeft <= 0) this.end();
+    }, 1000);
+    const step = () => {
+      if(!this.running) return;
+      this.update();
+      this.draw();
+      this.raf = requestAnimationFrame(step);
+    };
+    step();
+    sfx('click');
+  },
+
+  stop(){
+    this.running = false;
+    clearInterval(this.timer);
+    cancelAnimationFrame(this.raf);
+  },
+
+  send(){
+    if(!this.running) return;
+    const now = performance.now();
+    if(now - this.lastSend < 300) return; // ritmo máximo: ~3 datagramas/s
+    this.lastSend = now;
+    this.counter++;
+    // UDP não confirma: ~28% dos datagramas se perdem no caminho, sem reenvio
+    const loseAt = Math.random() < 0.28 ? rand(this.W * 0.30, this.W * 0.75) : null;
+    this.packets.push({
+      x: 90,
+      y: rand(this.H * 0.30, this.H * 0.70),
+      v: rand(6.5, 10),
+      loseAt: loseAt,
+      label: 'D' + this.counter
+    });
+    this.sent++;
+    this.hud();
+    sfx('send');
+  },
+
+  update(){
+    const serverX = this.W - 100;
+    this.packets = this.packets.filter(p => {
+      p.x += p.v;
+      if(p.loseAt !== null && p.x >= p.loseAt){
+        this.bursts.push({x: p.x, y: p.y, life: 26, emoji: '💥'});
+        this.lost++;
+        this.hud();
+        sfx('fail');
+        return false;
+      }
+      if(p.x >= serverX){
+        this.bursts.push({x: serverX, y: p.y, life: 26, emoji: '✅'});
+        this.delivered++;
+        addScore(5);
+        this.hud();
+        sfx('ok');
+        return false;
+      }
+      return true;
+    });
+    this.bursts = this.bursts.filter(b => { b.life--; return b.life > 0; });
+  },
+
+  draw(){
+    const ctx = this.ctx, W = this.W, H = this.H;
+    ctx.clearRect(0, 0, W, H);
+    ctx.setLineDash([6, 8]);
+    ctx.strokeStyle = 'rgba(148,163,184,.35)';
+    ctx.beginPath(); ctx.moveTo(90, H/2); ctx.lineTo(W - 90, H/2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '44px serif'; ctx.textAlign = 'center';
+    ctx.fillText('💻', 55, H/2 + 16);
+    ctx.fillText('🖥️', W - 55, H/2 + 16);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(226,232,240,.8)';
+    ctx.fillText('CLIENTE', 55, H/2 + 42);
+    ctx.fillText('SERVIDOR', W - 55, H/2 + 42);
+    for(const p of this.packets){
+      ctx.fillStyle = '#f59e0b';
+      roundRect(ctx, p.x - 26, p.y - 14, 52, 28, 8);
+      ctx.fill();
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(p.label, p.x, p.y + 4);
+    }
+    for(const b of this.bursts){
+      ctx.globalAlpha = Math.min(1, b.life / 26);
+      ctx.font = '30px serif';
+      ctx.fillText(b.emoji, b.x, b.y + 10);
+      ctx.globalAlpha = 1;
+    }
+  },
+
+  hud(){
+    $('#udp-hud').innerHTML =
+      '⏱ <b>' + this.timeLeft + 's</b> &nbsp;|&nbsp; 📨 Enviados: <b>' + this.sent +
+      '</b> &nbsp;|&nbsp; ✅ Entregues: <b>' + this.delivered +
+      '</b> &nbsp;|&nbsp; 💥 Perdidos: <b>' + this.lost + '</b> (e nenhum será reenviado!)';
+  },
+
+  end(){
+    this.stop();
+    $('#udp-send').disabled = true;
+    const rate = this.sent ? Math.round(this.lost / this.sent * 100) : 0;
+    $('#udp-over').innerHTML =
+      '<h3>⏱ Tempo esgotado!</h3>' +
+      '<p>✅ Entregues: <b>' + this.delivered + '</b> · 💥 Perdidos: <b>' + this.lost + '</b> (' + rate +
+      '% de perda) · Pontos: <b>' + (this.delivered * 5) + '</b></p>' +
+      '<p class="insight">💡 Isso é o UDP: <b>rápido e sem cerimônia</b> — sem handshake, sem ACK e <b>sem ' +
+      'retransmissão</b>. Os datagramas perdidos simplesmente se foram. Excelente quando a agilidade importa mais ' +
+      '(voz, vídeo ao vivo, jogos online); péssimo quando não pode faltar nenhum dado.</p>' +
+      '<div class="row">' +
+      '<button class="btn" onclick="startUdp()">🔁 Jogar de novo</button>' +
+      '<button class="btn tcp" onclick="startTcp()">➡️ Experimentar o Modo TCP</button>' +
+      '</div>';
+    $('#udp-over').classList.remove('hidden');
+    sfx('win');
+  }
+};
+
+/* ==================== MODO TCP ==================== */
+const tcp = {
+  running:false, raf:0,
+  cv:null, ctx:null, W:0, H:0,
+  phase:'handshake', // handshake | transfer | done
+  hsOrder:[], hsIndex:0,
+  arrows:[], packets:[], bursts:[],
+  segs:[], winSize:1, messages:0, retries:0,
+
+  start(){
+    showScreen('screen-tcp');
+    this.cv = $('#tcp-canvas');
+    this.ctx = this.cv.getContext('2d');
+    const dim = fitCanvas(this.cv);
+    this.W = dim.w; this.H = dim.h;
+    this.running = true;
+    this.phase = 'handshake';
+    this.arrows = []; this.packets = []; this.bursts = [];
+    this.segs = Array.from({length: 8}, (_, i) => ({seq: i + 1, state: 'pending'}));
+    this.winSize = 1; this.messages = 0; this.retries = 0;
+    $('#tcp-over').classList.add('hidden');
+    $('#tcp-send').classList.add('hidden');
+    $('#tcp-send').disabled = false;
+    $('#tcp-send').textContent = '📨 ENVIAR SEGMENTO';
+
+    // cartões do handshake embaralhados
+    const defs = [
+      {id:'syn',    label:'1️⃣ SYN',     desc:'Cliente pede conexão'},
+      {id:'synack', label:'2️⃣ SYN-ACK', desc:'Servidor responde e aceita'},
+      {id:'ack',    label:'3️⃣ ACK',     desc:'Cliente confirma a conexão'}
+    ];
+    this.hsOrder = defs.slice().sort(() => Math.random() - 0.5);
+    this.hsIndex = 0;
+    const box = $('#tcp-cards');
+    box.innerHTML = '';
+    this.hsOrder.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'hs-card';
+      b.innerHTML = '<b>' + d.label + '</b><span>' + d.desc + '</span>';
+      b.onclick = () => this.clickHs(b, d.id);
+      box.appendChild(b);
+    });
+    this.msg('Passo 1 — Estabeleça a conexão (handshake em 3 tempos): clique nos cartões na ordem certa.');
+    this.renderChips();
+    this.renderWindow();
+
+    const step = () => {
+      if(!this.running) return;
+      this.update();
+      this.draw();
+      this.raf = requestAnimationFrame(step);
+    };
+    step();
+    sfx('click');
+  },
+
+  stop(){ this.running = false; cancelAnimationFrame(this.raf); },
+
+  msg(t){ $('#tcp-msg').textContent = t; },
+
+  clickHs(btn, id){
+    if(this.phase !== 'handshake') return;
+    const expected = ['syn', 'synack', 'ack'][this.hsIndex];
+    if(id === expected){
+      btn.classList.add('done');
+      btn.disabled = true;
+      this.arrows.push({dir: id === 'synack' ? 's2c' : 'c2s', label: id.toUpperCase(), t: 0});
+      this.hsIndex++;
+      sfx('ok');
+      if(this.hsIndex === 3){
+        this.phase = 'transfer';
+        addScore(50);
+        this.msg('✅ Conexão estabelecida! Agora envie os 8 segmentos — cada um só conta quando o ACK volta. Perdeu? TIMEOUT e retransmissão.');
+        $('#tcp-send').classList.remove('hidden');
+        $('#tcp-send').textContent = '📨 ENVIAR SEGMENTO (SEQ 1)';
+      } else {
+        this.msg(this.hsIndex === 1
+          ? 'SYN enviado… o servidor precisa responder.'
+          : 'SYN-ACK recebido… falta a confirmação final do cliente.');
+      }
+    } else {
+      btn.classList.add('shake');
+      setTimeout(() => btn.classList.remove('shake'), 400);
+      this.msg('❌ Ordem errada! O TCP é rigoroso: primeiro SYN, depois SYN-ACK, por último ACK.');
+      sfx('fail');
+    }
+  },
+
+  sendSeg(){
+    if(this.phase !== 'transfer') return;
+    const next = this.segs.find(s => s.state === 'lost') || this.segs.find(s => s.state === 'pending');
+    if(!next) return;
+    const isRetry = next.state === 'lost';
+    next.state = 'flying';
+    if(isRetry) this.retries++; else this.messages++;
+    const loseAt = Math.random() < 0.24 ? rand(this.W * 0.30, this.W * 0.72) : null;
+    this.packets.push({
+      x: 95, y: rand(this.H * 0.28, this.H * 0.62),
+      v: 6, seq: next.seq, loseAt: loseAt, dir: 1, isRetry: isRetry
+    });
+    $('#tcp-send').disabled = true;
+    this.msg(isRetry
+      ? '🔁 Retransmitindo SEQ ' + next.seq + ' — o TCP mantinha uma cópia do segmento!'
+      : '📤 SEQ ' + next.seq + ' a caminho… aguardando o ACK ' + next.seq + '.');
+    this.renderChips();
+    sfx('send');
+  },
+
+  update(){
+    const serverX = this.W - 95, clientX = 95;
+    const spawned = [];
+    this.packets = this.packets.filter(p => {
+      p.x += p.v * p.dir;
+      if(p.dir === 1){
+        if(p.loseAt !== null && p.x >= p.loseAt){
+          this.bursts.push({x: p.x, y: p.y, life: 26, emoji: '💥'});
+          const seg = this.segs[p.seq - 1];
+          seg.state = 'lost';
+          this.winSize = Math.max(1, Math.floor(this.winSize / 2)); // controle de congestionamento
+          this.renderWindow();
+          $('#tcp-send').disabled = false;
+          $('#tcp-send').textContent = '🔁 RETRANSMITIR SEQ ' + seg.seq;
+          this.msg('⏱ TIMEOUT! O ACK ' + seg.seq + ' nunca chegou. Controle de congestionamento: janela caiu para ' +
+                   this.winSize + '. Retransmita!');
+          this.renderChips();
+          sfx('fail');
+          return false;
+        }
+        if(p.x >= serverX){
+          // chegou ao servidor: ele confere erros e devolve o ACK
+          spawned.push({x: serverX, y: p.y, v: 6.5, seq: p.seq, dir: -1});
+          this.bursts.push({x: serverX, y: p.y, life: 22, emoji: '🔎'});
+          return false;
+        }
+      } else if(p.x <= clientX){
+        const seg = this.segs[p.seq - 1];
+        if(seg.state !== 'acked'){
+          seg.state = 'acked';
+          this.winSize = Math.min(8, this.winSize + 1); // janela cresce a cada confirmação
+          addScore(25);
+          this.renderWindow();
+          this.renderChips();
+          this.msg('✅ ACK ' + seg.seq + ' recebido! Entrega confirmada, sem erros e na ordem. Janela de congestionamento: ' + this.winSize + '.');
+          sfx('ok');
+          const remaining = this.segs.find(s => s.state !== 'acked');
+          if(!remaining){
+            this.finish();
+          } else {
+            const nxt = this.segs.find(s => s.state === 'pending');
+            $('#tcp-send').disabled = false;
+            $('#tcp-send').textContent = nxt
+              ? '📨 ENVIAR SEGMENTO (SEQ ' + nxt.seq + ')'
+              : '📨 ENVIAR SEGMENTO';
+          }
+        }
+        return false;
+      }
+      return true;
+    });
+    this.packets.push(...spawned);
+    this.arrows = this.arrows.filter(a => { a.t += 1; return a.t < 90; });
+    this.bursts = this.bursts.filter(b => { b.life--; return b.life > 0; });
+  },
+
+  finish(){
+    this.phase = 'done';
+    $('#tcp-send').disabled = true;
+    const total = this.messages + this.retries;
+    const overhead = total > 8 ? Math.round((total - 8) / 8 * 100) : 0;
+    $('#tcp-over').innerHTML =
+      '<h3>✅ Conexão concluída com sucesso!</h3>' +
+      '<p><b>8/8 segmentos</b> entregues, <b>sem erros</b> e <b>na ordem certa</b> — com handshake, ACKs, ' +
+      'retransmissão e controle de congestionamento.</p>' +
+      '<p>Segmentos únicos: 8 · Mensagens enviadas: <b>' + this.messages + '</b> · Retransmissões: <b>' +
+      this.retries + '</b> → overhead de ~' + overhead + '% a mais de mensagens na rede. Pontos: <b>' +
+      (8 * 25 + 50) + '</b></p>' +
+      '<p class="insight">💡 Isso é o TCP: <b>confiável, porém mais lento e "conversador"</b>. Toda essa garantia ' +
+      'tem custo — mais informações de controle em cada mensagem (muito <b>overhead</b>) e um protocolo bem mais ' +
+      'complexo que o UDP. (Na vida real, ainda faltaria o handshake de finalização — FIN!) 😄</p>' +
+      '<div class="row">' +
+      '<button class="btn" onclick="startTcp()">🔁 Jogar de novo</button>' +
+      '<button class="btn udp" onclick="startUdp()">↩️ Comparar com o UDP</button>' +
+      '<button class="btn gold" onclick="startQuiz()">🧠 Ir para o Quiz</button>' +
+      '</div>';
+    $('#tcp-over').classList.remove('hidden');
+    sfx('win');
+  },
+
+  renderChips(){
+    const box = $('#tcp-chips');
+    box.innerHTML = '';
+    this.segs.forEach(s => {
+      const d = document.createElement('div');
+      d.className = 'chip ' + s.state;
+      d.textContent =
+        s.state === 'acked' ? 'SEQ ' + s.seq + ' ✔' :
+        s.state === 'lost'  ? 'SEQ ' + s.seq + ' ⏱' :
+        s.state === 'flying'? 'SEQ ' + s.seq + ' ✈' : 'SEQ ' + s.seq;
+      box.appendChild(d);
+    });
+  },
+
+  renderWindow(){
+    const box = $('#tcp-window-blocks');
+    box.innerHTML = '';
+    for(let i = 0; i < 8; i++){
+      const d = document.createElement('div');
+      d.className = 'wblock' + (i < this.winSize ? ' on' : '');
+      box.appendChild(d);
+    }
+    $('#tcp-window-num').textContent = this.winSize;
+  },
+
+  draw(){
+    const ctx = this.ctx, W = this.W, H = this.H;
+    ctx.clearRect(0, 0, W, H);
+    ctx.setLineDash([6, 8]);
+    ctx.strokeStyle = 'rgba(56,189,248,.4)';
+    ctx.beginPath(); ctx.moveTo(95, H/2); ctx.lineTo(W - 95, H/2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '44px serif'; ctx.textAlign = 'center';
+    ctx.fillText('💻', 55, H/2 + 16);
+    ctx.fillText('🖥️', W - 55, H/2 + 16);
+    ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(226,232,240,.8)';
+    ctx.fillText('CLIENTE', 55, H/2 + 42);
+    ctx.fillText('SERVIDOR', W - 55, H/2 + 42);
+    // setas do handshake
+    for(const a of this.arrows){
+      const t = Math.min(1, a.t / 60);
+      const y = a.dir === 'c2s' ? H/2 - 46 : H/2 + 46;
+      const x1 = a.dir === 'c2s' ? 75 : W - 75;
+      const x2 = a.dir === 'c2s' ? W - 75 : 75;
+      const cx = x1 + (x2 - x1) * t;
+      ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(cx, y); ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.font = 'bold 12px monospace'; ctx.fillStyle = '#67e8f9';
+      ctx.fillText(a.label, (x1 + x2) / 2, y - 8);
+    }
+    // segmentos e ACKs
+    for(const p of this.packets){
+      if(p.dir === 1){
+        ctx.fillStyle = p.isRetry ? '#fb923c' : '#38bdf8';
+        roundRect(ctx, p.x - 30, p.y - 14, 60, 28, 8);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('SEQ ' + p.seq, p.x, p.y + 4);
+      } else {
+        ctx.fillStyle = '#4ade80';
+        roundRect(ctx, p.x - 26, p.y - 12, 52, 24, 8);
+        ctx.fill();
+        ctx.fillStyle = '#052e16';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('ACK ' + p.seq, p.x, p.y + 4);
+      }
+    }
+    for(const b of this.bursts){
+      ctx.globalAlpha = Math.min(1, b.life / 26);
+      ctx.font = '30px serif';
+      ctx.fillText(b.emoji, b.x, b.y + 10);
+      ctx.globalAlpha = 1;
+    }
+  }
+};
+
+/* ==================== QUIZ ==================== */
+const QUIZ = [
+  { q:'Quando o usuário utiliza uma aplicação de rede, qual camada é responsável pela transmissão LÓGICA dos dados entre hosts?',
+    opts:['Camada de Enlace','Camada de Transporte','Camada Física','Camada de Aplicação'],
+    correct:1,
+    exp:'A transmissão física é realizada pela camada de Enlace; a camada de Transporte trata o envio de maneira lógica, não física.' },
+  { q:'Quais são os dois principais protocolos da Camada de Transporte?',
+    opts:['HTTP e DNS','IP e ICMP','UDP e TCP','FTP e SMTP'],
+    correct:2,
+    exp:'São exatamente os dois temas desta aula: UDP (não orientado à conexão) e TCP (orientado à conexão).' },
+  { q:'Como o protocolo UDP é caracterizado?',
+    opts:['Orientado à conexão e confiável','Não orientado à conexão e confiável','Orientado à conexão e não confiável','Não orientado à conexão e não confiável'],
+    correct:3,
+    exp:'O UDP não mantém conexão entre remetente e destinatário e não é confiável: nada garante que os segmentos enviados cheguem corretamente ao destino.' },
+  { q:'Qual é a principal função da camada de Transporte, que o UDP oferece?',
+    opts:['Roteamento dos pacotes entre redes diferentes','Entrega de dados de um processo (porta) do host origem para um processo (porta) do host destino','Criptografia dos dados trafegando','Controle do sinal elétrico do cabo'],
+    correct:1,
+    exp:'Essa é a função central da camada: entrega de dados de um processo do host origem (executando em determinada porta) para um processo do host destino (também em uma porta).' },
+  { q:'Por que muitas aplicações de rede utilizam o UDP?',
+    opts:['Porque ele garante a entrega de todos os dados','Porque ele controla o congestionamento da rede','Pela agilidade na transmissão das informações','Porque ele retransmite mensagens perdidas'],
+    correct:2,
+    exp:'Sem handshake e sem garantias, o UDP transmite com muita agilidade — ideal quando a rapidez importa mais que a garantia.' },
+  { q:'Quais funcionalidades o protocolo TCP oferece?',
+    opts:['Controle de erros, retransmissão de mensagens erradas, controle de fluxo, controle de congestionamento e sequenciamento','Apenas entrega rápida, sem confirmação','Somente roteamento entre redes diferentes','Nenhuma funcionalidade além da entrega simples'],
+    correct:0,
+    exp:'O TCP implementa exatamente o que falta ao UDP: controle de erros, retransmissão, controle de fluxo, controle de congestionamento e sequenciamento das mensagens.' },
+  { q:'Por que o TCP gera um maior volume de dados trafegando na rede?',
+    opts:['Porque ele é um protocolo muito antigo','Porque há muito overhead: diversas informações são introduzidas nas mensagens','Porque ele não usa cabeçalhos','Porque ele envia cada byte em um pacote separado'],
+    correct:1,
+    exp:'Para garantir a entrega, o TCP introduz diversas informações de controle nas mensagens — muito overhead, mais volume na rede e maior complexidade.' },
+  { q:'Um serviço de transporte ORIENTADO à conexão garante:',
+    opts:['Entrega instantânea, sem confirmações','Entrega apenas dos dados mais importantes','Entrega de todos os dados, sem erros e exatamente na mesma ordem em que foram enviados','Entrega em ordem aleatória para ganhar tempo'],
+    correct:2,
+    exp:'Essa é a definição do serviço orientado à conexão — o que o TCP faz.' },
+  { q:'Na pilha de protocolos da Internet, o TCP fica posicionado:',
+    opts:['Acima da camada de Aplicação','Dentro da camada Física','Substituindo a camada de Enlace','Entre a camada de aplicativos e a camada de rede'],
+    correct:3,
+    exp:'O TCP serve de intermediário entre os programas de aplicativos e as operações de rede.' },
+  { q:'Qual programa encontra a sequência de roteadores pelos quais uma mensagem é roteada até um destino?',
+    opts:['Traceroute (Unix) ou Tracert (Windows)','Ping','WHOIS','Netstat'],
+    correct:0,
+    exp:'Vivência na área: o Traceroute/Tracert mostra o caminho do seu site até outros sites, roteador por roteador.' }
+];
+
+let qi = 0, qHits = 0, qOrder = [];
+
+function startQuiz(){
+  showScreen('screen-quiz');
+  qi = 0; qHits = 0;
+  $('#quiz-result').classList.add('hidden');
+  $('#quiz-box').classList.remove('hidden');
+  renderQuestion();
+  sfx('click');
+}
+
+function renderQuestion(){
+  const q = QUIZ[qi];
+  $('#quiz-progress').textContent = 'Questão ' + (qi + 1) + ' de ' + QUIZ.length;
+  $('#quiz-q').textContent = q.q;
+  $('#quiz-expl').classList.add('hidden');
+  $('#quiz-next').classList.add('hidden');
+  // embaralha as alternativas mantendo o rastreio da correta
+  qOrder = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+  const box = $('#quiz-opts');
+  box.innerHTML = '';
+  qOrder.forEach((oi, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = String.fromCharCode(65 + i) + ') ' + q.opts[oi];
+    b.onclick = () => answerQ(b, oi === q.correct);
+    box.appendChild(b);
+  });
+}
+
+function answerQ(btn, isCorrect){
+  document.querySelectorAll('#quiz-opts .opt').forEach(b => b.disabled = true);
+  const q = QUIZ[qi];
+  if(isCorrect){
+    btn.classList.add('right');
+    qHits++;
+    addScore(30);
+    sfx('ok');
+  } else {
+    btn.classList.add('wrong');
+    sfx('fail');
+    document.querySelectorAll('#quiz-opts .opt').forEach((b, i) => {
+      if(qOrder[i] === q.correct) b.classList.add('right');
+    });
+  }
+  $('#quiz-expl').innerHTML =
+    (isCorrect ? '✅ <b>Correto!</b> ' : '❌ <b>Quase!</b> ') + q.exp;
+  $('#quiz-expl').classList.remove('hidden');
+  const nxt = $('#quiz-next');
+  nxt.textContent = (qi + 1 < QUIZ.length) ? 'Próxima questão ➡️' : '🏁 Ver resultado do quiz';
+  nxt.classList.remove('hidden');
+}
+
+function nextQuestion(){
+  qi++;
+  if(qi < QUIZ.length) renderQuestion();
+  else quizEnd();
+}
+
+function quizEnd(){
+  $('#quiz-box').classList.add('hidden');
+  const msg =
+    qHits === QUIZ.length ? '🏆 Perfeito! Você é mestre da Camada de Transporte!' :
+    qHits >= 7 ? '🎉 Muito bem! Você domina UDP e TCP.' :
+    qHits >= 5 ? '👍 Bom trabalho! Vale revisar os pontos que faltaram.' :
+    '📚 Sugestão: releia a revisão rápida e o e-book, depois jogue de novo!';
+  $('#quiz-result').innerHTML =
+    '<h3>Resultado do Quiz</h3>' +
+    '<p class="big-score">' + qHits + ' / ' + QUIZ.length + '</p>' +
+    '<p>' + msg + '</p>' +
+    '<p class="mut">Pontos ganhos no quiz: <b>' + (qHits * 30) + '</b></p>' +
+    '<div class="row">' +
+    '<button class="btn" onclick="startQuiz()">🔁 Refazer o quiz</button>' +
+    '<button class="btn gold" onclick="showEnd()">🏆 Ver placar final</button>' +
+    '</div>';
+  $('#quiz-result').classList.remove('hidden');
+  sfx('win');
+}
+
+/* ==================== placar final ==================== */
+function showEnd(){
+  const title =
+    totalScore >= 650 ? '🏆 Mestre da Camada de Transporte' :
+    totalScore >= 400 ? '🥈 Engenheiro de Redes' :
+    '🎓 Aprendiz de Protocolos';
+  $('#end-title').textContent = title;
+  $('#end-score').textContent = totalScore;
+  showScreen('screen-end');
+  sfx('win');
+}
+
+/* ==================== teclado e redimensionamento ==================== */
+document.addEventListener('keydown', (e) => {
+  if(e.code !== 'Space' && e.code !== 'Enter') return;
+  const active = document.querySelector('.screen.active');
+  if(!active) return;
+  if(active.id === 'screen-udp'){
+    if(!$('#udp-over').classList.contains('hidden')) return; // overlay aberto: deixa os botões agirem
+    e.preventDefault();
+    udp.send();
+  } else if(active.id === 'screen-tcp' && tcp.phase === 'transfer'){
+    e.preventDefault();
+    tcp.sendSeg();
+  }
+});
+
+window.addEventListener('resize', () => {
+  if(udp.running && document.getElementById('screen-udp').classList.contains('active')){
+    const dim = fitCanvas(udp.cv); udp.W = dim.w; udp.H = dim.h;
+  }
+  if(tcp.running && document.getElementById('screen-tcp').classList.contains('active')){
+    const dim = fitCanvas(tcp.cv); tcp.W = dim.w; tcp.H = dim.h;
+  }
+});
+</script>
+</body>
+</html>
