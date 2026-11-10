@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RNN Voice Quest — Laboratório 3.1 de Classificação de Áudio</title>
+<style>
+:root{
+  --bg:#0b1020; --bg2:#0e1530; --panel:#131b38; --panel2:#1a2347; --line:#2a3564;
+  --tx:#e8ecff; --tx2:#9aa5cf; --tx3:#6b76a8;
+  --cy:#22d3ee; --vi:#a78bfa; --gr:#34d399; --pk:#f472b6; --am:#fbbf24; --rd:#f87171;
+  --grad:linear-gradient(90deg,#22d3ee,#a78bfa);
+  --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(1200px 600px at 80% -10%,#1b2a5e55,transparent),radial-gradient(900px 500px at -10% 110%,#3b1b5e44,transparent),var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'Segoe UI',Roboto,Ubuntu,sans-serif;min-height:100vh;line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+main{max-width:1000px;margin:0 auto;padding:0 18px 60px}
+.screen{display:none;animation:fadeIn .35s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---------- topbar ---------- */
+header{position:sticky;top:0;z-index:50;background:#0b1020e8;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topbar{max-width:1000px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-weight:800;font-size:1.05rem;letter-spacing:.5px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo .bolt{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo small{color:var(--tx3);font-weight:500;font-size:.72rem;display:block;letter-spacing:0}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.8rem;color:var(--tx2);white-space:nowrap}
+.pill b{color:var(--tx)}
+.pill.xp b{color:var(--cy)}
+.iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--tx2);border-radius:10px;padding:6px 10px;font-size:.85rem;transition:.2s}
+.iconbtn:hover{border-color:var(--cy);color:var(--cy)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:12px 22px;font-size:.95rem;font-weight:700;color:#08101f;background:var(--grad);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px #22d3ee44}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.ghost{background:transparent;color:var(--tx2);border:1px solid var(--line)}
+.btn.ghost:hover{color:var(--cy);border-color:var(--cy);box-shadow:none}
+.btn.small{padding:8px 14px;font-size:.82rem;border-radius:10px}
+.btn.gr{background:linear-gradient(90deg,#34d399,#22d3ee)}
+
+/* ---------- cards / generic ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+.chip{display:inline-block;background:var(--panel2);border:1px solid var(--line);color:var(--tx2);border-radius:999px;padding:4px 12px;font-size:.75rem;margin:3px 3px 0 0}
+.chip.hl{color:var(--cy);border-color:#22d3ee66}
+h1,h2,h3{line-height:1.25}
+.sec-title{font-size:1.5rem;margin-bottom:6px}
+.sec-sub{color:var(--tx2);font-size:.92rem;margin-bottom:18px}
+
+/* ---------- home ---------- */
+#scr-home{padding-top:26px}
+.hero{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(160deg,#131b38,#0d1330 70%);margin-bottom:18px}
+#cvsWave{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
+.hero-in{position:relative;padding:38px 30px;text-align:center}
+.hero h1{font-size:clamp(1.7rem,4.5vw,2.6rem);letter-spacing:1px}
+.hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.tag{color:var(--tx2);max-width:640px;margin:10px auto 0;font-size:.95rem}
+.metachips{margin-top:16px}
+.namebox{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.namebox input{background:var(--panel2);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:12px 16px;font-size:.95rem;min-width:240px;outline:none}
+.namebox input:focus{border-color:var(--cy)}
+.story{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:18px}
+.story .card h3{font-size:1rem;margin-bottom:8px;color:var(--cy)}
+.story .card p{color:var(--tx2);font-size:.87rem}
+.story .card .big{font-size:1.6rem;margin-bottom:6px}
+
+/* ---------- map ---------- */
+#scr-map{padding-top:26px}
+.mapgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:14px}
+.phcard{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;color:var(--tx);transition:.2s;display:flex;flex-direction:column;gap:8px;min-height:150px}
+.phcard:not(.locked):hover{border-color:var(--cy);transform:translateY(-3px);box-shadow:0 10px 26px #0e1a3f88}
+.phcard.locked{opacity:.5;cursor:not-allowed}
+.phcard .phnum{position:absolute;top:12px;right:14px;font-size:.72rem;color:var(--tx3);font-weight:700;letter-spacing:1px}
+.phcard .phicon{font-size:1.7rem}
+.phcard h3{font-size:1rem}
+.phcard .sub{color:var(--tx2);font-size:.78rem;flex:1}
+.phcard .stars{font-size:.85rem;letter-spacing:2px;color:var(--am)}
+.phcard .status{font-size:.75rem;color:var(--gr);font-weight:700}
+.phcard.locked .phicon{filter:grayscale(1)}
+.bosscard{border:1px solid #fbbf2455;background:linear-gradient(160deg,#1d1836,#171135)}
+.bosscard:not(.locked):hover{border-color:var(--am);box-shadow:0 10px 26px #fbbf2422}
+
+/* ---------- phase screen ---------- */
+#scr-phase{padding-top:22px}
+.crumbs{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.phhead{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+.phhead .bigicon{font-size:2.3rem;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.phhead h2{font-size:1.35rem}
+.phhead .sub{color:var(--tx2);font-size:.85rem}
+.tut{border:1px solid #22d3ee44;background:linear-gradient(180deg,#101b3b,#101736);border-radius:16px;padding:18px;margin-bottom:16px}
+.tut h3{color:var(--cy);font-size:1rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.tut p{color:var(--tx2);font-size:.88rem;margin-bottom:10px}
+.tut b,.tut strong{color:var(--tx)}
+.tut ul{margin:4px 0 10px 20px;color:var(--tx2);font-size:.88rem}
+.tut li{margin-bottom:5px}
+.tut code{font-family:var(--mono);background:#0a0f24;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.8rem;color:var(--am)}
+.codebox{background:#0a0f24;border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:.78rem;line-height:1.6;white-space:pre;color:#cdd6ff;margin-top:8px}
+.c-com{color:#5f6f9e;font-style:italic}
+.c-str{color:#fbbf24}
+.c-kw{color:#c792ea}
+.c-num{color:#22d3ee}
+.c-fn{color:#82aaff}
+.c-blank{color:#f472b6;background:#f472b622;border-radius:4px;padding:0 6px;font-weight:700}
+
+.chcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+.chtop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.chtag{font-size:.72rem;font-weight:800;letter-spacing:1px;color:var(--vi);text-transform:uppercase}
+.dots{display:flex;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--panel2);border:1px solid var(--line)}
+.dot.cur{background:var(--cy);border-color:var(--cy)}
+.dot.done{background:var(--gr);border-color:var(--gr)}
+.chq{font-size:1.02rem;font-weight:600;margin-bottom:14px}
+.chq code,.fb code{font-family:var(--mono);background:#0a0f24;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.82em;color:var(--am)}
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--tx);font-size:.88rem;transition:.15s;line-height:1.45}
+.opt .l{font-weight:800;color:var(--vi);min-width:20px}
+.opt:hover:not(:disabled){border-color:var(--cy);transform:translateX(4px)}
+.opt:disabled{cursor:default;opacity:.55}
+.opt.ok{border-color:var(--gr);background:#12352899;opacity:1}
+.opt.ok .l{color:var(--gr)}
+.opt.bad{border-color:var(--rd);background:#3b122099;opacity:1;animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.opt code{font-family:var(--mono);font-size:.82em;color:var(--am)}
+.fb{margin-top:14px;border-radius:12px;padding:13px 16px;font-size:.87rem;display:none}
+.fb.show{display:block;animation:fadeIn .3s}
+.fb.ok{background:#0f2f22;border:1px solid #34d39966;color:#c9f5e5}
+.fb.bad{background:#331320;border:1px solid #f8717166;color:#ffd9e2}
+.fb .ttl{font-weight:800;margin-bottom:4px}
+.nextrow{display:flex;justify-content:flex-end;margin-top:14px;gap:10px}
+
+/* order challenge */
+.pool,.ordrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.pool{min-height:46px}
+.ordrow{background:#0a0f24;border:1px dashed var(--line);border-radius:12px;padding:10px;min-height:66px}
+.stepchip{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:.82rem;color:var(--tx);transition:.15s}
+.stepchip:hover:not(:disabled){border-color:var(--cy);transform:translateY(-2px)}
+.stepchip .n{background:var(--grad);color:#08101f;font-weight:800;border-radius:6px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0}
+.stepchip:disabled{opacity:.85;cursor:default}
+.stepchip.ok{border-color:var(--gr)}
+.stepchip.placed{background:#101c44}
+.hintrow{font-size:.78rem;color:var(--tx3);margin-top:8px}
+
+/* sims */
+.simbox{background:#0a0f24;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.simbox canvas{width:100%;height:auto;display:block;border-radius:8px}
+.simctl{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.simlabel{font-size:.78rem;color:var(--tx3)}
+table.cm{border-collapse:collapse;margin:6px auto;font-family:var(--mono);font-size:.78rem}
+table.cm th,table.cm td{border:1px solid var(--line);padding:7px 12px;text-align:center}
+table.cm th{background:var(--panel2);color:var(--tx2);font-weight:600}
+table.cm td.dg{color:var(--gr);font-weight:700}
+table.cm td.off{color:var(--pk);font-weight:700}
+table.cm .rowlab{color:var(--cy);font-weight:700;background:var(--panel2)}
+.capt{font-size:.78rem;color:var(--tx3);text-align:center;margin-top:6px}
+
+/* overlay / modal / toast */
+.overlay{position:fixed;inset:0;background:#060a18cc;backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100;padding:18px}
+.overlay.show{display:flex}
+.ovcard{background:var(--panel);border:1px solid var(--gr);border-radius:20px;max-width:520px;width:100%;padding:30px;text-align:center;animation:pop .35s ease}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.ovcard .trophy{font-size:3rem}
+.ovcard h2{margin:10px 0 6px}
+.ovcard p{color:var(--tx2);font-size:.9rem}
+.ovstars{font-size:1.8rem;letter-spacing:6px;color:var(--am);margin:10px 0}
+.ovxp{display:inline-block;background:#0f2f22;border:1px solid #34d39966;color:var(--gr);border-radius:999px;padding:6px 16px;font-weight:800;margin-bottom:16px}
+.ovbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.modal{position:fixed;inset:0;background:#060a18cc;display:none;align-items:flex-start;justify-content:center;z-index:110;padding:40px 16px;overflow-y:auto}
+.modal.show{display:flex}
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;max-width:680px;width:100%;padding:24px;position:relative}
+.mcard h2{font-size:1.2rem;margin-bottom:12px;color:var(--cy)}
+.mcard .steps{counter-reset:st}
+.mcard .step{position:relative;padding-left:44px;margin-bottom:14px;color:var(--tx2);font-size:.88rem}
+.mcard .step::before{counter-increment:st;content:counter(st);position:absolute;left:0;top:2px;width:30px;height:30px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--cy);font-size:.85rem}
+.mcard .step b{color:var(--tx)}
+.mcard .step code{font-family:var(--mono);font-size:.8em;color:var(--am)}
+.mclose{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--tx3);font-size:1.3rem}
+.mclose:hover{color:var(--rd)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0f2f22;border:1px solid #34d399;color:#c9f5e5;padding:11px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:200;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 10px 30px #00000066}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.bad{background:#331320;border-color:var(--rd);color:#ffd9e2}
+#cvsConf{position:fixed;inset:0;pointer-events:none;z-index:150}
+
+/* boss */
+.bossbar{height:10px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-bottom:16px;border:1px solid var(--line)}
+.bossbar i{display:block;height:100%;background:linear-gradient(90deg,#fbbf24,#f472b6);width:0;transition:width .4s}
+.bosstag{display:inline-block;background:#fbbf2422;border:1px solid #fbbf2455;color:var(--am);border-radius:999px;padding:3px 12px;font-size:.72rem;font-weight:800;letter-spacing:1px;margin-bottom:10px}
+
+/* certificate */
+#scr-cert{padding-top:26px}
+.cert{background:linear-gradient(170deg,#141d40,#0e1430);border:2px solid #22d3ee88;border-radius:20px;padding:36px 30px;text-align:center;position:relative;overflow:hidden}
+.cert::before{content:"";position:absolute;inset:8px;border:1px dashed #22d3ee33;border-radius:14px;pointer-events:none}
+.cert .crest{font-size:2.6rem}
+.cert h2{font-size:1.1rem;color:var(--tx2);letter-spacing:3px;text-transform:uppercase;margin:6px 0}
+.cert .cname{font-size:1.9rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;margin:8px 0}
+.cert .cstats{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:16px 0}
+.cert .cstat{background:#0a0f24cc;border:1px solid var(--line);border-radius:12px;padding:10px 18px;min-width:110px}
+.cert .cstat .v{font-size:1.3rem;font-weight:800;color:var(--cy)}
+.cert .cstat .k{font-size:.7rem;color:var(--tx3);text-transform:uppercase;letter-spacing:1px}
+.cert .crank{font-size:1.05rem;color:var(--am);font-weight:700;margin-bottom:8px}
+.cert .cfoot{font-size:.72rem;color:var(--tx3);margin-top:14px}
+.pipeline{margin:20px 0}
+.pipegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;margin-top:12px}
+.pipe{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:.8rem;color:var(--tx2)}
+.pipe b{display:block;color:var(--cy);font-size:.82rem;margin-bottom:4px}
+footer{border-top:1px solid var(--line);margin-top:40px}
+.foot{max-width:1000px;margin:0 auto;padding:18px;color:var(--tx3);font-size:.75rem;text-align:center}
+
+@media (max-width:640px){
+  .topbar{gap:8px}
+  .pill{padding:4px 9px;font-size:.72rem}
+  .phhead{flex-direction:column}
+}
+@media print{
+  header,footer,.noprint,#toast,#cvsConf{display:none!important}
+  body{background:#fff;color:#111}
+  .cert{border-color:#333;background:#fff;color:#111}
+  .cert .cname{color:#111;-webkit-text-fill-color:#111}
+  .cert .cstat{background:#fff;color:#111;border-color:#bbb}
+  .cert .cstat .v{color:#111}
+  .cert .cstat .k,.cert .cfoot,.cert h2{color:#444}
+  .cert .crank{color:#7a5b00}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="logo">⚡<span><span class="bolt">RNN VOICE QUEST</span><small>Laboratório 3.1 · Classificação de Áudio</small></span></div>
+    <div class="spacer"></div>
+    <span class="pill xp">⭐ XP: <b id="xpVal">0</b> / <span id="xpMax">0</span></span>
+    <span class="pill">🏅 <b id="rankVal">Aprendiz</b></span>
+    <button class="iconbtn" id="btnGuide" title="Guia do laboratório">📖 Guia</button>
+    <button class="iconbtn" id="btnSound" title="Som">🔊</button>
+    <button class="iconbtn" id="btnReset" title="Reiniciar progresso">↺</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section class="screen active" id="scr-home">
+    <div class="hero">
+      <canvas id="cvsWave"></canvas>
+      <div class="hero-in">
+        <h1>RNN <span class="g">VOICE QUEST</span></h1>
+        <p class="tag">Um jogo-tutorial que te guia, fase por fase, pelo desenvolvimento completo do laboratório <b>3.Lab.1 — Implementação de RNN para Classificação de Áudio</b> (PyTorch + Speech Commands). Leia, jogue, aprenda e chegue ao certificado.</p>
+        <div class="metachips">
+          <span class="chip hl">🎙️ Dataset Speech Commands</span>
+          <span class="chip hl">🔤 10 comandos de voz</span>
+          <span class="chip hl">🧠 Vanilla RNN (PyTorch)</span>
+          <span class="chip hl">📈 MFCC · Treino · Avaliação</span>
+          <span class="chip hl">🏆 8 fases + boss final</span>
+        </div>
+        <div class="namebox">
+          <input id="inpName" maxlength="40" placeholder="Digite seu nome para o certificado...">
+          <button class="btn" id="btnStart">🚀 Iniciar missão</button>
+        </div>
+      </div>
+    </div>
+    <div class="story">
+      <div class="card">
+        <div class="big">📖</div>
+        <h3>Aprenda com o tutorial</h3>
+        <p>Cada fase abre com um <b>tutorial da parte correspondente do notebook</b>: o que fazer, por que fazer e o código real que você escreverá no laboratório.</p>
+      </div>
+      <div class="card">
+        <div class="big">🎮</div>
+        <h3>Jogue os desafios</h3>
+        <p>Quiz, completar código, ordenar o pipeline e simulações interativas (onda sonora, MFCC, célula RNN, curvas de treino e estados ocultos). Errou? Tenta de novo — sem punição além das estrelas.</p>
+      </div>
+      <div class="card">
+        <div class="big">🧪</div>
+        <h3>Replique no notebook</h3>
+        <p>Ao final você terá o passo a passo completo para abrir o <b>3.lab.1-rnn-audio-classification.ipynb</b> e implementar tudo de verdade: dados → MFCC → Dataset → RNN → treino → avaliação → comparação.</p>
+      </div>
+    </div>
+    <div class="card" style="border-color:#22d3ee44">
+      <h3 style="color:var(--cy);font-size:.95rem;margin-bottom:6px">🎯 Contexto do laboratório (Semana 3)</h3>
+      <p style="color:var(--tx2);font-size:.86rem">No laboratório você vai carregar e pré-processar áudio (waveform → MFCC), implementar uma RNN vanilla em PyTorch, treinar e avaliar no dataset <b>Speech Commands</b>, visualizar a dinâmica dos estados ocultos e comparar com um modelo feedforward. As entregas do laboratório são: notebook completo com todas as células executadas, implementação funcional, visualizações e as 9 perguntas de reflexão respondidas — exatamente o que este jogo pratica.</p>
+    </div>
+  </section>
+
+  <!-- ============ MAP ============ -->
+  <section class="screen" id="scr-map">
+    <h2 class="sec-title">🗺️ Mapa do laboratório</h2>
+    <p class="sec-sub">Complete as fases na ordem — cada uma corresponde a uma parte do notebook. Quanto menos erros, mais estrelas.</p>
+    <div class="mapgrid" id="mapGrid"></div>
+  </section>
+
+  <!-- ============ PHASE ============ -->
+  <section class="screen" id="scr-phase">
+    <div class="crumbs">
+      <button class="btn ghost small" id="btnBackMap">← Mapa</button>
+      <span class="pill" id="phCount">Fase 1 de 8</span>
+    </div>
+    <div class="phhead">
+      <div class="bigicon" id="phIcon">🎧</div>
+      <div>
+        <h2 id="phTitle"></h2>
+        <div class="sub" id="phSub"></div>
+      </div>
+    </div>
+    <div class="tut" id="tutBox">
+      <h3>📖 Tutorial — como se faz no laboratório</h3>
+      <div id="tutBody"></div>
+    </div>
+    <div class="chcard">
+      <div class="chtop">
+        <span class="chtag" id="chTag">DESAFIO</span>
+        <div class="dots" id="chDots"></div>
+      </div>
+      <div id="chWrap"></div>
+    </div>
+  </section>
+
+  <!-- ============ CERT ============ -->
+  <section class="screen" id="scr-cert">
+    <div class="cert">
+      <div class="crest">🎓</div>
+      <h2>Certificado de Conclusão</h2>
+      <div class="cname" id="certName">—</div>
+      <div class="crank" id="certRank">—</div>
+      <div class="cstats">
+        <div class="cstat"><div class="v" id="certXp">0</div><div class="k">XP total</div></div>
+        <div class="cstat"><div class="v" id="certStars">0</div><div class="k">Estrelas</div></div>
+        <div class="cstat"><div class="v">9</div><div class="k">Reflexões</div></div>
+        <div class="cstat"><div class="v" id="certDate">—</div><div class="k">Data</div></div>
+      </div>
+      <p style="color:var(--tx2);font-size:.85rem;max-width:560px;margin:0 auto">concluiu o jogo-tutorial do laboratório <b style="color:var(--tx)">3.Lab.1 — RNN Implementation for Audio Classification</b>: dados, MFCC, Dataset, VanillaRNN, treinamento, avaliação, estados ocultos e baseline.</p>
+      <div class="cfoot">Baseado no laboratório da Semana 3 · Deep Learning &amp; Generative AI · jogo educacional estático</div>
+    </div>
+    <div class="pipeline">
+      <h2 class="sec-title" style="font-size:1.15rem">🧭 O pipeline completo que você aprendeu</h2>
+      <div class="pipegrid" id="pipeGrid"></div>
+    </div>
+    <div class="nextrow noprint" style="justify-content:center">
+      <button class="btn ghost" id="btnCertMap">↺ Voltar ao mapa</button>
+      <button class="btn" id="btnPrint">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot">RNN Voice Quest · jogo educacional estático (arquivo HTML único, sem servidor) · baseado no notebook <b>3.lab.1-rnn-audio-classification</b> e no briefing <b>B.3 Laboratório Semana 3</b> · as simulações são ilustrativas, com números verificados do modelo do laboratório.</div>
+</footer>
+
+<!-- overlay fase completa -->
+<div class="overlay" id="doneOv">
+  <div class="ovcard">
+    <div class="trophy" id="doneTrophy">🎉</div>
+    <h2 id="doneTitle">Fase concluída!</h2>
+    <div class="ovstars" id="doneStars">⭐⭐⭐</div>
+    <p id="doneMsg">Você dominou esta parte do laboratório.</p>
+    <div class="ovxp" id="doneXp">+45 XP</div>
+    <div class="ovbtns">
+      <button class="btn ghost" id="btnDoneMap">🗺️ Mapa</button>
+      <button class="btn gr" id="btnDoneNext">Continuar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal guia -->
+<div class="modal" id="modal">
+  <div class="mcard">
+    <button class="mclose" id="btnModalClose">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<canvas id="cvsConf"></canvas>
+
+<script>
+"use strict";
+/* ================= utilitários ================= */
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hl(code){
+  return esc(code).replace(/(?<![\w'"])(#[^\n]*)|('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")|(?<![\w_])(_{3,})(?![\w_])|\b(def|class|return|for|in|if|elif|else|import|from|pass|None|True|False|not|and|or|with|as|super|lambda|print|len|range)\b|\b(\d+(?:\.\d+)?)\b/g,
+    (m,c,s,b,k,n)=> c?`<span class="c-com">${m}</span>`
+      : s?`<span class="c-str">${m}</span>`
+      : b?`<span class="c-blank">${'____'.repeat(Math.max(1,Math.round(b.length/4)))}</span>`
+      : k?`<span class="c-kw">${m}</span>`
+      : `<span class="c-num">${m}</span>`);
+}
+let toastT=null;
+function toast(msg,bad){
+  const t=$('toast'); t.textContent=msg; t.className='show'+(bad?' bad':'');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.className='',2200);
+}
+/* som (WebAudio, sem arquivos) */
+let AC=null;
+function beep(seq){ /* seq: array de [freq, durMs] */
+  if(S.muted) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    let t=AC.currentTime;
+    seq.forEach(([f,d])=>{
+      const o=AC.createOscillator(), g=AC.createGain();
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.12,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+d/1000);
+      o.connect(g).connect(AC.destination); o.start(t); o.stop(t+d/1000+0.05);
+      t+=d/1000;
+    });
+  }catch(e){}
+}
+const sOk =()=>beep([[660,90],[880,140]]);
+const sBad=()=>beep([[200,160]]);
+const sWin=()=>beep([[523,110],[659,110],[784,110],[1047,220]]);
+
+/* ================= estado ================= */
+const SAVE_KEY='rnnquest_v1';
+let S={name:'',xp:0,stars:{},done:{},unlocked:1,bossDone:false,muted:false};
+function save(){ try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){} }
+function load(){ try{const r=localStorage.getItem(SAVE_KEY); if(r)S=Object.assign(S,JSON.parse(r));}catch(e){} }
+
+const MAX_STAR_BONUS=15; // por fase (3 estrelas)
+function totalXpMax(){
+  let t=0; PHASES.forEach(p=>p.ch.forEach(c=>t+=c.xp));
+  t += (PHASES.length-1)*MAX_STAR_BONUS; // bônus de estrelas das 8 fases (boss não dá bônus)
+  return t;
+}
+function rankOf(){
+  const r=S.xp/totalXpMax();
+  if(r>=.9) return 'Mestre das RNNs 🏆';
+  if(r>=.7) return 'Cientista de Áudio 🔬';
+  if(r>=.45)return 'Engenheiro de ML 👷';
+  return 'Aprendiz de Sequências 🎒';
+}
+function refreshHud(){
+  $('xpVal').textContent=S.xp; $('xpMax').textContent=totalXpMax();
+  $('rankVal').textContent=rankOf();
+  $('btnSound').textContent=S.muted?'🔇':'🔊';
+}
+
+/* ================= navegação ================= */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active'); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ================= mapa ================= */
+function starsTxt(n){ return n>0 ? '★'.repeat(n)+'☆'.repeat(3-n) : '☆☆☆'; }
+function renderMap(){
+  const g=$('mapGrid'); g.innerHTML='';
+  PHASES.forEach((p,i)=>{
+    const locked = i>=S.unlocked && !S.done[p.id];
+    const b=document.createElement('button');
+    b.className='phcard'+(locked?' locked':'')+(p.boss?' bosscard':'');
+    b.innerHTML=`<span class="phnum">${p.boss?'BOSS':'FASE '+(i+1)}</span>
+      <span class="phicon">${locked?'🔒':p.icon}</span>
+      <h3>${p.title}</h3>
+      <span class="sub">${p.part}</span>
+      ${p.boss?'':`<span class="stars">${starsTxt(S.stars[p.id]||0)}</span>`}
+      ${S.done[p.id]?'<span class="status">✓ Concluída</span>':(locked?'<span class="sub">Complete a fase anterior</span>':'<span class="status" style="color:var(--cy)">▶ Jogar</span>')}`;
+    if(!locked) b.onclick=()=>openPhase(i);
+    g.appendChild(b);
+  });
+  if(S.bossDone){
+    const cb=document.createElement('button');
+    cb.className='phcard bosscard';
+    cb.innerHTML=`<span class="phnum">BÔNUS</span><span class="phicon">🎓</span><h3>Ver certificado</h3><span class="sub">Seu diploma do laboratório, com XP, estrelas e o pipeline completo.</span><span class="status" style="color:var(--am)">★ Abrir</span>`;
+    cb.onclick=showCert;
+    g.appendChild(cb);
+  }
+}
+
+/* ================= conteúdo: FASES 1-4 ================= */
+const PHASES=[
+{ id:'f1', icon:'🎧', title:'Conhecendo os dados', part:'Parte 1 do notebook · Dataset Speech Commands',
+  tut:{ html:`
+    <p>Todo laboratório de deep learning começa pelo <b>dados</b>. Aqui usamos o <b>Speech Commands</b>: milhares de clipes de ~1 segundo, gravados a <b>16 kHz</b> por diferentes falantes, dizendo uma palavra. O laboratório classifica apenas <b>10 comandos</b>:</p>
+    <div class="codebox">COMMANDS = ['yes', 'no', 'up', 'down', 'left', 'right', 'on', 'off', 'stop', 'go']</div>
+    <p>A classe <code>SubsetSC</code> herda de <code>SPEECHCOMMANDS</code> e filtra o dataset usando as <b>listas oficiais de divisão</b>: <code>validation_list.txt</code> e <code>testing_list.txt</code>. O treino é todo o resto. Essa separação existe para você avaliar o modelo em falantes que ele <b>nunca viu</b> — sem isso, o modelo poderia "decorar" as gravações (vazamento de dados).</p>
+    <ul>
+      <li><b>1.1</b> — carregar os 3 subsets (treino, validação, teste) e imprimir quantas amostras tem cada um;</li>
+      <li><b>1.2</b> — explorar uma amostra: formato da waveform, taxa de amostragem, rótulo e duração;</li>
+      <li>plotar a <b>waveform</b> (amplitude × tempo) com <code>matplotlib</code>.</li>
+    </ul>`,
+  code:`# Define the subset of commands we want to classify
+COMMANDS = ['yes', 'no', 'up', 'down', 'left', 'right', 'on', 'off', 'stop', 'go']
+
+class SubsetSC(SPEECHCOMMANDS):
+    def __init__(self, subset: str = None, commands: list = None):
+        super().__init__("./data", download=True, subset=subset)
+        if commands:
+            def load_list(filename):
+                filepath = os.path.join(self._path, filename)
+                with open(filepath) as fileobj:
+                    return [os.path.normpath(os.path.join(self._path, line.strip()))
+                            for line in fileobj]
+
+            if subset == "validation":
+                # Your code here
+                pass
+            elif subset == "testing":
+                # Your code here
+                pass
+            elif subset == "training":
+                # Your code here (exclude validation and testing)
+                pass
+            # TODO: filter self._walker by command labels
+
+sample_waveform, sample_rate, sample_label, *_ = train_set[0]
+print(f"Waveform shape: {sample_waveform.shape}")   # ex.: torch.Size([1, 16000])
+print(f"Sample rate: {sample_rate} Hz")             # 16000
+print(f"Duration: {sample_waveform.shape[1] / sample_rate:.2f} seconds")`},
+  ch:[
+    { type:'mc', xp:10, q:'Por que o áudio é um dado <b>sequencial</b>, e o que isso exige de uma rede neural?',
+      opts:['Porque os arquivos .wav ocupam muito espaço em disco e precisam ser comprimidos.',
+            'Porque o significado está na <b>ordem temporal</b> das amostras — "es" e "se" têm os mesmos sons em ordens diferentes.',
+            'Porque todo áudio é gravado em estéreo, formando dois canais paralelos.',
+            'Porque 16 kHz significa que o sinal é uma sequência de bits de computador.'],
+      ans:1, exp:'Exato! O significado de um comando de voz depende da ordem no tempo. Uma rede feedforward comum trataria cada amostra de forma independente; a RNN processa passo a passo mantendo uma memória (hidden state) do que já ouviu — exatamente o que você implementará na Parte 3.'},
+    { type:'code', xp:10, q:'Complete o ramo de <b>validação</b> do <code>SubsetSC</code>. Qual linha carrega os caminhos corretos para <code>self._walker</code>?',
+      code:`if subset == "validation":
+    ____
+elif subset == "testing":
+    self._walker = load_list("testing_list.txt")`,
+      opts:['<code>self._walker = load_list("validation_list.txt")</code>',
+            '<code>self._walker = load_list("training_list.txt")</code>',
+            '<code>self._walker = COMMANDS</code>',
+            '<code>self._walker = self._path + "/validation"</code>'],
+      ans:0, exp:'<code>self._walker</code> é a lista de caminhos de arquivos que o dataset vai percorrer. Para validação, usamos a lista oficial <code>validation_list.txt</code>; no treino, você filtra as amostras que NÃO estão em nenhuma das duas listas.'},
+    { type:'sim', sim:'wave', xp:10, q:'Observe a waveform animada acima. Os eixos do gráfico de uma waveform são:',
+      opts:['Eixo x: frequência (Hz); eixo y: tempo (s)',
+            'Eixo x: tempo (s); eixo y: amplitude (pressão sonora)',
+            'Eixo x: intensidade (dB); eixo y: frequência (Hz)',
+            'Eixo x: classes; eixo y: probabilidade'],
+      ans:1, exp:'Isso! A waveform é o sinal "cru": amplitude da pressão sonora ao longo do tempo. Um segundo a 16 kHz gera ~16.000 valores — por isso na Parte 2 você vai transformá-la em MFCCs, uma representação bem mais compacta.'}
+  ]},
+
+{ id:'f2', icon:'🎼', title:'Extração de características (MFCC)', part:'Parte 2 do notebook · Waveform → MFCC',
+  tut:{ html:`
+    <p>A waveform bruta é uma má entrada para a rede: são dezenas de milhares de valores com a informação espalhada. O laboratório converte cada clipe em <b>MFCCs</b> (Mel-Frequency Cepstral Coefficients) — 40 coeficientes por janela de tempo que resumem a <b>energia espectral</b> do áudio imitando a percepção auditiva humana (escala <i>mel</i>).</p>
+    <p>O caminho do sinal é: <b>sinal → janelas curtas → FFT → bancos de filtros mel → log → DCT → MFCCs</b>. No PyTorch isso é uma linha, com <code>torchaudio.transforms.T.MFCC</code>. O resultado tem formato <code>[canal, 40, passos_de_tempo]</code>.</p>
+    <ul>
+      <li>Definir o transform com <code>sample_rate=16000</code> e <code>n_mfcc=40</code>;</li>
+      <li>aplicar em uma amostra e imprimir o shape;</li>
+      <li>visualizar waveform e MFCC lado a lado (a imagem do MFCC se lê como um mapa de calor: x = tempo, y = coeficiente).</li>
+    </ul>`,
+  code:`# TODO: Define MFCC feature extraction transform
+mfcc_transform = T.MFCC(
+    sample_rate=16000,   # taxa do Speech Commands
+    n_mfcc=40,           # número de coeficientes
+)
+
+features = mfcc_transform(sample_waveform)
+print(f"Feature shape: {features.shape}")  # [1, 40, passos de tempo]
+# Visualização (Parte 2): imshow das MFCCs
+# axes[1].imshow(features[0].numpy(), aspect='auto', origin='lower')`},
+  ch:[
+    { type:'code', xp:10, q:'Complete a definição do transform. Quais parâmetros o laboratório pede?',
+      code:`mfcc_transform = T.MFCC(
+    ____
+)`,
+      opts:['<code>sample_rate=16000, n_mfcc=40</code>',
+            '<code>sample_rate=44100, n_mfcc=13</code>',
+            '<code>channels=1, kernel_size=3</code>',
+            '<code>num_classes=10, hidden_size=128</code>'],
+      ans:0, exp:'Correto: 16000 Hz é a taxa do dataset e 40 coeficientes dão o <code>input_size=40</code> que a RNN receberá em cada passo de tempo. Manter a taxa correta evita que as frequências sejam interpretadas erradas.'},
+    { type:'sim', sim:'mfcc', xp:10, q:'No mapa de calor de MFCC gerado acima, cada coluna vertical representa:',
+      opts:['Um coeficiente mel fixo, ao longo de toda a palavra',
+            'Um passo de tempo (uma janela curta do áudio), com seus 40 coeficientes',
+            'Um falante diferente do dataset',
+            'Uma classe de comando'],
+      ans:1, exp:'Perfeito: o eixo horizontal é o tempo (a sequência!) e o vertical são os 40 coeficientes. É essa sequência de colunas que a RNN vai consumir, um passo por vez — cada passo é um vetor de 40 números.'},
+    { type:'mc', xp:10, q:'Por que usamos MFCC em vez da waveform bruta como entrada da rede?',
+      opts:['Porque MFCC remove completamente o ruído do áudio.',
+            'Porque MFCC comprime a informação espectral relevante em ~40 valores por passo, tornando o aprendizado mais fácil e estável.',
+            'Porque a waveform não pode ser representada como tensor no PyTorch.',
+            'Porque MFCC aumenta a taxa de amostragem do áudio.'],
+      ans:1, exp:'Isso mesmo. MFCCs concentram a informação fonética (energia por bandas de frequência na escala mel, em log) e reduzem drasticamente a dimensão. Eles não removem todo ruído — por isso termos como "stop" e "go" ainda podem se confundir na avaliação.'}
+  ]},
+
+{ id:'f3', icon:'📦', title:'AudioDataset e DataLoaders', part:'Parte 2.1 do notebook · Dataset, padding e lotes',
+  tut:{ html:`
+    <p>Para alimentar a rede em <b>lotes</b>, todos os tensores do lote precisam do mesmo tamanho — mas os clipes têm durações ligeiramente diferentes. A solução do laboratório é a classe <code>AudioDataset</code>, que padroniza tudo dentro do <code>__getitem__</code>:</p>
+    <ul>
+      <li>carregar <code>(waveform, taxa, label)</code> do subset;</li>
+      <li>aplicar o transform MFCC;</li>
+      <li><b>transpor</b> para o formato <code>(tempo, features)</code> — a RNN itera no eixo do tempo;</li>
+      <li><b>padding ou truncamento</b> para <code>max_length=101</code> passos;</li>
+      <li>converter o rótulo para índice com <code>label_to_idx</code>;</li>
+      <li>devolver <code>(features, label_idx)</code>.</li>
+    </ul>
+    <p>Depois, três <code>DataLoader</code>s com <code>batch_size=32</code> — com <code>shuffle=True</code> no treino, para o modelo não aprender a ordem dos exemplos.</p>`,
+  code:`class AudioDataset(Dataset):
+    def __init__(self, subset_dataset, transform, label_to_idx, max_length=101):
+        self.dataset = subset_dataset
+        self.transform = transform
+        self.label_to_idx = label_to_idx
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        waveform, _, label, *_ = self.dataset[idx]
+        features = self.transform(waveform)          # [1, 40, T]
+        features = features.squeeze(0).transpose(0, 1)  # -> [T, 40]
+        # pad ou truncate para max_length ...
+        label_idx = self.label_to_idx[label]
+        return features, label_idx
+
+label_to_idx = {label: idx for idx, label in enumerate(COMMANDS)}
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)`},
+  ch:[
+    { type:'order', xp:15, q:'Monte o pipeline do <code>__getitem__</code>: clique nos passos <b>na ordem correta</b>.',
+      items:['Carregar (waveform, label) do dataset',
+             'Aplicar o transform MFCC',
+             'Transpor para (tempo, features)',
+             'Pad/truncate para max_length = 101',
+             'Converter label → índice (label_to_idx)',
+             'Retornar (features, label_idx)'],
+      hint:'Dica: primeiro os dados, depois o formato, depois o rótulo.',
+      exp:'É esse o fluxo do AudioDataset: carregar → transformar → transpor → padronizar o comprimento → indexar o rótulo → retornar. A transposição para (tempo, features) é essencial: a RNN com batch_first=True espera (lote, tempo, 40).'},
+    { type:'code', xp:10, q:'Como criar o <b>loader de treino</b> corretamente?',
+      code:`batch_size = 32
+train_loader = ____`,
+      opts:['<code>DataLoader(train_dataset, batch_size=32, shuffle=True)</code>',
+            '<code>DataLoader(train_dataset, batch_size=32, shuffle=False)</code>',
+            '<code>DataLoader(train_dataset, batch_size=101, shuffle=True)</code>',
+            '<code>train_dataset.batch(32)</code>'],
+      ans:0, exp:'No treino usamos shuffle=True para misturar os exemplos a cada época — isso estabiliza o gradiente descendente. Em validação/teste a ordem não afeta as métricas, mas avaliar sem shuffle facilita comparar execuções.'},
+    { type:'mc', xp:10, q:'Por que precisamos de <b>padding/truncamento</b> para <code>max_length=101</code>?',
+      opts:['Porque a RNN só aceita entradas de exatamente 101 valores de amplitude.',
+            'Porque clipes têm comprimentos ligeiramente diferentes e tensores de um mesmo lote precisam de dimensões iguais.',
+            'Porque 101 é o número de comandos do dataset.',
+            'Porque o padding aumenta a qualidade do áudio gravado.'],
+      ans:1, exp:'Exato: para empilhar 32 sequências num tensor (32, 101, 40), todas precisam do mesmo número de passos. Sequências curtas recebem zeros no final; longas são cortadas. O padding excessivo também explica por que depois olhamos o último passo de tempo com cuidado.'}
+  ]},
+
+{ id:'f4', icon:'🧠', title:'Implementando a VanillaRNN', part:'Parte 3 do notebook · O modelo',
+  tut:{ html:`
+    <p>Chegou a estrela do laboratório. Uma célula RNN atualiza sua <b>memória</b> a cada passo de tempo:</p>
+    <div class="codebox">h_t = tanh(W_ih · x_t + b_ih + W_hh · h_(t-1) + b_hh)</div>
+    <p>O novo estado <code>h_t</code> mistura a entrada atual (um vetor MFCC de 40 valores) com o estado anterior. No PyTorch, <code>nn.RNN</code> já faz isso ao longo de toda a sequência; nós empilhamos <b>2 camadas</b> de <b>128 unidades ocultas</b> e classificamos com uma camada linear usando o estado do <b>último passo</b> — quando a rede já "ouviu" a palavra inteira. O modelo completo tem <b>56.074 parâmetros</b>.</p>
+    <ul>
+      <li><code>nn.RNN(input_size=40, hidden_size=128, num_layers=2, batch_first=True)</code>;</li>
+      <li><code>nn.Dropout(0.2)</code> para regularizar;</li>
+      <li><code>nn.Linear(hidden_size, num_classes)</code> → 10 logits;</li>
+      <li>forward: RNN → pegar <code>out[:, -1, :]</code> → dropout → fc → retornar (logits, hidden).</li>
+    </ul>`,
+  code:`class VanillaRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout=0.2):
+        super(VanillaRNN, self).__init__()
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers,
+                          batch_first=True)
+        self.dropout = nn.Dropout(dropout)
+        self.fc = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, x):                 # x: (batch, seq, 40)
+        out, hidden = self.rnn(x)         # out: (batch, seq, 128)
+        out = out[:, -1, :]               # último passo de tempo
+        out = self.dropout(out)
+        logits = self.fc(out)             # (batch, num_classes)
+        return logits, hidden
+
+input_size, hidden_size, num_layers = 40, 128, 2
+num_classes = len(COMMANDS)               # 10
+model = VanillaRNN(input_size, hidden_size, num_layers, num_classes).to(device)
+# Total parameters: 56,074`},
+  ch:[
+    { type:'sim', sim:'rnn', xp:10, q:'Assista ao fluxo na célula RNN animada. O <b>hidden state</b> h_t serve para:',
+      opts:['Guardar os pesos do modelo entre épocas de treinamento.',
+            'Carregar um resumo do que a rede já processou, passando informação de um passo de tempo para o próximo.',
+            'Armazenar o dataset inteiro na memória da GPU.',
+            'Normalizar os coeficientes MFCC de entrada.'],
+      ans:1, exp:'Isso! O hidden state é a "memória de trabalho" da RNN: a cada passo ele é atualizado com a entrada atual e carrega o contexto dos passos anteriores. É por isso que a rede consegue capturar dependências temporais — e por isso respondemos a Reflexão 3 sobre ele no notebook.'},
+    { type:'code', xp:10, q:'Complete a definição das camadas no <code>__init__</code>. Qual bloco está correto?',
+      code:`self.rnn = ____
+self.dropout = ____
+self.fc = ____`,
+      opts:['<code>nn.RNN(input_size, hidden_size, num_layers, batch_first=True)</code> / <code>nn.Dropout(dropout)</code> / <code>nn.Linear(hidden_size, num_classes)</code>',
+            '<code>nn.RNN(num_classes, hidden_size, input_size)</code> / <code>nn.ReLU()</code> / <code>nn.Linear(input_size, num_classes)</code>',
+            '<code>nn.RNN(hidden_size, input_size, batch_first=True)</code> / <code>nn.Softmax()</code> / <code>nn.Linear(num_classes, hidden_size)</code>',
+            '<code>nn.LSTM(input_size, hidden_size)</code> / <code>nn.Dropout(0.5)</code> / <code>nn.Linear(40, 10)</code>'],
+      ans:0, exp:'Exatamente o esqueleto do laboratório: RNN com batch_first=True (entrada em (lote, tempo, features)), dropout de 0.2 e Linear ligando hidden_size → num_classes. A LSTM fica para o Lab 2!'},
+    { type:'order', xp:15, q:'Monte o <code>forward</code> na ordem certa.',
+      items:['out, hidden = self.rnn(x)',
+             'out = out[:, -1, :]  (último passo de tempo)',
+             'out = self.dropout(out)',
+             'logits = self.fc(out)',
+             'return logits, hidden'],
+      hint:'Pense no caminho do tensor: sequência → último estado → regularização → classificação.',
+      exp:'O fluxo correto: RNN processa toda a sequência → extraímos o estado do último passo (a palavra já acabou de ser "ouvida") → dropout na avaliação interna → camada linear gera os 10 logits → retornamos também o hidden para a visualização da Parte 6.'},
+    { type:'mc', xp:10, q:'No <code>nn.RNN</code> usamos <code>batch_first=True</code>. O que isso define?',
+      opts:['Que os tensores de entrada saem como (batch, seq, features) em vez de (seq, batch, features).',
+            'Que o primeiro lote é usado para validação.',
+            'Que a rede treina primeiro a primeira camada.',
+            'Que os dados são carregados em paralelo na CPU.'],
+      ans:0, exp:'Correto! É por isso que o AudioDataset devolve (tempo, features): o DataLoader empilha para (batch, tempo, 40), que é exatamente o formato que o forward espera com batch_first=True. Sem isso, os eixos tempo e lote ficariam trocados silenciosamente — bug clássico!'}
+  ]},
+{ id:'f5', icon:'🏋️', title:'Treinamento do modelo', part:'Parte 4 do notebook · 20 épocas',
+  tut:{ html:`
+    <p>Com o modelo montado, hora de treinar. O laboratório usa:</p>
+    <ul>
+      <li><code>nn.CrossEntropyLoss()</code> — função de perda padrão para classificação multiclasse (compara os 10 logits com o índice da classe correta);</li>
+      <li><code>optim.Adam(model.parameters(), lr=0.001)</code> — otimizador com taxa de aprendizado 0.001;</li>
+      <li><code>ReduceLROnPlateau</code> — reduz o lr pela metade (factor=0.5) se a perda de validação parar de cair por 3 épocas (patience=3);</li>
+      <li><b>20 épocas</b>, salvando o melhor modelo em <code>best_rnn_model.pth</code> pela acurácia de validação.</li>
+    </ul>
+    <p>O coração é o <b>loop de treinamento</b>: para cada lote, zerar gradientes → forward → loss → backward → step. A cada época, rodamos também a <code>validate()</code> (mesmo fluxo, <b>sem</b> atualizar pesos) e guardamos as métricas para plotar as curvas de perda e acurácia.</p>`,
+  code:`criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode='min', factor=0.5, patience=3)
+
+def train_epoch(model, train_loader, criterion, optimizer, device):
+    model.train()
+    for wave, labels in train_loader:      # 1. lote
+        wave, labels = wave.to(device), labels.to(device)
+        optimizer.zero_grad()              # 2. zerar gradientes
+        outputs, _ = model(wave)           # 3. forward
+        loss = criterion(outputs, labels)  # 4. loss
+        loss.backward()                    # 5. backward
+        optimizer.step()                   # 6. atualizar pesos
+    # ... track loss e acurácia do épico
+
+for epoch in range(num_epochs):            # 20 épocas
+    tr_loss, tr_acc = train_epoch(...)
+    va_loss, va_acc = validate(...)
+    scheduler.step(va_loss)
+    if va_acc > best_val_acc:              # salvar o melhor modelo
+        torch.save(model.state_dict(), 'best_rnn_model.pth')`},
+  ch:[
+    { type:'code', xp:10, q:'Defina a perda e o otimizador como no laboratório:',
+      code:`criterion = ____
+optimizer = ____`,
+      opts:['<code>nn.CrossEntropyLoss()</code> / <code>optim.Adam(model.parameters(), lr=0.001)</code>',
+            '<code>nn.MSELoss()</code> / <code>optim.SGD(model.parameters(), lr=0.1)</code>',
+            '<code>nn.CrossEntropyLoss()</code> / <code>optim.Adam(model.parameters(), lr=10)</code>',
+            '<code>nn.BCELoss()</code> / <code>optim.AdamW(lr=0.001)</code>'],
+      ans:0, exp:'CrossEntropyLoss é a escolha certa para 10 classes mutuamente exclusivas (ela aplica softmax+log internamente — não passe softmax antes!). Adam com lr=0.001 é o ponto de partida clássico; lr=10 faria o treino divergir.'},
+    { type:'order', xp:15, q:'Ordene as 5 operações do loop de treinamento:',
+      items:['optimizer.zero_grad()',
+             'outputs, _ = model(wave)   (forward)',
+             'loss = criterion(outputs, labels)',
+             'loss.backward()',
+             'optimizer.step()'],
+      hint:'Os gradientes precisam começar zerados a cada lote.',
+      exp:'Sem zero_grad(), os gradientes de lotes anteriores se acumulam e corrompem a atualização — bug clássico do PyTorch. Depois: forward calcula logits, a loss mede o erro, backward propaga os gradientes e step dá o passo de otimização.'},
+    { type:'sim', sim:'train', xp:10, q:'Treine clicando em "Treinar 1 época" (até 20). Perto da época 15+, a curva de <b>perda de validação</b> sobe enquanto a de treino continua caindo. Isso é:',
+      opts:['Underfitting — o modelo é fraco demais e precisa de mais camadas.',
+            'Overfitting — o modelo começou a decorar o treino; vale usar early stopping/regularização.',
+            'Um bug no carregamento dos dados.',
+            'Normal e desejável — significa que o modelo está aprendendo.'],
+      ans:1, exp:'Exatamente o que a Reflexão 4 pede para analisar: treino caindo + validação subindo = overfitting. Combates: early stopping (o laboratório já salva o melhor modelo!), dropout, weight decay ou mais dados/aumento de dados.'}
+  ]},
+
+{ id:'f6', icon:'📊', title:'Avaliação e matriz de confusão', part:'Parte 5 do notebook · Teste final',
+  tut:{ html:`
+    <p>Com o melhor modelo salvo, avaliamos no <b>conjunto de teste</b> — amostras que a rede nunca viu:</p>
+    <ul>
+      <li><code>model.load_state_dict(torch.load('best_rnn_model.pth'))</code> carrega o melhor checkpoint;</li>
+      <li><code>model.eval()</code> desativa o dropout e <code>torch.no_grad()</code> desliga o cálculo de gradientes (mais rápido e econômico);</li>
+      <li>coletamos previsões e rótulos, calculamos <code>accuracy_score</code> e o <code>classification_report</code> (precisão, recall, F1 por comando);</li>
+      <li>plotamos a <b>matriz de confusão</b> 10×10 com <code>seaborn.heatmap</code>: linhas = classe real, colunas = previsão; a diagonal são os acertos.</li>
+    </ul>
+    <p>A matriz mostra <b>quais</b> comandos se confundem — tipicamente pares foneticamente parecidos, como "no" × "go".</p>`,
+  code:`model.load_state_dict(torch.load('best_rnn_model.pth'))
+model.eval()
+
+all_preds, all_labels = [], []
+with torch.no_grad():
+    for wave, labels in test_loader:
+        outputs, _ = model(wave.to(device))
+        preds = outputs.argmax(dim=1)
+        all_preds.extend(preds.cpu().numpy())
+        all_labels.extend(labels.numpy())
+
+print(f"Test Accuracy: {accuracy_score(all_labels, all_preds):.4f}")
+print(classification_report(all_labels, all_preds, target_names=COMMANDS))
+
+cm = confusion_matrix(all_labels, all_preds)
+sns.heatmap(cm, annot=True, fmt='d',
+            xticklabels=COMMANDS, yticklabels=COMMANDS)`},
+  ch:[
+    { type:'mc', xp:10, q:'Antes de avaliar chamamos <code>model.eval()</code> e usamos <code>torch.no_grad()</code>. Por quê?',
+      opts:['Para recompilar o modelo na GPU com precisão dupla.',
+            'Para desativar o dropout (e comportamento de treino) e não calcular gradientes, deixando a inferência correta e mais rápida.',
+            'Para embaralhar o conjunto de teste e evitar vício.',
+            'Para converter os dados para float16 automaticamente.'],
+      ans:1, exp:'Isso! Em modo eval o dropout não zera neurônios durante a previsão; no_grad economiza memória e tempo pois nada será otimizado. Esquecer o model.eval() é outro bug clássico — a acurácia oscila sem motivo aparente.'},
+    { type:'code', xp:10, q:'Qual linha calcula a <b>matriz de confusão</b> no final da avaliação?',
+      code:`____
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, fmt='d')`,
+      opts:['<code>cm = confusion_matrix(all_labels, all_preds)</code>',
+            '<code>cm = accuracy_score(all_labels, all_preds)</code>',
+            '<code>cm = model.confusion()</code>',
+            '<code>cm = classification_report(all_preds, all_labels)</code>'],
+      ans:0, exp:'confusion_matrix(reais, previstos) devolve a grade 10×10. accuracy_score devolve um único número e classification_report devolve o texto com precisão/recall/F1 — cada um tem seu papel!'},
+    { type:'sim', sim:'conf', xp:10, q:'Leia a mini-matriz acima (linhas = classe real, colunas = previsão). Quantas vezes o modelo <b>previu "go"</b> quando o correto era <b>"no"</b>?',
+      opts:['96', '110', '7', '4'],
+      ans:2, exp:'Na linha "no" (classe real), a coluna "go" (previsão) tem o valor 7. A diagonal tem os acertos (ex.: 96 "no" corretos); os valores fora da diagonal são as confusões — na Reflexão 5 você explica por que palavras parecidas se confundem.'}
+  ]},
+
+{ id:'f7', icon:'👁️', title:'Visualizando os estados ocultos', part:'Parte 6 do notebook · Hidden states',
+  tut:{ html:`
+    <p>A Parte 6 do laboratório responde à pergunta: <b>o que acontece dentro da RNN enquanto ela "ouve" a palavra?</b></p>
+    <p>Passamos UM clipe pelo modelo passo a passo e guardamos o hidden state de cada instante. O resultado é um mapa de calor: no eixo x estão os <b>passos de tempo</b> (as colunas de MFCC, ~101 no total) e no eixo y as <b>128 unidades ocultas</b>; a cor mostra a ativação de cada neurônio em cada instante.</p>
+    <ul>
+      <li>os primeiros passos mudam muito — a rede está descobrindo o início do som;</li>
+      <li>com o tempo, as ativações tendem a estabilizar num padrão que codifica a palavra;</li>
+      <li>o estado final (última coluna) é exatamente o vetor que a camada linear usa para decidir a classe.</li>
+    </ul>
+    <p>Essa visualização alimenta a discussão sobre memória e interpretabilidade — e é um ótimo print para o notebook entregável.</p>`,
+  code:`def visualize_hidden_states(model, sample_input, label, device):
+    model.eval()
+    x = sample_input.unsqueeze(0).to(device)   # (1, seq, 40)
+    states = []
+    with torch.no_grad():
+        out, hidden = model.rnn(x)             # out: (1, seq, 128)
+    states = out.squeeze(0).cpu().numpy().T    # (128, seq)
+
+    plt.figure(figsize=(12, 6))
+    plt.imshow(states, aspect='auto', cmap='viridis')
+    plt.xlabel('Passo de tempo')
+    plt.ylabel('Unidade oculta')
+    plt.title(f'Hidden states — comando: {label}')
+    plt.colorbar()
+    plt.show()
+
+visualize_hidden_states(model, sample_input, idx_to_label[sample_label], device)`},
+  ch:[
+    { type:'sim', sim:'hidden', xp:10, q:'No mapa de calor animado, o eixo <b>x (horizontal)</b> representa:',
+      opts:['Os 128 neurônios da camada oculta',
+            'Os 40 coeficientes MFCC',
+            'Os passos de tempo do áudio sendo processado',
+            'As 10 classes de comando'],
+      ans:2, exp:'Isso: cada coluna é um instante do áudio. Vendo a animação da esquerda para a direita, você assiste a memória da RNN sendo construída — o análogo visual do forward pass sequencial.'},
+    { type:'mc', xp:10, q:'O que tipicamente se observa no heatmap dos hidden states durante uma palavra?',
+      opts:['Ativações perfeitamente constantes do início ao fim.',
+            'Grandes mudanças nos primeiros instantes e estabilização gradual num padrão distintivo da palavra.',
+            'Ruído aleatório sem estrutura alguma.',
+            'Um padrão idêntico para todas as palavras.'],
+      ans:1, exp:'Exato. No início a rede ainda integra informação nova a cada passo; quando a palavra se completa, o estado converge para uma representação que separa as classes — e é esse estado final que a Linear classifica. Se fossem constantes, não haveria memória útil!'}
+  ]},
+
+{ id:'f8', icon:'⚖️', title:'RNN vs. baseline feedforward', part:'Parte 7 do notebook · Comparação',
+  tut:{ html:`
+    <p>Para provar o valor da modelagem sequencial, a Parte 7 constrói um <b>baseline feedforward</b>: o mesmo input é simplesmente <b>achatado</b> (flatten) de <code>(101, 40)</code> para um vetor de <b>4.040</b> valores, passando por camadas densas comuns. Sem loop temporal, sem memória: a ordem dos passos vira apenas uma posição fixa no vetor.</p>
+    <p>Números para o relatório: nossa <b>VanillaRNN tem 56.074 parâmetros</b>; um baseline denso típico (4040 → 256 → 10) tem <b>1.037.066</b> — cerca de <b>18,5×</b> mais parâmetros. Mesmo assim, o feedforward tende a performar pior: ele não sabe que o vetor veio de uma sequência.</p>
+    <ul>
+      <li>implementar <code>FeedforwardBaseline</code> (flatten + Linears);</li>
+      <li>treinar com o mesmo loop da Parte 4;</li>
+      <li>comparar acurácia, curvas e número de parâmetros — e responder a Reflexão 6.</li>
+    </ul>`,
+  code:`class FeedforwardBaseline(nn.Module):
+    def __init__(self, input_size, seq_length, hidden_size, num_classes):
+        super(FeedforwardBaseline, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(seq_length * input_size, hidden_size),  # 101*40 = 4040
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_size, num_classes),
+        )
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)   # flatten: (batch, 4040)
+        return self.net(x)
+
+# Modelo denso típico: 4040 -> 256 -> 10  =  1.037.066 parâmetros
+# VanillaRNN (128 ocultas, 2 camadas)     =    56.074 parâmetros  (~18,5x menor)`},
+  ch:[
+    { type:'code', xp:10, q:'Complete o <b>flatten</b> do baseline feedforward:',
+      code:`def forward(self, x):
+        x = ____
+        return self.net(x)`,
+      opts:['<code>x.view(x.size(0), -1)</code>',
+            '<code>x.transpose(0, 1)</code>',
+            '<code>x.argmax(dim=1)</code>',
+            '<code>x.unsqueeze(0)</code>'],
+      ans:0, exp:'view(x.size(0), -1) mantém o eixo do lote e colapsa (tempo, features) num único vetor de 4040. É justamente aqui que a informação de ordem é "achata" — o modelo denso não tem como recuperar a sequência.'},
+    { type:'mc', xp:10, q:'Mesmo com 18× mais parâmetros, o feedforward tende a ter acurácia menor. Por quê?',
+      opts:['Porque ele não consegue rodar na GPU.',
+            'Porque ignora a estrutura temporal — "no" e "on" viram vetores quase iguais com as amostras trocadas, enquanto a RNN percebe a ordem.',
+            'Porque 4.040 entradas excedem o limite de memória do PyTorch.',
+            'Porque feedforward não usa funções de perda.'],
+      ans:1, exp:'Perfeito para a Reflexão 6: a RNN compartilha os mesmos pesos ao longo do tempo e acumula contexto, generalizando melhor para dados sequenciais. O denso trata cada posição do vetor de forma independente e desperdiça parâmetros memorizando posições fixas.'},
+    { type:'mc', xp:10, q:'E qual <b>vantagem honesta</b> o baseline feedforward tem?',
+      opts:['Processa todos os passos de uma vez (uma única multiplicação de matriz), sendo simples e rápido por lote — desde que a tarefa não exija ordem.',
+            'É sempre mais preciso em qualquer tarefa de áudio.',
+            'Precisa de menos dados rotulados para qualquer problema.',
+            'Substitui o pré-processamento MFCC.'],
+      ans:0, exp:'Trade-off honesto: sem iteração temporal, o denso paraleliza tudo numa matriz gigante e é trivial de treinar. Mas para áudio a ordem importa — por isso a RNN, mesmo menor, é a arquitetura certa aqui. (No Lab 2, os Transformers paralelizam SEM abrir mão do contexto!)'}
+  ]},
+
+{ id:'boss', boss:true, icon:'🏆', title:'BOSS: Reflexão final', part:'Parte 8 · As 9 perguntas de reflexão do notebook',
+  tut:{ html:`
+    <p>Última etapa do laboratório! O notebook tem <b>9 perguntas de reflexão</b> (REFLECTION QUESTION 1–9) que valem parte da nota — cada resposta deve ter de 3 a 7 frases, com base nos <b>seus</b> experimentos. Este boss é a versão rápida delas: acerte as 9 para liberar o certificado.</p>
+    <ul>
+      <li>R1 — por que áudio é sequencial; R2 — o que os MFCCs capturam;</li>
+      <li>R3 — papel do hidden state; R4 — overfitting nas curvas;</li>
+      <li>R5 — confusões da matriz; R6 — RNN vs. feedforward;</li>
+      <li>R7 — desafios encontrados; R8 — hiperparâmetros; R9 — aplicações reais.</li>
+    </ul>`,
+  code:`# No notebook, cada pergunta é respondida em markdown, ex.:
+# REFLECTION QUESTION 4
+# "Analyze the training curves. Is there evidence of overfitting
+#  or underfitting? What could you do to improve the model?"
+#
+# **Your Answer:** (3-7 frases, citando SUAS curvas e números)`},
+  ch:[
+    { type:'mc', xp:8, q:'R1 — O que torna uma RNN mais adequada que uma rede feedforward para áudio?',
+      opts:['Ela processa o sinal em passos de tempo mantendo memória (hidden state), capturando dependências temporais.',
+            'Ela exige menos dados rotulados em qualquer cenário.',
+            'Ela elimina a necessidade de extrair features como MFCC.',
+            'Ela não usa backpropagation, então treina mais rápido.'],
+      ans:0, exp:'A memória recorrente é a resposta central da R1: significado acústico depende da ordem no tempo, e a RNN modela isso naturalmente.'},
+    { type:'mc', xp:8, q:'R2 — O que os MFCCs capturam do sinal e por que ajudam na classificação?',
+      opts:['A localização geográfica do falante.',
+            'A energia espectral em bandas na escala mel (percepção humana), comprimindo a informação fonética relevante.',
+            'O volume máximo absoluto da gravação.',
+            'A letra exata da palavra falada.'],
+      ans:1, exp:'R2: MFCCs resumem "que frequências soam a cada instante", na escala como humanos percebemos — uma representação compacta e estável para treinar.'},
+    { type:'mc', xp:8, q:'R3 — Qual é o papel do hidden state no processamento de sequências?',
+      opts:['É uma cópia de segurança dos pesos do modelo.',
+            'É o vetor que resume o histórico da sequência até o passo t, transmitindo contexto ao próximo passo.',
+            'É o learning rate adaptativo da camada oculta.',
+            'É o índice da classe prevista.'],
+      ans:1, exp:'R3: o hidden state é a memória da rede — ele permite que o passo 80 "saiba" o que aconteceu nos passos 1–79, sem guardar os dados brutos.'},
+    { type:'mc', xp:8, q:'R4 — Nas curvas de treino, qual padrão indica <b>overfitting</b>?',
+      opts:['Perda de treino e de validação caindo juntas.',
+            'Perda de treino caindo enquanto a perda de validação começa a subir.',
+            'Acurácia de validação acima da de treino desde a época 1.',
+            'Perda zebra durante as 20 épocas.'],
+      ans:1, exp:'R4: o "afastamento das curvas" é a assinatura do overfitting. O laboratório mitiga salvando o melhor checkpoint pela validação (early stopping de facto), além de dropout.'},
+    { type:'mc', xp:8, q:'R5 — Na matriz de confusão, por que certos comandos se confundem mais?',
+      opts:['Porque as classes têm exatamente o mesmo número de amostras.',
+            'Porque pares foneticamente parecidos (ex.: "no" × "go") produzem MFCCs parecidos.',
+            'Porque o shuffle do DataLoader mistura as classes.',
+            'Porque a matriz é plotada em escala logarítmica.'],
+      ans:1, exp:'R5: sons parecidos → espectrogramas parecidos → features parecidas. Analisar QUAIS pares se confundem mostra que o modelo erra de forma "humana", não aleatória.'},
+    { type:'mc', xp:8, q:'R6 — O que a comparação com o baseline feedforward demonstra?',
+      opts:['Que feedforward é sempre superior por ter mais parâmetros.',
+            'Que modelar dependências temporais traz ganho real de acurácia para dados sequenciais.',
+            'Que RNNs não precisam de treinamento.',
+            'Que a matriz de confusão substitui a acurácia.'],
+      ans:1, exp:'R6: mesmo maior, o denso ignora a ordem; a RNN vence com menos parâmetros — evidência de que a estrutura do modelo deve combinar com a estrutura do dado.'},
+    { type:'mc', xp:8, q:'R7 — Qual foi um dos principais desafios técnicos deste laboratório?',
+      opts:['Compilar o PyTorch a partir do código-fonte.',
+            'Lidar com sequências de comprimentos variáveis (pad/truncate) e preparar o pipeline de features corretamente.',
+            'Traduzir o dataset para português.',
+            'Comprar uma GPU para o Colab.'],
+      ans:1, exp:'R7: padronizar comprimentos, transpor eixos para (tempo, features) e configurar o MFCC são os pontos onde a maioria dos erros acontece — exatamente o que as Fases 2–3 do jogo praticaram.'},
+    { type:'mc', xp:8, q:'R8 — Quais mudanças de hiperparâmetros tenderiam a impactar mais o desempenho?',
+      opts:['Cor da interface e tamanho das figuras do matplotlib.',
+            'hidden_size, num_layers e a learning rate (ex.: 128→256 ocultas, ajustar lr com o scheduler).',
+            'O nome do arquivo do checkpoint salvo.',
+            'A ordem alfabética dos comandos.'],
+      ans:1, exp:'R8: capacidade (hidden_size, num_layers) e otimização (lr, scheduler) dominam. O ReduceLROnPlateau do laboratório já ajusta o lr automaticamente quando a validação estagna.'},
+    { type:'mc', xp:8, q:'R9 — Qual aplicação real usa classificação de comandos por voz com RNN — e qual desafio de produção aparece?',
+      opts:['Assistentes de voz e acionamento por voz em dispositivos; na produção enfrentam ruído ambiente, sotaques variados e exigência de baixa latência.',
+            'Editores de planilha; o desafio é a cor dos gráficos.',
+            'Compactação de arquivos .zip; o desafio é a memória RAM.',
+            'Nenhuma — RNNs só funcionam em laboratório.'],
+      ans:1, exp:'R9: wake words e comandos de voz (celulares, carregadores, carros) são o exemplo clássico. Em produção somam-se ruído, diversidade de falantes, privacidade dos dados e modelos leves para rodar no dispositivo.'}
+  ]}
+];
+
+/* ================= motor do jogo ================= */
+let CUR=null; // {pi, ci, mistakes}
+function openPhase(i){
+  CUR={pi:i,ci:0,mistakes:0};
+  const p=PHASES[i];
+  $('phIcon').textContent=p.icon;
+  $('phTitle').textContent=p.title;
+  $('phSub').textContent=p.part;
+  $('phCount').textContent = p.boss ? 'Boss final' : 'Fase '+(i+1)+' de '+(PHASES.length-1);
+  $('tutBody').innerHTML = p.tut.html + (p.tut.code ? `<div class="codebox">${hl(p.tut.code)}</div>` : '');
+  show('scr-phase');
+  renderCh();
+}
+function shuffle(a){
+  const r=[...a];
+  for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}
+  return r;
+}
+function sameArr(a,b){return a.length===b.length && a.every((v,i)=>v===b[i]);}
+
+function renderCh(){
+  const p=PHASES[CUR.pi], ch=p.ch[CUR.ci];
+  // dots de progresso
+  const dots=$('chDots'); dots.innerHTML='';
+  p.ch.forEach((_,i)=>{
+    const d=document.createElement('span');
+    d.className='dot'+(i<CUR.ci?' done':i===CUR.ci?' cur':'');
+    dots.appendChild(d);
+  });
+  $('chTag').textContent = p.boss ? `PERGUNTA ${CUR.ci+1} / ${p.ch.length}` :
+    (ch.type==='order' ? 'DESAFIO · ORDENE OS PASSOS' : ch.type==='code' ? 'DESAFIO · COMPLETE O CÓDIGO' :
+     ch.type==='sim' ? 'DESAFIO · SIMULAÇÃO' : 'DESAFIO · QUIZ');
+  const w=$('chWrap'); w.innerHTML='';
+
+  let simBox=null;
+  if(ch.type==='sim'){
+    simBox=document.createElement('div'); simBox.className='simbox'; w.appendChild(simBox);
+  }
+  if(ch.type==='code'){
+    const cb=document.createElement('div'); cb.className='codebox'; cb.innerHTML=hl(ch.code);
+    w.appendChild(cb);
+  }
+  const q=document.createElement('div'); q.className='chq'; q.innerHTML=ch.q; w.appendChild(q);
+
+  let optsEl=null;
+  if(ch.type==='order'){ renderOrder(ch,w); }
+  else { optsEl=renderOptions(ch,w); }
+
+  if(ch.type==='sim'){
+    const gate = buildSim(ch.sim, simBox);
+    if(gate && optsEl){
+      optsEl.querySelectorAll('.opt').forEach(b=>b.disabled=true);
+      const note=document.createElement('div'); note.className='hintrow';
+      note.style.color='var(--am)'; note.textContent='⏳ Complete o treino de 20 épocas acima para liberar a pergunta.';
+      optsEl.parentNode.insertBefore(note, optsEl);
+      gate(()=>{
+        optsEl.querySelectorAll('.opt').forEach(b=>b.disabled=false);
+        note.remove(); toast('Treino concluído! Responda à pergunta.');
+      });
+    }
+  }
+}
+
+function renderOptions(ch,w){
+  const chal=ch, p=PHASES[CUR.pi];
+  const wrap=document.createElement('div'); wrap.className='opts';
+  let wrongTries=0, answered=false;
+  chal.opts.forEach((opt,idx)=>{
+    const b=document.createElement('button'); b.className='opt';
+    b.innerHTML=`<span class="l">${String.fromCharCode(65+idx)}</span><span>${opt}</span>`;
+    b.onclick=()=>{
+      if(answered||b.disabled) return;
+      if(idx===chal.ans){
+        answered=true;
+        b.classList.add('ok');
+        wrap.querySelectorAll('.opt').forEach(o=>o.disabled=true);
+        gainXp(chal.xp); sOk();
+        showFb(w,true,'✅ Correto! +'+chal.xp+' XP',chal.exp);
+        addNext(w,p);
+      }else{
+        wrongTries++; CUR.mistakes++; sBad();
+        b.classList.add('bad'); b.disabled=true;
+        showFb(w,false,'❌ Não é essa. Tente novamente.','Releia o tutorial acima com calma — a resposta está lá.'+(wrongTries>=2?' 👀 Dica: a alternativa correta está destacada.':''));
+        if(wrongTries>=2){
+          const ok=wrap.querySelector(`.opt:nth-child(${chal.ans+1})`);
+          if(ok) ok.style.boxShadow='0 0 0 2px var(--gr)';
+        }
+      }
+    };
+    wrap.appendChild(b);
+  });
+  w.appendChild(wrap);
+  return wrap;
+}
+
+function renderOrder(ch,w){
+  const p=PHASES[CUR.pi];
+  let pool=shuffle(ch.items);
+  if(sameArr(pool,ch.items)&&ch.items.length>1) pool=shuffle(ch.items);
+  const ordrow=document.createElement('div'); ordrow.className='ordrow';
+  const poolEl=document.createElement('div'); poolEl.className='pool';
+  const placed=[];
+  const hint=document.createElement('div'); hint.className='hintrow'; hint.textContent=ch.hint||'Clique nos passos na ordem; clique em um colocado para devolvê-lo.';
+  const check=document.createElement('button'); check.className='btn small'; check.textContent='✓ Verificar ordem'; check.disabled=true;
+  function refresh(){
+    ordrow.innerHTML='';
+    placed.forEach((txt,i)=>{
+      const s=document.createElement('button'); s.className='stepchip placed';
+      s.innerHTML=`<span class="n">${i+1}</span>${txt}`;
+      s.onclick=()=>{ if(check.disabled===false){ placed.splice(i,1); const idx=ch.items.indexOf(txt);
+        const b=document.createElement('button'); b.className='stepchip'; b.dataset.k=idx; b.textContent=txt;
+        b.onclick=place; poolEl.appendChild(b);} refresh(); };
+      ordrow.appendChild(s);
+    });
+    check.disabled = placed.length!==ch.items.length;
+    poolEl.style.opacity = placed.length===ch.items.length ? .35 : 1;
+  }
+  function place(ev){
+    const b=ev.currentTarget, k=+b.dataset.k;
+    placed.push(ch.items[k]); b.remove(); refresh();
+  }
+  ch.items.forEach(txt=>{
+    const b=document.createElement('button'); b.className='stepchip';
+    const k=ch.items.indexOf(txt); b.dataset.k=k; b.textContent=txt; b.onclick=place;
+    poolEl.appendChild(b);
+  });
+  let wrong=false, tries=0;
+  check.onclick=()=>{
+    if(sameArr(placed,ch.items)){
+      ordrow.querySelectorAll('.stepchip').forEach(s=>s.classList.add('ok'));
+      check.disabled=true; check.style.display='none';
+      gainXp(ch.xp); sOk();
+      showFb(w,true,'✅ Ordem correta! +'+ch.xp+' XP',ch.exp);
+      addNext(w,p);
+    }else{
+      tries++; CUR.mistakes++; sBad();
+      placed.length=0;
+      poolEl.innerHTML=''; ordrow.innerHTML='';
+      ch.items.forEach(txt=>{ const b=document.createElement('button'); b.className='stepchip';
+        const k=ch.items.indexOf(txt); b.dataset.k=k; b.textContent=txt; b.onclick=place; poolEl.appendChild(b); });
+      refresh();
+      showFb(w,false,'❌ A ordem não está certa. Os passos foram devolvidos ao baralho.','Releia o tutorial — a sequência aparece listada nele.'+(tries>=2?' Preste atenção no que precisa vir ANTES.':''));
+    }
+  };
+  w.appendChild(ordrow); w.appendChild(poolEl); w.appendChild(hint);
+  const row=document.createElement('div'); row.className='nextrow'; row.appendChild(check); w.appendChild(row);
+  refresh();
+}
+
+function showFb(w,ok,title,txt){
+  let fb=w.querySelector('.fb');
+  if(!fb){ fb=document.createElement('div'); w.insertBefore(fb, w.querySelector('.nextrow')); }
+  fb.className='fb show '+(ok?'ok':'bad');
+  fb.innerHTML=`<div class="ttl">${title}</div>${txt}`;
+  fb.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function gainXp(n){ S.xp+=n; refreshHud(); save(); toast('+'+n+' XP'); }
+function addNext(w,p){
+  const row=document.createElement('div'); row.className='nextrow';
+  const b=document.createElement('button'); b.className='btn gr';
+  b.textContent = CUR.ci===p.ch.length-1 ? (p.boss?'🎓 Gerar certificado':'✅ Concluir fase') : 'Continuar →';
+  b.onclick=()=>{ CUR.ci++; if(CUR.ci<p.ch.length) renderCh(); else completePhase(); };
+  row.appendChild(b); w.appendChild(row);
+  b.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function completePhase(){
+  const p=PHASES[CUR.pi], i=CUR.pi;
+  const stars = CUR.mistakes===0?3:CUR.mistakes<=2?2:1;
+  const bonus = p.boss?0:stars*5;
+  S.done[p.id]=true;
+  if(!p.boss){
+    S.stars[p.id]=Math.max(S.stars[p.id]||0,stars);
+    S.unlocked=Math.max(S.unlocked,Math.min(i+2,PHASES.length));
+    S.xp+=bonus; // bônus de estrelas
+  }else{
+    S.bossDone=true;
+  }
+  save(); refreshHud();
+  if(p.boss){ showCert(); return; }
+  $('doneTrophy').textContent = stars===3?'🏆':stars===2?'🎉':'👍';
+  $('doneTitle').textContent = stars===3?'Fase impecável!':'Fase concluída!';
+  $('doneStars').textContent = '⭐'.repeat(stars)+'☆'.repeat(3-stars);
+  $('doneMsg').textContent = CUR.mistakes===0 ? 'Nenhum erro — você domina esta parte do laboratório.' :
+    `Concluída com ${CUR.mistakes} erro(s) — releia o tutorial sempre que quiser.`;
+  $('doneXp').textContent = bonus>0?`+${bonus} XP de bônus (estrelas)`:'+0 XP de bônus';
+  $('btnDoneNext').textContent = i+1<PHASES.length?'Próxima fase →':'Ver resumo →';
+  $('doneOv').classList.add('show');
+  sWin(); confetti(90);
+}
+/* ================= simulações ================= */
+let SIM_RAFS=[];
+function stopSims(){ SIM_RAFS.forEach(id=>cancelAnimationFrame(id)); SIM_RAFS=[]; }
+function mkCanvas(box,w,h){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  box.appendChild(c);
+  const cap=document.createElement('div'); cap.className='capt'; box.appendChild(cap);
+  return [c,c.getContext('2d'),cap];
+}
+function viridis(t){
+  t=Math.max(0,Math.min(1,t));
+  const stops=[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+  const x=t*(stops.length-1), i=Math.min(stops.length-2,Math.floor(x)), f=x-i;
+  const a=stops[i],b=stops[i+1];
+  return `rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;
+}
+const pnoise=(a,b)=>0.5+0.5*Math.sin(a*12.9898+b*78.233)*Math.cos(a*3.7+b*1.3);
+
+function buildSim(kind,box){
+  stopSims();
+  if(kind==='wave')  return simWave(box);
+  if(kind==='mfcc')  return simMfcc(box);
+  if(kind==='rnn')   return simRnn(box);
+  if(kind==='train') return simTrain(box);
+  if(kind==='conf')  return simConf(box);
+  if(kind==='hidden')return simHidden(box);
+}
+
+function simWave(box){
+  const [c,ctx,cap]=mkCanvas(box,820,240);
+  cap.textContent='🎙️ Comando: "yes" · 16 kHz · ~1 s · amplitude × tempo (simulação ilustrativa)';
+  let t=0;
+  function draw(){
+    t+=0.035;
+    ctx.fillStyle='#0a0f24'; ctx.fillRect(0,0,820,240);
+    ctx.strokeStyle='#2a3564'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,120); ctx.lineTo(820,120); ctx.stroke();
+    for(let x=0;x<820;x+=82){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,240);ctx.stroke();}
+    ctx.strokeStyle='#22d3ee'; ctx.lineWidth=2.2; ctx.beginPath();
+    for(let x=0;x<=820;x++){
+      const u=x/820;
+      const env=Math.exp(-Math.pow((u-0.45)/0.28,2));         //Envelope da palavra
+      const y=Math.sin(u*28+t*2.2)*0.55+Math.sin(u*63+t*3.1)*0.3+Math.sin(u*131+t*1.7)*0.15;
+      const py=120-y*env*95;
+      x===0?ctx.moveTo(x,py):ctx.lineTo(x,py);
+    }
+    ctx.stroke();
+    ctx.fillStyle='#6b76a8'; ctx.font='12px system-ui';
+    ctx.fillText('tempo →',740,225); ctx.fillText('amplitude',8,16);
+    SIM_RAFS.push(requestAnimationFrame(draw));
+  }
+  draw(); return null;
+}
+
+function simMfcc(box){
+  const [c,ctx,cap]=mkCanvas(box,820,300);
+  cap.textContent='🎼 MFCC do comando (40 coeficientes × passos de tempo) — eixo x = tempo, eixo y = coeficiente';
+  const R=40,C=64,cw=800/C,rh=260/R;
+  for(let r=0;r<R;r++)for(let col=0;col<C;col++){
+    const u=col/C;
+    const env=Math.exp(-Math.pow((u-0.45)/0.3,2));
+    let v=0.30*env + 0.25*Math.exp(-Math.pow((r-6)/3.2,2))*env
+        + 0.22*Math.exp(-Math.pow((r-18)/5,2))*Math.exp(-Math.pow((u-0.5)/0.18,2))
+        + 0.10*pnoise(r,col);
+    ctx.fillStyle=viridis(v*0.9);
+    ctx.fillRect(10+col*cw,20+(R-1-r)*rh,cw+0.6,rh+0.6);
+  }
+  ctx.fillStyle='#9aa5cf'; ctx.font='12px system-ui';
+  ctx.fillText('tempo →',730,292); ctx.fillText('coef. mel ↑',10,14);
+  return null;
+}
+
+function simRnn(box){
+  const [c,ctx,cap]=mkCanvas(box,820,300);
+  cap.textContent='🧠 Célula RNN: x_t (40 MFCCs) + h_(t-1) → h_t (128 valores) · o loop é a memória · ao final, fc classifica';
+  const T=14; let step=0,ph=0;
+  function draw(){
+    ph+=0.02; if(ph>=1){ph=0; step=(step+1)%T;}
+    ctx.fillStyle='#0a0f24'; ctx.fillRect(0,0,820,300);
+    // entradas
+    for(let i=0;i<T;i++){
+      const y=32+i*18;
+      ctx.beginPath(); ctx.arc(70,y,6,0,7);
+      ctx.fillStyle = i===step? '#fbbf24':'#2a3564'; ctx.fill();
+      ctx.fillStyle='#6b76a8'; ctx.font='11px ui-monospace';
+      ctx.fillText('x_'+(i+1),20,y+4);
+    }
+    // seta entrada -> célula
+    const cy=150;
+    ctx.strokeStyle = ph<0.35 && step<T? '#fbbf24':'#2a3564'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(82,32+step*18); ctx.lineTo(300,cy-28); ctx.stroke();
+    // célula
+    ctx.fillStyle='#1a2347'; ctx.strokeStyle='#22d3ee'; ctx.lineWidth=2;
+    const flash=Math.max(0,Math.sin((ph)*Math.PI))*(ph<0.7?1:0.25);
+    ctx.shadowColor='#22d3ee'; ctx.shadowBlur=18*flash;
+    ctx.fillRect(300,cy-55,200,110); ctx.strokeRect(300,cy-55,200,110); ctx.shadowBlur=0;
+    ctx.fillStyle='#e8ecff'; ctx.font='bold 14px system-ui'; ctx.textAlign='center';
+    ctx.fillText('Célula RNN',400,cy-16);
+    ctx.fillStyle='#9aa5cf'; ctx.font='12px system-ui';
+    ctx.fillText('h_t = tanh(W·x_t + U·h_t-1 + b)',400,cy+10);
+    ctx.fillText('128 unidades × 2 camadas',400,cy+30);
+    // loop hidden
+    ctx.strokeStyle= ph>=0.35&&ph<0.7 ? '#a78bfa':'#2a3564'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(400,cy-55);
+    ctx.bezierCurveTo(480,cy-115,560,cy-115,520,cy-55);
+    ctx.stroke();
+    ctx.fillStyle='#a78bfa'; ctx.font='11px ui-monospace';
+    ctx.fillText('h_t → próximo passo',505,cy-118);
+    // seta célula -> saída
+    ctx.strokeStyle= ph>=0.7 ? '#34d399':'#2a3564'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(500,cy); ctx.lineTo(650,cy); ctx.stroke();
+    ctx.fillStyle='#1a2347'; ctx.strokeStyle='#34d399';
+    ctx.fillRect(650,cy-38,140,76); ctx.strokeRect(650,cy-38,140,76);
+    ctx.fillStyle='#e8ecff'; ctx.font='bold 13px system-ui';
+    ctx.fillText('out[:, -1, :]',720,cy-8);
+    ctx.fillStyle='#9aa5cf'; ctx.font='12px system-ui';
+    ctx.fillText('fc → 10 classes',720,cy+14);
+    ctx.textAlign='left';
+    ctx.fillStyle='#6b76a8'; ctx.font='11px system-ui';
+    ctx.fillText('passo de tempo: '+(step+1)+' / '+T,10,288);
+    SIM_RAFS.push(requestAnimationFrame(draw));
+  }
+  draw(); return null;
+}
+
+function simTrain(box){
+  const [c,ctx,cap]=mkCanvas(box,820,300);
+  cap.textContent='📈 Curvas do laboratório — perdas (linhas cheias) e acurácias (tracejadas). Note a validação subindo no final!';
+  const E=20;
+  const trL=[],vaL=[],trA=[],vaA=[];
+  for(let e=1;e<=E;e++){
+    trL.push(0.25+1.85*Math.exp(-0.25*e)+0.02*Math.sin(e*7.3));
+    const base=0.45+1.55*Math.exp(-0.3*e);
+    vaL.push(e<=13? base+0.02*Math.cos(e*5.1) : base*(1+0.07*(e-13)));
+    trA.push(0.95*(1-Math.exp(-0.3*e))+0.01*Math.sin(e*3.3));
+    vaA.push(e<=14? 0.87*(1-Math.exp(-0.33*e)) : 0.86-0.008*(e-14));
+  }
+  let n=0, done=false;
+  const ctrl=document.createElement('div'); ctrl.className='simctl';
+  const b1=document.createElement('button'); b1.className='btn small'; b1.textContent='🏋️ Treinar 1 época (0/20)';
+  const b2=document.createElement('button'); b2.className='btn ghost small'; b2.textContent='↺ Reiniciar';
+  const lbl=document.createElement('span'); lbl.className='simlabel'; lbl.textContent=' época 0 — treino: loss 2.10 · acc 0.00';
+  ctrl.append(b1,b2,lbl); box.appendChild(ctrl);
+  const X0=50,X1=790,Y0=20,Y1=250;
+  function axes(){
+    ctx.fillStyle='#0a0f24'; ctx.fillRect(0,0,820,300);
+    ctx.strokeStyle='#2a3564'; ctx.lineWidth=1;
+    ctx.strokeRect(X0,Y0,X1-X0,Y1-Y0);
+    ctx.fillStyle='#6b76a8'; ctx.font='11px system-ui';
+    for(let g=0;g<=5;g++){ const y=Y1-(Y1-Y0)*g/5;
+      ctx.fillText((2.5*g/5).toFixed(1),14,y+4);
+      ctx.strokeStyle='#1a2347'; ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
+    }
+    for(let e=0;e<=20;e+=5){ const x=X0+(X1-X0)*e/20; ctx.fillText(e,x-6,268); }
+    ctx.fillText('época →',730,285); ctx.fillText('perda',14,14);
+    ctx.fillStyle='#34d399'; ctx.fillText('acc (escala 0–1 × 2.5)',660,14);
+  }
+  function plot(arr,color,dash){
+    ctx.strokeStyle=color; ctx.lineWidth=2.2; ctx.setLineDash(dash?[6,5]:[]);
+    ctx.beginPath();
+    arr.slice(0,n).forEach((v,i)=>{
+      const x=X0+(X1-X0)*(i+1)/E, y=Y1-(Y1-Y0)*v/2.5;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  function draw(){
+    axes();
+    if(n>1){ plot(trL,'#22d3ee'); plot(vaL,'#f472b6'); plot(trA,'#a78bfa',true); plot(vaA,'#34d399',true); }
+    const lg=[['#22d3ee','perda treino'],['#f472b6','perda validação'],['#a78bfa','acc treino'],['#34d399','acc validação']];
+    let lx=64; lg.forEach(([cl,tx])=>{ ctx.fillStyle=cl; ctx.fillRect(lx,240,14,3); ctx.fillStyle='#9aa5cf'; ctx.fillText(tx,lx+18,247); lx+=ctx.measureText(tx).width+52; });
+  }
+  draw();
+  b1.onclick=()=>{
+    if(n>=E){ if(!done){done=true;} return; }
+    n++; b1.textContent=`🏋️ Treinar 1 época (${n}/20)`;
+    lbl.textContent=` época ${n} — treino: loss ${trL[n-1].toFixed(2)} · acc ${Math.min(1,trA[n-1]).toFixed(2)} | validação: loss ${vaL[n-1].toFixed(2)}`;
+    draw();
+    if(n===E){ sWin(); done=true; }
+  };
+  b2.onclick=()=>{ n=0; done=false; b1.textContent='🏋️ Treinar 1 época (0/20)'; draw(); };
+  return cb=>{ const iv=setInterval(()=>{ if(done){clearInterval(iv); cb();} },300);
+    SIM_RAFS.push(iv); };
+}
+
+function simConf(box){
+  const d=document.createElement('div');
+  const labs=['yes','no','up','go'];
+  const M=[[118,1,3,2],[2,96,1,7],[4,3,104,2],[1,4,3,110]];
+  let h='<table class="cm"><tr><th>real ↓ / prev →</th>'+labs.map(l=>`<th>${l}</th>`).join('')+'</tr>';
+  M.forEach((row,i)=>{ h+=`<tr><td class="rowlab">${labs[i]}</td>`+row.map((v,j)=>`<td class="${i===j?'dg':'off'}">${v}</td>`).join('')+'</tr>'; });
+  h+='</table>';
+  d.innerHTML=h;
+  box.appendChild(d);
+  const cap=document.createElement('div'); cap.className='capt';
+  cap.textContent='🔢 Mini-matriz de confusão (4 comandos de exemplo) — verde = acertos (diagonal), rosa = confusões';
+  box.appendChild(cap);
+  return null;
+}
+
+function simHidden(box){
+  const [c,ctx,cap]=mkCanvas(box,820,260);
+  cap.textContent='👁️ Ativações dos neurônios ocultos (16 de 128, ilustrativo) ao longo do tempo — cada coluna é um passo';
+  const R=16,C=40,cw=760/C,rh=200/R; let col=0,wait=0;
+  function draw(){
+    wait++; if(wait%5===0 && col<=C) col++;
+    if(col>C+14) col=0;
+    ctx.fillStyle='#0a0f24'; ctx.fillRect(0,0,820,260);
+    for(let r=0;r<R;r++)for(let i=0;i<Math.min(col,C);i++){
+      let v=0.45+0.3*Math.sin(0.4*r+0.35*i)+0.25*Math.sin(0.9*i+r*0.15)+0.15*pnoise(r,i);
+      v=Math.max(0,Math.min(1,v*0.85));
+      ctx.fillStyle=viridis(v);
+      ctx.fillRect(30+i*cw,30+(R-1-r)*rh,cw+0.5,rh+0.5);
+    }
+    ctx.fillStyle='#6b76a8'; ctx.font='11px system-ui';
+    ctx.fillText('unidades ocultas ↑',30,20);
+    ctx.fillText('passo de tempo →',700,248);
+    if(col<=C){ ctx.strokeStyle='#fbbf24'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(30+col*cw,30); ctx.lineTo(30+col*cw,230); ctx.stroke(); }
+    SIM_RAFS.push(requestAnimationFrame(draw));
+  }
+  draw(); return null;
+}
+
+/* ================= confetti ================= */
+function confetti(n){
+  const cv=$('cvsConf'),ctx=cv.getContext('2d');
+  cv.width=innerWidth; cv.height=innerHeight;
+  const cols=['#22d3ee','#a78bfa','#34d399','#fbbf24','#f472b6'];
+  const ps=Array.from({length:n},()=>({
+    x:Math.random()*cv.width, y:-20-Math.random()*cv.height*0.4,
+    r:4+Math.random()*6, vy:2+Math.random()*3.5, vx:(Math.random()-0.5)*2,
+    c:cols[Math.floor(Math.random()*cols.length)], a:Math.random()*6.28
+  }));
+  let f=0;
+  (function anim(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ps.forEach(p=>{ p.y+=p.vy; p.x+=p.vx+Math.sin(p.a+=0.08);
+      ctx.fillStyle=p.c; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+      ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.7); ctx.restore(); });
+    if(++f<180) requestAnimationFrame(anim); else ctx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+/* ================= certificado ================= */
+function showCert(){
+  const starsTot=Object.values(S.stars).reduce((a,b)=>a+b,0);
+  $('certName').textContent=S.name||'Cientista Anônimo';
+  $('certRank').textContent='Nível alcançado: '+rankOf();
+  $('certXp').textContent=S.xp;
+  $('certStars').textContent=starsTot+'/24';
+  $('certDate').textContent=new Date().toLocaleDateString('pt-BR');
+  const pg=$('pipeGrid');
+  if(!pg.dataset.filled){
+    pg.dataset.filled=1;
+    PIPE.forEach(s=>{ const d=document.createElement('div'); d.className='pipe';
+      d.innerHTML=`<b>${s[0]} ${s[1]}</b>${s[2]}`; pg.appendChild(d); });
+  }
+  show('scr-cert'); sWin(); confetti(220);
+}
+
+/* ================= guia do laboratório ================= */
+function openGuide(){
+  $('modalBody').innerHTML=`
+  <h2>📖 Guia: como desenvolver o laboratório RNN passo a passo</h2>
+  <div class="steps">
+    <div class="step"><b>Abra o notebook</b> <code>3.lab.1-rnn-audio-classification.ipynb</code>, preencha seu nome/data no cabeçalho e confira as instruções oficiais no Canvas LMS.</div>
+    <div class="step"><b>Célula de setup:</b> importe <code>torch</code>, <code>torchaudio</code>, <code>sklearn</code>, <code>matplotlib/seaborn</code>; fixe as seeds (<code>seed 42</code>) e defina o <code>device</code> (GPU se disponível).</div>
+    <div class="step"><b>Parte 1 — Dados:</b> implemente o <code>SubsetSC</code> filtrando <code>validation_list.txt</code>/<code>testing_list.txt</code> e os 10 comandos; carregue treino/validação/teste, imprima os tamanhos, explore uma amostra e <b>plote a waveform</b>.</div>
+    <div class="step"><b>Parte 2 — Features:</b> defina <code>T.MFCC(sample_rate=16000, n_mfcc=40)</code>; aplique em uma amostra, imprima o shape <code>[1, 40, T]</code> e visualize waveform + MFCC (imshow).</div>
+    <div class="step"><b>Parte 2.1 — Dataset:</b> complete a classe <code>AudioDataset</code> (<code>__len__</code>, <code>__getitem__</code>: MFCC → transpor para (tempo, 40) → pad/truncate p/ 101 → label→índice). Crie os 3 <code>DataLoader</code>s com <code>batch_size=32</code> (shuffle no treino).</div>
+    <div class="step"><b>Parte 3 — Modelo:</b> implemente a <code>VanillaRNN</code>: <code>nn.RNN(40, 128, 2, batch_first=True)</code> → <code>nn.Dropout(0.2)</code> → <code>nn.Linear(128, 10)</code>; no forward, use <code>out[:, -1, :]</code>. Confira: ~56.074 parâmetros.</div>
+    <div class="step"><b>Parte 4 — Treino:</b> <code>nn.CrossEntropyLoss()</code> + <code>optim.Adam(lr=0.001)</code> + <code>ReduceLROnPlateau</code>; implemente <code>train_epoch</code> (zero_grad → forward → loss → backward → step) e <code>validate</code>; rode <b>20 épocas</b> salvando <code>best_rnn_model.pth</code> pela melhor acurácia de validação; plote as curvas.</div>
+    <div class="step"><b>Parte 5 — Avaliação:</b> carregue o melhor modelo, rode <code>model.eval()</code> + <code>no_grad()</code> no teste; calcule acurácia, <code>classification_report</code> e <b>matriz de confusão</b> (seaborn heatmap).</div>
+    <div class="step"><b>Parte 6 — Estados ocultos:</b> implemente <code>visualize_hidden_states</code>: rode uma amostra pela RNN e faça heatmap (unidades × tempo) com <code>imshow</code>.</div>
+    <div class="step"><b>Parte 7 — Baseline:</b> implemente a <code>FeedforwardBaseline</code> (flatten 101×40=4040 → Linear → ReLU → Linear), treine igual e compare com a RNN.</div>
+    <div class="step"><b>Parte 8 — Reflexão:</b> responda as <b>9 REFLECTION QUESTIONS</b> em markdown (3–7 frases cada, citando seus próprios números e gráficos) e <b>submeta o notebook com todas as células executadas e outputs visíveis</b>.</div>
+  </div>
+  <p style="color:var(--tx3);font-size:.78rem;margin-top:8px">💡 Cada fase do jogo corresponde a uma dessas etapas — use o botão “← Mapa” para rever qualquer tutorial.</p>`;
+  $('modal').classList.add('show');
+}
+
+/* ================= wiring + init ================= */
+const PIPE=[
+ ['🎧','Dados','Speech Commands · 10 comandos · splits oficiais treino/val/teste'],
+ ['🎼','Features','T.MFCC(sample_rate=16000, n_mfcc=40) → [1, 40, T]'],
+ ['📦','Dataset','AudioDataset: (tempo, 40), max_length=101, lotes de 32'],
+ ['🧠','Modelo','VanillaRNN(40→128, 2 camadas) → dropout → Linear(10) · 56.074 parâmetros'],
+ ['🏋️','Treino','CrossEntropy + Adam(0.001) + scheduler · 20 épocas · best checkpoint'],
+ ['📊','Avaliação','teste limpo (eval + no_grad) · matriz de confusão · F1 por comando'],
+ ['👁️','Interpretação','heatmap da evolução dos hidden states'],
+ ['⚖️','Baseline','Feedforward (flatten 4040) · 1.037.066 parâmetros · RNN 18,5× menor']
+];
+
+function initHeroWave(){
+  const cv=$('cvsWave'),ctx=cv.getContext('2d');
+  function size(){ cv.width=cv.offsetWidth; cv.height=cv.offsetHeight; }
+  size(); window.addEventListener('resize',size);
+  let t=0;
+  (function draw(){
+    if($('scr-home').classList.contains('active')){
+      t+=0.02;
+      ctx.clearRect(0,0,cv.width,cv.height);
+      [['#22d3ee22',0.5,1],['#a78bfa22',0.9,1.7],['#f472b622',1.4,0.6]].forEach(([cl,sp,hz],k)=>{
+        ctx.strokeStyle=cl; ctx.lineWidth=2; ctx.beginPath();
+        for(let x=0;x<=cv.width;x+=6){
+          const u=x/cv.width;
+          const y=cv.height*0.62+Math.sin(u*7*hz+t*sp)*38*hz*Math.sin(u*3.14);
+          x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+      });
+    }
+    requestAnimationFrame(draw);
+  })();
+}
+
+$('btnStart').onclick=()=>{
+  S.name=$('inpName').value.trim()||'Cientista Anônimo'; save();
+  renderMap(); show('scr-map'); sOk();
+};
+$('btnBackMap').onclick=()=>{ stopSims(); renderMap(); show('scr-map'); };
+$('btnDoneMap').onclick=()=>{ $('doneOv').classList.remove('show'); stopSims(); renderMap(); show('scr-map'); };
+$('btnDoneNext').onclick=()=>{
+  $('doneOv').classList.remove('show');
+  const i=CUR.pi;
+  if(i+1<PHASES.length) openPhase(i+1); else { renderMap(); show('scr-map'); }
+};
+$('btnCertMap').onclick=()=>{ renderMap(); show('scr-map'); };
+$('btnPrint').onclick=()=>window.print();
+$('btnGuide').onclick=openGuide;
+$('btnModalClose').onclick=()=>$('modal').classList.remove('show');
+$('modal').onclick=e=>{ if(e.target===$('modal')) $('modal').classList.remove('show'); };
+$('btnSound').onclick=()=>{ S.muted=!S.muted; refreshHud(); save(); if(!S.muted) sOk(); };
+$('btnReset').onclick=()=>{
+  if(confirm('Reiniciar todo o progresso (XP, estrelas e fases)?')){
+    try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+    location.reload();
+  }
+};
+
+load();
+if(S.name) $('inpName').value=S.name;
+refreshHud();
+initHeroWave();
+</script>
+</body>
+</html>
