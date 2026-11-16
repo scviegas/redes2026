@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocolo TCP — Missão Estudo Dirigido</title>
+<style>
+  :root{
+    --bg:#0a0e1a;
+    --bg2:#111827;
+    --panel:#151c2e;
+    --panel2:#1c2540;
+    --line:#2a3556;
+    --txt:#e6edf7;
+    --muted:#8da2c5;
+    --accent:#22d3ee;
+    --accent2:#a78bfa;
+    --ok:#34d399;
+    --warn:#fbbf24;
+    --err:#f87171;
+    --pink:#f472b6;
+    --glow:0 0 18px rgba(34,211,238,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Segoe UI',Roboto,system-ui,-apple-system,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(167,139,250,.18), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(34,211,238,.16), transparent 60%),
+      var(--bg);
+    color:var(--txt);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  /* animated grid backdrop */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;
+    background-image:
+      linear-gradient(rgba(42,53,86,.25) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42,53,86,.25) 1px, transparent 1px);
+    background-size:42px 42px;
+    mask-image:radial-gradient(ellipse at center, black 40%, transparent 100%);
+    animation:gridmove 18s linear infinite;
+  }
+  @keyframes gridmove{from{background-position:0 0}to{background-position:42px 42px}}
+
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 16px 60px}
+
+  header.app{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 18px;border:1px solid var(--line);border-radius:14px;
+    background:linear-gradient(180deg, rgba(28,37,64,.7), rgba(21,28,46,.7));
+    backdrop-filter:blur(6px);position:sticky;top:8px;z-index:50;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .logo{
+    width:34px;height:34px;border-radius:9px;
+    background:conic-gradient(from 220deg, var(--accent), var(--accent2), var(--pink), var(--accent));
+    display:grid;place-items:center;color:#06121a;font-weight:900;
+    box-shadow:var(--glow);
+  }
+  .brand small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+  .hud{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    font-size:12px;padding:6px 10px;border-radius:999px;
+    background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+    display:flex;align-items:center;gap:6px;
+  }
+  .chip b{color:var(--accent)}
+  .chip.lv b{color:var(--accent2)}
+  .chip.score b{color:var(--warn)}
+
+  /* progress bar */
+  .progress{height:6px;border-radius:6px;background:var(--panel2);overflow:hidden;margin:10px 0 18px;border:1px solid var(--line)}
+  .progress > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s ease}
+
+  .card{
+    border:1px solid var(--line);border-radius:16px;
+    background:linear-gradient(180deg, rgba(28,37,64,.55), rgba(21,28,46,.55));
+    padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.3);
+  }
+  .hide{display:none!important}
+
+  /* ===== Intro ===== */
+  #intro .hero{text-align:center;padding:14px 0 6px}
+  #intro .hero h1{
+    font-size:clamp(26px,5vw,40px);letter-spacing:.5px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2),var(--pink));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(167,139,250,.25);
+  }
+  #intro .hero p{color:var(--muted);margin-top:8px;max-width:680px;margin-inline:auto}
+  .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 18px}
+  .tag{font-size:11px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--muted)}
+  .tag b{color:var(--accent)}
+
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:6px}
+  .lvl{
+    border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel);
+    cursor:pointer;transition:.2s;position:relative;overflow:hidden;
+  }
+  .lvl:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:var(--glow)}
+  .lvl.locked{opacity:.4;cursor:not-allowed}
+  .lvl.locked:hover{transform:none;border-color:var(--line);box-shadow:none}
+  .lvl .num{
+    width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;
+    background:var(--panel2);border:1px solid var(--line);color:var(--accent);
+  }
+  .lvl.done .num{background:var(--ok);color:#06281b;border-color:transparent}
+  .lvl h3{margin:8px 0 4px;font-size:15px}
+  .lvl p{color:var(--muted);font-size:12px;line-height:1.4}
+  .lvl .lock{position:absolute;top:10px;right:10px;font-size:14px}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+    border:1px solid var(--accent);background:linear-gradient(180deg, rgba(34,211,238,.18), rgba(34,211,238,.06));
+    color:var(--accent);padding:10px 18px;border-radius:10px;font-weight:600;
+    transition:.18s;font-size:14px;
+  }
+  .btn:hover{background:var(--accent);color:#06121a;box-shadow:var(--glow)}
+  .btn.ghost{border-color:var(--line);background:var(--panel2);color:var(--muted)}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent);background:var(--panel2)}
+  .btn.purple{border-color:var(--accent2);color:var(--accent2);background:linear-gradient(180deg, rgba(167,139,250,.18), rgba(167,139,250,.06))}
+  .btn.purple:hover{background:var(--accent2);color:#1a1030}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .center{text-align:center}
+
+  /* ===== TCP Header visual ===== */
+  .hwrap{overflow-x:auto;padding-bottom:6px}
+  .header-grid{
+    display:grid;grid-template-columns:repeat(16,1fr);gap:3px;min-width:760px;
+    font-size:11px;
+  }
+  .cell{
+    border:1px solid var(--line);border-radius:4px;padding:5px 4px;text-align:center;
+    background:var(--panel2);color:var(--muted);min-height:46px;
+    display:flex;flex-direction:column;justify-content:center;cursor:pointer;
+    transition:.15s;
+  }
+  .cell:hover{border-color:var(--accent);color:var(--txt)}
+  .cell.active{border-color:var(--accent2);background:rgba(167,139,250,.18);color:#fff;box-shadow:0 0 10px rgba(167,139,250,.4)}
+  .cell .nm{font-weight:700;color:var(--accent);font-size:10px}
+  .cell .bt{font-size:9px;color:var(--muted)}
+  .cell .val{font-size:10px;color:var(--ok);font-family:ui-monospace,Menlo,Consolas,monospace}
+  .cell.flag{min-height:30px}
+  .span-2{grid-column:span 2}
+  .span-4{grid-column:span 4}
+  .span-8{grid-column:span 8}
+  .span-16{grid-column:span 16}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+  .field-info{
+    margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel);
+    min-height:120px;
+  }
+  .field-info h4{color:var(--accent);margin-bottom:6px}
+  .field-info .meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .field-info p{font-size:13px;line-height:1.55;color:var(--txt)}
+
+  .byte-ruler{
+    display:grid;grid-template-columns:repeat(16,1fr);gap:3px;min-width:760px;
+    font-size:9px;color:var(--muted);margin-bottom:4px;font-family:ui-monospace,monospace;
+  }
+  .byte-ruler span{text-align:center}
+
+  /* ===== Quiz ===== */
+  .qblock{margin:10px 0}
+  .opts{display:grid;gap:8px;margin-top:10px}
+  .opt{
+    border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel);
+    cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:flex-start;
+  }
+  .opt:hover{border-color:var(--accent)}
+  .opt .bullet{
+    width:24px;height:24px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);
+    display:grid;place-items:center;font-weight:700;color:var(--accent);flex-shrink:0;
+  }
+  .opt.correct{border-color:var(--ok);background:rgba(52,211,153,.12)}
+  .opt.correct .bullet{background:var(--ok);color:#06281b;border-color:transparent}
+  .opt.wrong{border-color:var(--err);background:rgba(248,113,113,.12)}
+  .opt.wrong .bullet{background:var(--err);color:#2a0808;border-color:transparent}
+  .opt.disabled{cursor:not-allowed;opacity:.7}
+
+  .feedback{
+    margin-top:12px;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5;
+    border:1px solid var(--line);background:var(--panel);display:none;
+  }
+  .feedback.show{display:block;animation:pop .25s ease}
+  @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+  .feedback.ok{border-color:var(--ok);background:rgba(52,211,153,.1)}
+  .feedback.bad{border-color:var(--err);background:rgba(248,113,113,.1)}
+  .feedback .lab{font-weight:700;display:block;margin-bottom:4px}
+  .feedback.ok .lab{color:var(--ok)}
+  .feedback.bad .lab{color:var(--err)}
+
+  /* ===== Compare table ===== */
+  .cmp{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-top:12px}
+  .cmp .hd{
+    padding:10px;border-radius:8px;font-weight:700;text-align:center;border:1px solid var(--line);
+    background:var(--panel2);
+  }
+  .cmp .hd.tcp{color:var(--accent);border-color:var(--accent)}
+  .cmp .hd.udp{color:var(--warn);border-color:var(--warn)}
+  .cmp .hd.feat{color:var(--muted);text-align:left}
+  .cmp .cell-c{
+    padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+    font-size:13px;display:flex;align-items:center;gap:8px;
+  }
+  .cmp .cell-c.feat{font-weight:600;color:var(--txt)}
+  .cmp .yes{color:var(--ok)}
+  .cmp .no{color:var(--err)}
+
+  /* ===== Congestion chart ===== */
+  .chart-box{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--panel);margin-top:10px}
+  canvas{display:block;width:100%;height:240px;border-radius:8px}
+  .phase-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .phase{
+    flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2);
+    cursor:pointer;transition:.15s;
+  }
+  .phase:hover{border-color:var(--accent)}
+  .phase.active{border-color:var(--accent2);box-shadow:0 0 12px rgba(167,139,250,.35)}
+  .phase h5{color:var(--accent);font-size:13px;margin-bottom:4px}
+  .phase p{font-size:11px;color:var(--muted);line-height:1.4}
+
+  /* ===== Ports / multiplexing ===== */
+  .mux-box{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+  .mux-side{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel)}
+  .mux-side h4{color:var(--accent);margin-bottom:8px}
+  .proc-list{display:flex;flex-direction:column;gap:6px}
+  .proc{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);
+    font-size:12px;
+  }
+  .proc .port{color:var(--accent);font-family:ui-monospace,monospace;font-weight:700}
+  .proc .name{color:var(--txt)}
+  .arrow{font-size:18px;color:var(--accent2)}
+  .pkt{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);font-family:ui-monospace,monospace;font-size:11px;color:var(--ok)}
+
+  /* drag drop ports */
+  .dd{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .dd-src{display:flex;gap:6px;flex-wrap:wrap}
+  .dd-item{
+    padding:8px 12px;border-radius:8px;background:var(--panel2);border:1px dashed var(--accent);
+    cursor:grab;font-size:12px;user-select:none;
+  }
+  .dd-item.dragging{opacity:.5}
+  .dd-targets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  .dd-target{
+    border:1px solid var(--line);border-radius:10px;padding:10px;min-height:70px;background:var(--panel);
+    transition:.15s;
+  }
+  .dd-target.over{border-color:var(--ok);background:rgba(52,211,153,.08)}
+  .dd-target h5{font-size:12px;color:var(--accent);margin-bottom:6px}
+  .dd-target .slot{font-size:11px;color:var(--muted)}
+  .dd-target.placed .slot{color:var(--ok);font-weight:700}
+
+  /* ===== final exam ===== */
+  .exam{border:1px solid var(--accent2);border-radius:14px;padding:18px;background:linear-gradient(180deg, rgba(167,139,250,.1), rgba(21,28,46,.4));margin-top:8px}
+  .exam h3{color:var(--accent2)}
+  .exam .stmt{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--panel);margin:6px 0;font-size:13px;line-height:1.5}
+  .exam .stmt .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-left:6px}
+  .exam .stmt .badge.t{background:rgba(52,211,153,.2);color:var(--ok);border:1px solid var(--ok)}
+  .exam .stmt .badge.f{background:rgba(248,113,113,.2);color:var(--err);border:1px solid var(--err)}
+
+  /* result */
+  .result{text-align:center;padding:20px}
+  .result .big{font-size:48px;margin:10px 0}
+  .result .stars{color:var(--warn);font-size:24px;letter-spacing:4px;margin:6px 0}
+
+  footer.appf{
+    margin-top:24px;text-align:center;color:var(--muted);font-size:11px;line-height:1.6;
+    border-top:1px solid var(--line);padding-top:14px;
+  }
+  footer.appf b{color:var(--accent)}
+
+  /* responsive */
+  @media (max-width:640px){
+    .mux-box{grid-template-columns:1fr}
+    .cmp{font-size:12px}
+    .cmp .cell-c{font-size:11px}
+  }
+
+  /* highlight box */
+  .note{border-left:3px solid var(--accent);background:rgba(34,211,238,.06);padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;line-height:1.55;margin:10px 0}
+  .note b{color:var(--accent)}
+  .note.warn{border-color:var(--warn);background:rgba(251,191,36,.06)}
+  .note.warn b{color:var(--warn)}
+
+  .h-title{font-size:18px;font-weight:700;margin-bottom:4px}
+  .h-sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--panel);border:1px solid var(--accent);color:var(--txt);
+    padding:12px 20px;border-radius:10px;box-shadow:var(--glow);z-index:200;
+    opacity:0;pointer-events:none;transition:.3s;font-size:13px;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <div class="brand">
+      <div class="logo">T</div>
+      <div>
+        Protocolo TCP
+        <small>Missão Estudo Dirigido — Semana 5</small>
+      </div>
+    </div>
+    <div class="hud">
+      <span class="chip lv">Nível <b id="hud-level">0</b>/5</span>
+      <span class="chip score">Pontos <b id="hud-score">0</b></span>
+      <span class="chip">Concluídos <b id="hud-done">0</b></span>
+    </div>
+  </header>
+
+  <div class="progress"><i id="prog"></i></div>
+
+  <!-- ============ INTRO ============ -->
+  <section id="intro" class="card">
+    <div class="hero">
+      <h1>Missão: Protocolo TCP</h1>
+      <p>Você é um <b style="color:var(--accent)">analista de redes</b> em treinamento. Para concluir a Semana 5, precisa dominar o cabeçalho TCP, o confronto TCP × UDP, o controle de congestionamento, o checksum e a multiplexação por portas. Complete os 5 níveis para destravar o <b style="color:var(--accent2)">Exercício Final</b>.</p>
+      <div class="badges">
+        <span class="tag"><b>Camada de Transporte</b> · TCP/IP</span>
+        <span class="tag">Cabeçalho <b>20 bytes</b> fixo</span>
+        <span class="tag">Opções até <b>40 bytes</b></span>
+        <span class="tag">IPv4 = IPv6</span>
+      </div>
+    </div>
+
+    <div class="levels" id="levelList"></div>
+
+    <div class="row center" style="margin-top:18px">
+      <button class="btn" id="startBtn">▶ Iniciar Missão</button>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL 1: HEADER ============ -->
+  <section id="lvl1" class="card hide">
+    <div class="h-title">Nível 1 — Anatomia do Cabeçalho TCP</div>
+    <div class="h-sub">Um segmento TCP começa com um cabeçalho fixo de <b style="color:var(--accent)">20 bytes</b> (160 bits), idêntico em IPv4 e IPv6. O campo de opções pode adicionar até 40 bytes (320 bits). Clique em cada campo para inspecioná-lo.</div>
+
+    <div class="byte-ruler" id="ruler"></div>
+    <div class="hwrap">
+      <div class="header-grid" id="headerGrid"></div>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>Endereçamento (portas)</span>
+      <span><i style="background:var(--accent2)"></i>Controle de conexão</span>
+      <span><i style="background:var(--pink)"></i>Confiabilidade/fluxo</span>
+      <span><i style="background:var(--warn)"></i>Verificação</span>
+      <span><i style="background:#64748b"></i>Opções (variável)</span>
+    </div>
+
+    <div class="field-info" id="fieldInfo">
+      <h4>Selecione um campo</h4>
+      <p>Clique em qualquer célula do cabeçalho acima para ver sua descrição, tamanho e função.</p>
+    </div>
+
+    <div class="note"><b>Importante:</b> o cabeçalho TCP é o mesmo para IPv4 e IPv6. A versão do IP não altera o formato do cabeçalho TCP, apenas o endereçamento da camada inferior.</div>
+
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+      <button class="btn ghost" onclick="goIntro()">← Voltar</button>
+      <button class="btn purple" id="l1next" disabled>Concluir nível →</button>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL 2: TCP vs UDP ============ -->
+  <section id="lvl2" class="card hide">
+    <div class="h-title">Nível 2 — TCP × UDP</div>
+    <div class="h-sub">Os dois protocolos de transporte mais usados na Internet. Entenda a diferença que justifica a escolha de um ou outro em cada aplicação.</div>
+
+    <div class="cmp">
+      <div class="hd feat">Característica</div>
+      <div class="hd tcp">TCP</div>
+      <div class="hd udp">UDP</div>
+
+      <div class="cell-c feat">Orientado à conexão</div>
+      <div class="cell-c"><span class="yes">✔ Sim</span> (three-way handshake)</div>
+      <div class="cell-c"><span class="no">✘ Não</span> (connectionless)</div>
+
+      <div class="cell-c feat">Confiabilidade</div>
+      <div class="cell-c"><span class="yes">✔ Sim</span> — ACKs, retransmissão</div>
+      <div class="cell-c"><span class="no">✘ Não</span> — "best effort"</div>
+
+      <div class="cell-c feat">Ordem dos dados</div>
+      <div class="cell-c"><span class="yes">✔ Garantida</span> (nº de sequência)</div>
+      <div class="cell-c"><span class="no">✘ Não</span></div>
+
+      <div class="cell-c feat">Controle de fluxo/congestionamento</div>
+      <div class="cell-c"><span class="yes">✔ Sim</span></div>
+      <div class="cell-c"><span class="no">✘ Não</span></div>
+
+      <div class="cell-c feat">Tamanho do cabeçalho</div>
+      <div class="cell-c">20 bytes (fixo + opções)</div>
+      <div class="cell-c">8 bytes (mínimo)</div>
+
+      <div class="cell-c feat">Velocidade / overhead</div>
+      <div class="cell-c">Mais lento, mais overhead</div>
+      <div class="cell-c"><span class="yes">✔ Mais rápido</span>, leve</div>
+
+      <div class="cell-c feat">Exemplos de uso</div>
+      <div class="cell-c">Web (HTTP), e-mail (SMTP), FTP, SSH</div>
+      <div class="cell-c">DNS, VoIP, streaming, jogos online</div>
+
+      <div class="cell-c feat">Camada (modelo TCP/IP)</div>
+      <div class="cell-c">Transporte</div>
+      <div class="cell-c">Transporte</div>
+    </div>
+
+    <div class="note warn"><b>Atenção:</b> para <b>streaming</b>, o UDP costuma ser mais adequado, pois a perda eventual de pacotes não compromete tanto a experiência do usuário e evita o atraso das retransmissões do TCP. O TCP, por sua vez, é preferido quando a integridade dos dados é crítica.</div>
+
+    <div class="qblock">
+      <h4 style="margin-top:14px">Quiz rápido — qual protocolo usar?</h4>
+      <div class="opts" id="quiz2"></div>
+      <div class="feedback" id="fb2"></div>
+    </div>
+
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+      <button class="btn ghost" onclick="goIntro()">← Voltar</button>
+      <button class="btn purple" id="l2next" disabled>Concluir nível →</button>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL 3: CONGESTION + CHECKSUM ============ -->
+  <section id="lvl3" class="card hide">
+    <div class="h-title">Nível 3 — Controle de Congestionamento & Checksum</div>
+    <div class="h-sub">O TCP não pode eliminar totalmente gargalos críticos, mas mitiga o congestionamento por meio de algoritmos. Clique nas fases para vê-las no gráfico.</div>
+
+    <div class="chart-box">
+      <canvas id="ccCanvas" width="800" height="240"></canvas>
+    </div>
+
+    <div class="phase-row" id="phases"></div>
+
+    <div class="field-info" id="phaseInfo" style="min-height:90px">
+      <h4>Clique em uma fase</h4>
+      <p>Cada fase do controle de congestionamento do TCP ajusta a janela (cwnd) de acordo com os sinais da rede (ACKs recebidos, perdas, timeouts).</p>
+    </div>
+
+    <div class="note"><b>Checksum:</b> campo de 16 bits que verifica a integridade do cabeçalho <b>e</b> dos dados do segmento. O emissor calcula o checksum sobre todo o segmento e o receptor recalcula ao receber; se não coincidir, o segmento é descartado silenciosamente.</div>
+
+    <div class="qblock">
+      <h4 style="margin-top:8px">Quiz — controle de congestionamento</h4>
+      <div class="opts" id="quiz3"></div>
+      <div class="feedback" id="fb3"></div>
+    </div>
+
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+      <button class="btn ghost" onclick="goIntro()">← Voltar</button>
+      <button class="btn purple" id="l3next" disabled>Concluir nível →</button>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL 4: MULTIPLEXING ============ -->
+  <section id="lvl4" class="card hide">
+    <div class="h-title">Nível 4 — Multiplexação & Portas</div>
+    <div class="h-sub">Vários processos rodam ao mesmo tempo em um host. A camada de transporte os atende por <b>multiplexação</b> (remitente) e <b>demultiplexação</b> (receptor), usando <b>portas</b> de 16 bits.</div>
+
+    <div class="mux-box">
+      <div class="mux-side">
+        <h4>📤 Multiplexação (emissor)</h4>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Vários processos enviam dados pelo mesmo protocolo de transporte. Os segmentos ganham portas de origem diferentes.</p>
+        <div class="proc-list">
+          <div class="proc"><span class="name">🌐 Navegador (HTTP)</span><span class="pkt">port 52311→</span><span class="port">:443</span></div>
+          <div class="proc"><span class="name">✉️ E-mail (SMTP)</span><span class="pkt">port 48220→</span><span class="port">:25</span></div>
+          <div class="proc"><span class="name">🔒 SSH</span><span class="pkt">port 50199→</span><span class="port">:22</span></div>
+          <div class="arrow center">↓</div>
+          <div class="proc" style="justify-content:center"><span class="pkt">Segmento TCP único no canal</span></div>
+        </div>
+      </div>
+
+      <div class="mux-side">
+        <h4>📥 Demultiplexação (receptor)</h4>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Os segmentos chegam pelo mesmo canal; o receptor usa a porta de destino para entregar ao processo correto.</p>
+        <div class="proc-list">
+          <div class="proc" style="justify-content:center"><span class="pkt">Segmento TCP chega</span></div>
+          <div class="arrow center">↓</div>
+          <div class="proc"><span class="pkt">dst :443</span><span class="arrow">→</span><span class="name">🌐 Servidor Web</span></div>
+          <div class="proc"><span class="pkt">dst :25</span><span class="arrow">→</span><span class="name">✉️ Servidor SMTP</span></div>
+          <div class="proc"><span class="pkt">dst :22</span><span class="arrow">→</span><span class="name">🔒 Servidor SSH</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note"><b>Portas bem conhecidas (0–1023):</b> HTTP 80/HTTPS 443, DNS 53, SMTP 25, FTP 21, SSH 22. Cada porta identifica um processo/serviço, permitindo que múltiplas conversações coexistam no mesmo IP.</div>
+
+    <div class="qblock">
+      <h4 style="margin-top:8px">Mini-jogo: arraste o serviço para a porta correta</h4>
+      <div class="dd-src" id="ddSrc"></div>
+      <div class="dd-targets" id="ddTargets" style="margin-top:10px"></div>
+      <div class="feedback" id="fb4"></div>
+    </div>
+
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+      <button class="btn ghost" onclick="goIntro()">← Voltar</button>
+      <button class="btn purple" id="l4next" disabled>Concluir nível →</button>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL 5: FINAL EXAM ============ -->
+  <section id="lvl5" class="card hide">
+    <div class="h-title">Nível 5 — Exercício Final (3 pontos)</div>
+    <div class="h-sub">Esta é a questão original do Estudo Dirigido. Marque a alternativa correta.</div>
+
+    <div class="exam">
+      <h3>Questão 1 — ID 32816389</h3>
+      <p style="font-size:13px;line-height:1.55;margin:8px 0">Os protocolos TCP e UDP são dois exemplos de protocolos bastante utilizados na internet. Entretanto possuem diferenças importantes que justificam a utilização de um, em detrimento ao outro, em situações específicas. A respeito de características destes dois protocolos, analise as opções abaixo e marque a alternativa correta.</p>
+
+      <div class="stmt" id="st1">1. A grande diferença entre TCP e UDP é que o primeiro é um protocolo orientado à conexão, mas o segundo não.</div>
+      <div class="stmt" id="st2">2. Por ser orientado à conexão, o protocolo TCP é mais indicado em aplicações de streaming. Neste tipo de aplicação a perda eventual de dados não se caracteriza como problema grave para o usuário.</div>
+      <div class="stmt" id="st3">3. Ambos são exemplos de protocolos pertencentes à camada de aplicação do modelo TCP/IP.</div>
+
+      <h4 style="margin-top:14px">Selecione a resposta:</h4>
+      <div class="opts" id="quiz5"></div>
+      <div class="feedback" id="fb5"></div>
+    </div>
+
+    <div id="finalResult" class="result hide"></div>
+
+    <div class="row" style="justify-content:space-between;margin-top:16px">
+      <button class="btn ghost" onclick="goIntro()">← Voltar</button>
+      <button class="btn ghost" id="restartBtn">↻ Reiniciar missão</button>
+    </div>
+  </section>
+
+  <footer class="appf">
+    <b>Protocolo TCP — Estudo Dirigido</b> · Jogo educativo interativo · Conteúdo: cabeçalho TCP (20 bytes fixo + até 40 bytes de opções), TCP × UDP, controle de congestionamento, checksum e multiplexação por portas.<br>
+    Baseado na leitura: RAEDER, Mateus. <i>Redes de computadores: conceitos, aplicações e tipos de transporte.</i> Cap. 3, seções 1.2.5–1.2.8.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================== STATE ================== */
+const STATE = {
+  score:0,
+  current:0,
+  done:{1:false,2:false,3:false,4:false,5:false},
+  l1Seen:new Set(),
+  quiz2:false, quiz3:false,
+  ddMatched:0,
+  quiz5:null
+};
+
+const LEVELS = [
+  {n:1,title:"Cabeçalho TCP",desc:"20 bytes fixos + opções",icon:"📦"},
+  {n:2,title:"TCP × UDP",desc:"Conexão, confiabilidade, streaming",icon:"⚔️"},
+  {n:3,title:"Congestionamento",desc:"Slow start, checksum",icon:"📈"},
+  {n:4,title:"Portas & Mux",desc:"Multiplexação",icon:"🔀"},
+  {n:5,title:"Exercício Final",desc:"Questão de 3 pontos",icon:"🏆"},
+];
+
+/* ================== HELPERS ================== */
+function $(id){return document.getElementById(id)}
+function toast(msg){
+  const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),2200);
+}
+function updateHUD(){
+  $("hud-level").textContent=STATE.current||"—";
+  $("hud-score").textContent=STATE.score;
+  $("hud-done").textContent=Object.values(STATE.done).filter(Boolean).length;
+  const pct=(Object.values(STATE.done).filter(Boolean).length/5)*100;
+  $("prog").style.width=pct+"%";
+}
+function goIntro(){
+  ["lvl1","lvl2","lvl3","lvl4","lvl5"].forEach(id=>$(id).classList.add("hide"));
+  $("intro").classList.remove("hide");
+  STATE.current=0;updateHUD();renderLevelList();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function openLevel(n){
+  goIntroHide();
+  $("lvl"+n).classList.remove("hide");
+  STATE.current=n;updateHUD();
+  if(n===1)initL1();
+  if(n===2)initL2();
+  if(n===3)initL3();
+  if(n===4)initL4();
+  if(n===5)initL5();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function goIntroHide(){ $("intro").classList.add("hide"); }
+
+function isUnlocked(n){
+  if(n===1) return true;
+  return STATE.done[n-1];
+}
+
+function renderLevelList(){
+  const box=$("levelList");box.innerHTML="";
+  LEVELS.forEach(l=>{
+    const unlocked=isUnlocked(l.n);
+    const done=STATE.done[l.n];
+    const d=document.createElement("div");
+    d.className="lvl"+(done?" done":"")+(unlocked?"":" locked");
+    d.innerHTML=`
+      <div class="num">${done?"✓":l.n}</div>
+      <h3>${l.icon} ${l.title}</h3>
+      <p>${l.desc}</p>
+      ${unlocked?"":'<span class="lock">🔒</span>'}
+    `;
+    if(unlocked)d.onclick=()=>openLevel(l.n);
+    box.appendChild(d);
+  });
+}
+
+/* ================== LEVEL 1: HEADER ================== */
+const FIELDS=[
+  {key:"sport",name:"Porta de Origem",span:2,color:"#22d3ee",bits:16,bytes:2,
+   desc:"Identifica a porta da aplicação que <b>envia</b> o segmento. 16 bits → 2 bytes. Junto com a porta de destino permite que o receptor saiba a qual processo entregar a resposta.",
+   value:"0x1F90"},
+  {key:"dport",name:"Porta de Destino",span:2,color:"#22d3ee",bits:16,bytes:2,
+   desc:"Identifica a porta da aplicação de <b>destino</b>. Ex.: 80 (HTTP), 443 (HTTPS). É usada na demultiplexação no receptor.",
+   value:"0x0050"},
+  {key:"seq",name:"Nº de Sequência",span:4,color:"#a78bfa",bits:32,bytes:4,
+   desc:"32 bits que indicam a posição do <b>primeiro byte</b> de dados neste segmento dentro do fluxo. Garante a ordem dos dados e permite detecção de duplicatas.",
+   value:"0x00000100"},
+  {key:"ack",name:"Nº de Reconhecimento",span:4,color:"#a78bfa",bits:32,bytes:4,
+   desc:"32 bits. Válido apenas se o flag ACK estiver setado. Indica o <b>próximo número de sequência</b> que o emissor espera receber.",
+   value:"0x00000200"},
+  {key:"doff",name:"Data Offset",span:0.5,color:"#a78bfa",bits:4,bytes:0.5,
+   desc:"4 bits. Indica o <b>tamanho do cabeçalho</b> em palavras de 32 bits. Como há 20 bytes fixos, o valor mínimo é 5 (= 5×4 = 20 bytes).",
+   value:"0101"},
+  {key:"res",name:"Reservado",span:0.25,color:"#64748b",bits:3,bytes:0.25,
+   desc:"3 bits reservados para uso futuro. Atualmente devem ser zero.",
+   value:"000"},
+  {key:"ns",name:"NS",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — ECN-nonce. Sinalização de notificação explícita de congestionamento.",
+   value:"0"},
+  {key:"cwr",name:"CWR",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — Congestion Window Reduced. Indica que o host reduziu a janela de congestionamento.",
+   value:"0"},
+  {key:"ece",name:"ECE",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — ECN-Echo. Indica que o TCP peer é ECN-capable / sinaliza congestionamento.",
+   value:"0"},
+  {key:"urg",name:"URG",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — ponteiro de urgência válido. Indica dados urgentes prioritários.",
+   value:"0"},
+  {key:"ackf",name:"ACK",span:0.0625,color:"#a78bfa",bits:1,bytes:0.125,
+   desc:"1 bit — campo Acknowledgment Number é válido. Presente em quase todos os segmentos após o handshake.",
+   value:"1"},
+  {key:"psh",name:"PSH",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — Push. Solicita que o receptor entregue imediatamente os dados à aplicação.",
+   value:"0"},
+  {key:"rst",name:"RST",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — Reset. Reinicia a conexão abruptamente.",
+   value:"0"},
+  {key:"syn",name:"SYN",span:0.0625,color:"#a78bfa",bits:1,bytes:0.125,
+   desc:"1 bit — Synchronize. Sincroniza números de sequência no início da conexão (handshake).",
+   value:"0"},
+  {key:"fin",name:"FIN",span:0.0625,color:"#f472b6",bits:1,bytes:0.125,
+   desc:"1 bit — Finish. Encerra a conexão amigavelmente.",
+   value:"0"},
+  {key:"win",name:"Janela",span:2,color:"#f472b6",bits:16,bytes:2,
+   desc:"16 bits — Window Size. <b>Controle de fluxo</b>: quantos bytes o receptor pode aceitar a partir do próximo ACK.",
+   value:"0x2000"},
+  {key:"cksum",name:"Checksum",span:2,color:"#fbbf24",bits:16,bytes:2,
+   desc:"16 bits — verifica <b>integridade do cabeçalho e dos dados</b>. Calculado sobre o segmento + pseudo-cabeçalho IP.",
+   value:"0x4A1C"},
+  {key:"urgp",name:"Ponteiro Urgente",span:2,color:"#f472b6",bits:16,bytes:2,
+   desc:"16 bits — válido quando URG=1. Aponta para o último byte de dados urgentes.",
+   value:"0x0000"},
+  {key:"opts",name:"Opções",span:4,color:"#64748b",bits:"0–320",bytes:"0–40",
+   desc:"Campo <b>variável</b> de 0 a 40 bytes (320 bits). Pode conter MSS, timestamps, SACK, etc. Preenchido com zeros para alinhamento de 32 bits.",
+   value:"MSS,TS"},
+];
+
+function initL1(){
+  if($("headerGrid").dataset.ready) return;
+  // ruler 0-15 (each col = 4 bits => 16 cols = 64 bits = 8 bytes... we use 16 cols total for visual simplicity)
+  const ruler=$("ruler");ruler.innerHTML="";
+  // We use 16 columns representing the 20-byte fixed header simplified. We'll show byte offsets 0..19
+  for(let i=0;i<16;i++){
+    const s=document.createElement("span");s.textContent=i*4+"b";ruler.appendChild(s);
+  }
+  // header grid: use 16 columns. We'll lay out fields with explicit spans.
+  const grid=$("headerGrid");
+  // Build layout as a row of cells. Total 16 cols per row. Several rows.
+  // Row1: sport(2) dport(2) seq(4) ack(4) doff(0.5)... we simplify flags to 9 cells of 1 col each won't fit.
+  // Better: use 32 columns. Let's switch to 32-col grid.
+  grid.style.gridTemplateColumns="repeat(32,1fr)";
+  const rows=[
+    // row 1: src(2) dst(2) seq(4) ack(4) doff(4 res+flags cols? ) => we'll use 32 cells: sport(4=16b) dst(4) seq(8=32b) ack(8=32b) = 24, then doff(1)+res(1)+flags(6)=8 => 32. Good.
+    [["sport",4],["dport",4],["seq",8],["ack",8],["doff",1],["res",1],["flagsN",1],["ackf",1],["psh",1],["rst",1],["syn",1],["fin",1]],
+    // wait that's 4+4+8+8+1+1+1+1+1+1+1+1 = 32 ✓ but we grouped NS/CWR/ECE/URG into flagsN. Let's separate them too.
+  ];
+  // We'll lay out two rows:
+  const layout=[
+    {row:"1",cells:[["sport",4],["dport",4],["seq",8],["ack",8],["doff",1],["res",1],["ns",1],["cwr",1],["ece",1],["urg",1],["ackf",1],["psh",1],["rst",1],["syn",1],["fin",1]]},
+    {row:"2",cells:[["win",4],["cksum",4],["urgp",4],["opts",20]]}
+  ];
+  // row1 sums to 4+4+8+8+1*11 = 24+11=35 oops. Let me recompute: 4+4+8+8=24, +1(doff)+1(res)+1(ns)+1(cwr)+1(ece)+1(urg)+1(ackf)+1(psh)+1(rst)+1(syn)+1(fin)=11 → 35. Too many.
+  // Reduce: combine res+ns+cwr+ece+urg into single 5-bit "Reserved/Flags" cell, then ACK,PSH,RST,SYN,FIN as 1 each => 4+4+8+8 +1+5+1+1+1+1+1 = 24+1+5+5=35 still.
+  // Use 36 cols total. Easier: make row use grid auto-flow with fractions and not enforce sum=32. Use min width and let it wrap. We'll set grid auto-rows.
+  grid.style.gridTemplateColumns="repeat(36,1fr)";
+  grid.style.gridAutoFlow="row dense";
+
+  const layout36=[
+    [["sport",4],["dport",4],["seq",8],["ack",8],["doff",1],["res",1],["ns",1],["cwr",1],["ece",1],["urg",1],["ackf",1],["psh",1],["rst",1],["syn",1],["fin",1]],
+    [["win",4],["cksum",4],["urgp",4],["opts",20]]
+  ];
+  // row1: 4+4+8+8+1*11=35, fits in 36 (1 empty). row2: 4+4+4+20=32 ✓.
+  const flagNames=["ns","cwr","ece","urg","ackf","psh","rst","syn","fin"];
+  layout36.forEach((row,ri)=>{
+    row.forEach(([key,span])=>{
+      const f=FIELDS.find(x=>x.key===key);
+      const c=document.createElement("div");
+      c.className="cell"+(f.span<1?" flag":"");
+      c.style.gridColumn="span "+span;
+      c.style.borderColor=f.color+"55";
+      c.dataset.key=key;
+      c.innerHTML=`<div class="nm">${f.name}</div><div class="bt">${typeof f.bits==="number"?f.bits+" bits":f.bits+" bits"}</div>${f.value?`<div class="val">${f.value}</div>`:""}`;
+      c.onclick=()=>showField(key,c);
+      grid.appendChild(c);
+    });
+    if(ri===0){
+      const filler=document.createElement("div");
+      filler.style.gridColumn="span 1";
+      filler.style.border="1px dashed var(--line)";
+      filler.style.borderRadius="4px";
+      filler.style.minHeight="46px";
+      filler.style.opacity=".3";
+      grid.appendChild(filler);
+    }
+  });
+
+  grid.dataset.ready="1";
+}
+
+function showField(key,cell){
+  document.querySelectorAll("#headerGrid .cell").forEach(c=>c.classList.remove("active"));
+  cell.classList.add("active");
+  const f=FIELDS.find(x=>x.key===key);
+  const info=$("fieldInfo");
+  info.innerHTML=`
+    <h4 style="color:${f.color}">${f.name}</h4>
+    <div class="meta">${typeof f.bits==="number"?f.bits+" bits":f.bits} · ${f.bytes} bytes${f.value?(" · valor exemplo: "+f.value):""}</div>
+    <p>${f.desc}</p>
+  `;
+  if(!STATE.l1Seen.has(key)){
+    STATE.l1Seen.add(key);
+    // count main fields (exclude reserved filler). Need at least the 11 main fields seen.
+    const mainFields=["sport","dport","seq","ack","doff","win","cksum","urgp","opts","ackf","syn","fin"];
+    const seenCount=mainFields.filter(k=>STATE.l1Seen.has(k)).length;
+    if(seenCount>=mainFields.length){
+      $("l1next").disabled=false;
+      toast("✓ Todos os campos principais inspecionados!");
+    }
+  }
+}
+
+/* ================== LEVEL 2: TCP vs UDP quiz ================== */
+const Q2=[
+  {q:"Para uma <b>videoconferência ao vivo (VoIP)</b>, qual protocolo é geralmente preferido?",opts:["TCP","UDP"],correct:1,
+   why:"UDP é preferido por ser mais rápido e tolerar pequenas perdas — em tempo real, retransmitir um pacote atrasado não ajuda."},
+  {q:"Para <b>transferir um arquivo importante por FTP</b>, qual usar?",opts:["TCP","UDP"],correct:0,
+   why:"TCP garante entrega completa e ordenada — essencial para integridade de arquivos."},
+  {q:"Qual é o tamanho <b>mínimo</b> do cabeçalho TCP?",opts:["8 bytes","20 bytes","40 bytes"],correct:1,
+   why:"O cabeçalho fixo do TCP tem 20 bytes (160 bits). O campo de opções pode adicionar até 40 bytes, totalizando no máximo 60 bytes."},
+];
+let q2i=0;
+function initL2(){
+  if($("quiz2").dataset.ready) return;
+  $("quiz2").dataset.ready="1";
+  q2i=0;renderQ2();
+}
+function renderQ2(){
+  if(q2i>=Q2.length){
+    $("quiz2").innerHTML=`<div style="padding:10px;color:var(--ok);font-weight:600">✓ Quiz concluído! (+30 pontos)</div>`;
+    STATE.score+=30;updateHUD();
+    $("fb2").classList.remove("show");
+    $("l2next").disabled=false;
+    return;
+  }
+  const q=Q2[q2i];
+  const box=$("quiz2");box.innerHTML="";
+  q.opts.forEach((o,i)=>{
+    const el=document.createElement("div");el.className="opt";
+    el.innerHTML=`<div class="bullet">${String.fromCharCode(65+i)}</div><div>${o}</div>`;
+    el.onclick=()=>{
+      if(box.dataset.answered)return;
+      box.dataset.answered="1";
+      const correct=i===q.correct;
+      el.classList.add(correct?"correct":"wrong");
+      if(!correct){
+        const cEl=box.children[q.correct];cEl.classList.add("correct");
+      }
+      [...box.children].forEach(c=>c.classList.add("disabled"));
+      const fb=$("fb2");
+      fb.className="feedback show "+(correct?"ok":"bad");
+      fb.innerHTML=`<span class="lab">${correct?"✓ Correto":"✗ Quase!"}</span>${q.why}`;
+      if(correct){STATE.score+=10;updateHUD();}
+      setTimeout(()=>{delete box.dataset.answered;q2i++;renderQ2();},1400);
+    };
+    box.appendChild(el);
+  });
+}
+
+/* ================== LEVEL 3: Congestion control ================== */
+const PHASES=[
+  {key:"slow",name:"Slow Start",color:"#34d399",desc:"A janela (cwnd) começa pequena (1 MSS) e <b>dobra</b> a cada RTT até atingir o limiar (ssthresh). Crescimento exponencial."},
+  {key:"avoid",name:"Congestion Avoidance",color:"#22d3ee",desc:"Após o limiar, o crescimento passa a ser <b>linear</b> (+1 MSS por RTT) — crescimento aditivo para sondar a rede com cautela."},
+  {key:"fast",name:"Fast Retransmit",color:"#fbbf24",desc:"Ao receber <b>3 ACKs duplicados</b>, o TCP retransmite imediatamente o segmento perdido, sem esperar o timeout."},
+  {key:"rec",name:"Fast Recovery",color:"#a78bfa",desc:"Após fast retransmit, o TCP não volta a slow start; reduz cwnd pela metade e continua em congestion avoidance (crescimento linear)."},
+];
+let ccAnim=null;
+function initL3(){
+  drawCC(-1);
+  if($("phases").dataset.ready)return;
+  $("phases").dataset.ready="1";
+  const box=$("phases");box.innerHTML="";
+  PHASES.forEach(p=>{
+    const el=document.createElement("div");
+    el.className="phase";el.dataset.key=p.key;
+    el.innerHTML=`<h5>${p.name}</h5><p>${p.desc.replace(/<[^>]+>/g,"").slice(0,80)}…</p>`;
+    el.onclick=()=>{
+      document.querySelectorAll("#phases .phase").forEach(x=>x.classList.remove("active"));
+      el.classList.add("active");
+      const ph=PHASES.find(x=>x.key===p.key);
+      $("phaseInfo").innerHTML=`<h4 style="color:${p.color}">${ph.name}</h4><p>${ph.desc}</p>`;
+      drawCC(PHASES.indexOf(ph));
+    };
+    box.appendChild(el);
+  });
+  renderQ3();
+}
+function drawCC(highlight){
+  const cv=$("ccCanvas");
+  const ctx=cv.getContext("2d");
+  // scale to device
+  const W=cv.clientWidth*2, H=cv.clientHeight*2;
+  cv.width=W;cv.height=H;
+  ctx.scale(2,2);
+  const w=cv.clientWidth,h=cv.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  // bg
+  ctx.fillStyle="#0f1626";ctx.fillRect(0,0,w,h);
+  // grid
+  ctx.strokeStyle="rgba(42,53,86,.5)";ctx.lineWidth=1;
+  for(let x=0;x<=w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<=h;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  // axes
+  ctx.strokeStyle="#2a3556";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(40,10);ctx.lineTo(40,h-30);ctx.lineTo(w-10,h-30);ctx.stroke();
+  // labels
+  ctx.fillStyle="#8da2c5";ctx.font="11px sans-serif";
+  ctx.fillText("cwnd (janela)",8,16);
+  ctx.fillText("tempo (RTT)",w-80,h-12);
+
+  const baseY=h-30, baseX=40;
+  // Slow start: exponential up to ssthresh at RTT=4
+  const pts=[];
+  // phase boundaries (in RTT units, x-axis width)
+  const ssthreshRTT=4, lossRTT=9;
+  // Slow start: cwnd doubles each RTT: 1,2,4,8,16
+  for(let r=0;r<=ssthreshRTT;r++){
+    const c=Math.pow(2,r);
+    pts.push([baseX+r*30, baseY-c*6]);
+  }
+  // Congestion avoidance: linear from 16 at r=4 to ~21 at r=lossRTT
+  let c=16;
+  for(let r=ssthreshRTT;r<=lossRTT;r++){
+    pts.push([baseX+r*30, baseY-c*6]);
+    c+=1;
+  }
+  // Loss event: drop to half
+  let halfC=Math.floor(c/2);
+  pts.push([baseX+lossRTT*30, baseY-halfC*6]);
+  // Fast recovery -> linear again
+  for(let r=lossRTT+1;r<=lossRTT+4;r++){
+    pts.push([baseX+r*30, baseY-halfC*6]);
+    halfC+=1;
+  }
+
+  // draw segments colored by phase
+  function phaseOf(r){
+    if(r<=ssthreshRTT)return 0;
+    if(r<=lossRTT)return 1;
+    if(r===lossRTT+0.5)return 2;
+    return 3;
+  }
+  for(let i=1;i<pts.length;i++){
+    const r=i;
+    let ph;
+    if(r<=ssthreshRTT)ph=0;
+    else if(r<=lossRTT)ph=1;
+    else if(r===lossRTT+1)ph=2;
+    else ph=3;
+    const hl=(highlight===ph);
+    ctx.strokeStyle=PHASES[ph].color;
+    ctx.lineWidth=hl?4:2;
+    ctx.globalAlpha=hl?1:0.55;
+    ctx.beginPath();ctx.moveTo(pts[i-1][0],pts[i-1][1]);ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // dots
+  pts.forEach((p,i)=>{
+    let ph;
+    if(i<=ssthreshRTT)ph=0;else if(i<=lossRTT)ph=1;else if(i===lossRTT+1)ph=2;else ph=3;
+    ctx.fillStyle=PHASES[ph].color;
+    ctx.beginPath();ctx.arc(p[0],p[1],highlight===ph?4:2.5,0,Math.PI*2);ctx.fill();
+  });
+  // ssthresh line
+  ctx.strokeStyle="rgba(244,114,182,.5)";ctx.setLineDash([5,4]);ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(baseX+ssthreshRTT*30,10);ctx.lineTo(baseX+ssthreshRTT*30,baseY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle="#f472b6";ctx.font="10px sans-serif";
+  ctx.fillText("ssthresh",baseX+ssthreshRTT*30-14,8);
+  // loss marker
+  ctx.fillStyle="#f87171";
+  ctx.fillText("✕ perda",baseX+lossRTT*30-10,baseY-c*6-8);
+}
+const Q3=[
+  {q:"O campo <b>Checksum</b> do TCP verifica:",opts:["Apenas o cabeçalho","Apenas os dados","O cabeçalho e os dados","Nada — é decorativo"],correct:2,
+   why:"O checksum cobre tanto o cabeçalho quanto os dados (mais um pseudo-cabeçalho IP). Se falhar, o segmento é descartado."},
+  {q:"Na fase <b>Slow Start</b>, a janela cwnd:",opts:["Cresce linearmente","Dobra a cada RTT","Permanece fixa","Diminui pela metade"],correct:1,
+   why:"Slow Start cresce exponencialmente — dobra a cada RTT — até atingir o ssthresh."},
+  {q:"O gatilho do <b>Fast Retransmit</b> é:",opts:["Timeout","3 ACKs duplicados","1 ACK duplicado","Reset do servidor"],correct:1,
+   why:"Ao receber 3 ACKs duplicados, o TCP presume perda e retransmite sem esperar o timeout."},
+];
+let q3i=0;
+function renderQ3(){
+  if(q3i>=Q3.length){
+    $("quiz3").innerHTML=`<div style="padding:10px;color:var(--ok);font-weight:600">✓ Quiz concluído! (+30 pontos)</div>`;
+    STATE.score+=30;updateHUD();
+    $("fb3").classList.remove("show");
+    $("l3next").disabled=false;
+    return;
+  }
+  const q=Q3[q3i];
+  const box=$("quiz3");box.innerHTML="";box.dataset.ready="1";
+  q.opts.forEach((o,i)=>{
+    const el=document.createElement("div");el.className="opt";
+    el.innerHTML=`<div class="bullet">${String.fromCharCode(65+i)}</div><div>${o}</div>`;
+    el.onclick=()=>{
+      if(box.dataset.answered)return;
+      box.dataset.answered="1";
+      const correct=i===q.correct;
+      el.classList.add(correct?"correct":"wrong");
+      if(!correct)box.children[q.correct].classList.add("correct");
+      [...box.children].forEach(c=>c.classList.add("disabled"));
+      const fb=$("fb3");
+      fb.className="feedback show "+(correct?"ok":"bad");
+      fb.innerHTML=`<span class="lab">${correct?"✓ Correto":"✗ Quase!"}</span>${q.why}`;
+      if(correct){STATE.score+=10;updateHUD();}
+      setTimeout(()=>{delete box.dataset.answered;q3i++;renderQ3();},1500);
+    };
+    box.appendChild(el);
+  });
+}
+
+/* ================== LEVEL 4: drag-drop ports ================== */
+const DD=[
+  {name:"🌐 HTTP",port:80},
+  {name:"🔒 HTTPS",port:443},
+  {name:"📬 SMTP",port:25},
+  {name:"🔍 DNS",port:53},
+  {name:"🔐 SSH",port:22},
+  {name:"📁 FTP",port:21},
+];
+let ddPool=[];
+function initL4(){
+  if($("ddSrc").dataset.ready)return;
+  $("ddSrc").dataset.ready="1";
+  ddPool=[...DD].sort(()=>Math.random()-0.5);
+  renderDD();
+}
+function renderDD(){
+  const src=$("ddSrc");src.innerHTML="";
+  const tgts=$("ddTargets");tgts.innerHTML="";
+  ddPool.forEach(item=>{
+    const el=document.createElement("div");
+    el.className="dd-item";el.draggable=true;el.textContent=item.name;
+    el.dataset.port=item.port;
+    el.ondragstart=e=>{el.classList.add("dragging");e.dataTransfer.setData("port",item.port);e.dataTransfer.setData("name",item.name);e.dataTransfer.setData("srcId",el.dataset.id=el.textContent);};
+    el.ondragend=()=>el.classList.remove("dragging");
+    src.appendChild(el);
+  });
+  // targets: all ports in random order
+  const ports=[...DD].sort(()=>Math.random()-0.5);
+  ports.forEach(p=>{
+    const t=document.createElement("div");
+    t.className="dd-target";t.dataset.port=p.port;
+    t.innerHTML=`<h5>Porta ${p.port}</h5><div class="slot">arraste aqui…</div>`;
+    t.ondragover=e=>{e.preventDefault();t.classList.add("over");};
+    t.ondragleave=()=>t.classList.remove("over");
+    t.ondrop=e=>{
+      e.preventDefault();t.classList.remove("over");
+      const port=e.dataTransfer.getData("port");
+      const name=e.dataTransfer.getData("name");
+      if(t.classList.contains("placed"))return;
+      if(parseInt(port)===p.port){
+        t.classList.add("placed");
+        t.querySelector(".slot").innerHTML=`✓ ${name}`;
+        // remove source item
+        const dragged=[...src.children].find(c=>c.textContent===name);
+        if(dragged)dragged.remove();
+        STATE.ddMatched++;
+        STATE.score+=5;updateHUD();
+        if(STATE.ddMatched>=DD.length){
+          $("fb4").className="feedback show ok";
+          $("fb4").innerHTML=`<span class="lab">✓ Perfeito!</span>Todas as portas combinam! A <b>demultiplexação</b> usa exatamente essa ideia: a porta de destino direciona o segmento ao processo correto. (+20 bônus)`;
+          STATE.score+=20;updateHUD();
+          $("l4next").disabled=false;
+        }else{
+          toast("✓ "+name+" → "+p.port+" (+5)");
+        }
+      }else{
+        $("fb4").className="feedback show bad";
+        $("fb4").innerHTML=`<span class="lab">✗ Porta errada</span>${name} não pertence à porta ${p.port}. Tente novamente.`;
+        setTimeout(()=>$("fb4").classList.remove("show"),1600);
+      }
+    };
+    tgts.appendChild(t);
+  });
+}
+
+/* ================== LEVEL 5: FINAL EXAM ================== */
+const EXAM_OPTS=[
+  {id:"a",label:"Somente a opção 1 está correta.",correct:true,
+   why:"<b>Opção 1 — CORRETA:</b> TCP é orientado à conexão (handshake + estado), UDP é connectionless. Essa é a diferença central.<br><br><b>Opção 2 — INCORRETA:</b> Embora TCP seja orientado à conexão, justamente por isso ele <i>não</i> é o mais indicado para streaming — o overhead de retransmissões e ACKs gera atraso. Em streaming, a perda eventual é tolerável, e o <b>UDP</b> costuma ser preferido.<br><br><b>Opção 3 — INCORRETA:</b> TCP e UDP são protocolos da <b>camada de transporte</b>, não da camada de aplicação do modelo TCP/IP."},
+  {id:"b",label:"Apenas as opções 1 e 2 estão corretas.",correct:false,why:"A opção 2 está incorreta: TCP não é o mais indicado para streaming — o UDP costuma ser preferido pela menor latência."},
+  {id:"c",label:"Apenas as opções 2 e 3 estão corretas.",correct:false,why:"Ambas estão incorretas. TCP é para transporte (não aplicação) e TCP não é preferido para streaming."},
+  {id:"d",label:"Apenas as opções 1 e 3 estão corretas.",correct:false,why:"A opção 3 está incorreta: TCP e UDP são da camada de transporte, não de aplicação."},
+  {id:"e",label:"Todas estão corretas.",correct:false,why:"As opções 2 e 3 estão incorretas. Veja a explicação na resposta correta."},
+];
+
+function initL5(){
+  if($("quiz5").dataset.ready)return;
+  $("quiz5").dataset.ready="1";
+  const box=$("quiz5");box.innerHTML="";
+  EXAM_OPTS.forEach(o=>{
+    const el=document.createElement("div");el.className="opt";
+    el.innerHTML=`<div class="bullet">${o.id}</div><div>${o.label}</div>`;
+    el.onclick=()=>{
+      if(box.dataset.answered)return;
+      box.dataset.answered="1";
+      STATE.quiz5=o.id;
+      el.classList.add(o.correct?"correct":"wrong");
+      if(!o.correct){
+        const correctEl=[...box.children].find(c=>EXAM_OPTS.find(x=>x.id===c.querySelector(".bullet").textContent)?.correct);
+        // simpler: find the 'a' option
+        const aEl=[...box.children].find(c=>c.querySelector(".bullet").textContent==="a");
+        if(aEl)aEl.classList.add("correct");
+      }
+      [...box.children].forEach(c=>c.classList.add("disabled"));
+      const fb=$("fb5");
+      fb.className="feedback show "+(o.correct?"ok":"bad");
+      fb.innerHTML=`<span class="lab">${o.correct?"✓ Resposta correta!":("✗ Resposta incorreta — a correta é a alternativa (a)")}</span>${o.why}`;
+      // mark statements with T/F badges
+      markStatements();
+      // reward
+      if(o.correct){STATE.score+=50;}
+      else{STATE.score+=15;}
+      STATE.done[5]=true;updateHUD();
+      showFinalResult(o.correct);
+      $("restartBtn").classList.remove("ghost");
+      $("restartBtn").classList.add("purple");
+    };
+    box.appendChild(el);
+  });
+}
+function markStatements(){
+  $("st1").innerHTML="1. A grande diferença entre TCP e UDP é que o primeiro é um protocolo orientado à conexão, mas o segundo não. <span class='badge t'>VERDADEIRA</span>";
+  $("st2").innerHTML="2. Por ser orientado à conexão, o protocolo TCP é mais indicado em aplicações de streaming... <span class='badge f'>FALSA</span>";
+  $("st3").innerHTML="3. Ambos são exemplos de protocolos pertencentes à camada de aplicação do modelo TCP/IP. <span class='badge f'>FALSA</span>";
+}
+function showFinalResult(correct){
+  const r=$("finalResult");
+  r.classList.remove("hide");
+  const doneCount=Object.values(STATE.done).filter(Boolean).length;
+  const total=STATE.score;
+  let stars=1;
+  if(total>=120)stars=3;else if(total>=80)stars=2;
+  r.innerHTML=`
+    <div class="big">${correct?"🏆":"📘"}</div>
+    <h3 style="color:${correct?"var(--ok)":"var(--warn)"}">${correct?"Missão Cumprida!":"Quase lá — revise e tente de novo"}</h3>
+    <div class="stars">${"★".repeat(stars)+"☆".repeat(3-stars)}</div>
+    <p style="color:var(--muted);margin-top:8px">Pontuação final: <b style="color:var(--warn)">${total}</b> pontos · Níveis concluídos: <b style="color:var(--accent)">${doneCount}/5</b></p>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px;max-width:520px;margin-inline:auto">Resposta oficial do Estudo Dirigido: <b style="color:var(--ok)">alternativa (a) — Somente a opção 1 está correta.</b></p>
+    <button class="btn purple" style="margin-top:14px" onclick="goIntro()">← Voltar ao mapa</button>
+  `;
+}
+
+/* ================== WIRE NEXT BUTTONS ================== */
+function completeLevel(n){
+  if(!STATE.done[n]){
+    STATE.done[n]=true;
+    STATE.score+=20;
+    toast("✓ Nível "+n+" concluído! +20 pts");
+    updateHUD();
+  }
+  goIntro();
+}
+$("l1next").onclick=()=>completeLevel(1);
+$("l2next").onclick=()=>completeLevel(2);
+$("l3next").onclick=()=>completeLevel(3);
+$("l4next").onclick=()=>completeLevel(4);
+$("startBtn").onclick=()=>openLevel(1);
+$("restartBtn").onclick=()=>{
+  STATE.score=0;STATE.current=0;
+  STATE.done={1:false,2:false,3:false,4:false,5:false};
+  STATE.l1Seen.clear();STATE.quiz2=false;STATE.quiz3=false;STATE.ddMatched=0;STATE.quiz5=null;
+  // reset DOM datasets so re-entry re-inits
+  ["quiz2","quiz3","quiz5","ddSrc","phases","headerGrid"].forEach(id=>{const e=$(id);if(e)delete e.dataset.ready;});
+  ["l1next","l2next","l3next","l4next"].forEach(id=>$(id).disabled=true);
+  $("finalResult").classList.add("hide");
+  $("restartBtn").classList.add("ghost");$("restartBtn").classList.remove("purple");
+  // reset statements
+  $("st1").innerHTML="1. A grande diferença entre TCP e UDP é que o primeiro é um protocolo orientado à conexão, mas o segundo não.";
+  $("st2").innerHTML="2. Por ser orientado à conexão, o protocolo TCP é mais indicado em aplicações de streaming. Neste tipo de aplicação a perda eventual de dados não se caracteriza como problema grave para o usuário.";
+  $("st3").innerHTML="3. Ambos são exemplos de protocolos pertencentes à camada de aplicação do modelo TCP/IP.";
+  goIntro();
+  toast("↻ Missão reiniciada");
+};
+
+/* init */
+renderLevelList();
+updateHUD();
+window.addEventListener("resize",()=>{if(!$("lvl3").classList.contains("hide"))drawCC(-1);});
+</script>
+</body>
+</html>
