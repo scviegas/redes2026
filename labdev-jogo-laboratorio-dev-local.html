@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LabDev — Laboratório de Desenvolvimento Local</title>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#10161d; --panel2:#161e28; --panel3:#1b2531;
+  --border:#243044; --border2:#2f3e56;
+  --text:#dce7f5; --muted:#8296ad; --faint:#5b6c82;
+  --accent:#4da3ff; --accent2:#8b5cf6; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+  --mono:ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,'Courier New',monospace;
+  --ui:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --rad:12px; --rad-s:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px;overflow:hidden}
+button{font-family:var(--ui);cursor:pointer}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#2b3850;border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:#3a4b68}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- header ---------- */
+#topbar{height:56px;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.brand-logo{font-size:22px;filter:drop-shadow(0 0 6px rgba(77,163,255,.45))}
+.brand strong{font-size:15px;letter-spacing:.4px;display:block;line-height:1.1}
+.brand small{color:var(--muted);font-size:10.5px;display:block;white-space:nowrap}
+.head-progress{display:flex;flex-direction:column;gap:3px;min-width:150px}
+.head-progress span{font-size:10.5px;color:var(--muted);letter-spacing:.5px}
+.bar{height:6px;background:var(--panel3);border-radius:4px;overflow:hidden}
+#mission-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s ease}
+.head-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.chip{background:var(--panel3);border:1px solid var(--border2);color:var(--warn);font-size:12px;font-weight:600;padding:5px 10px;border-radius:20px;white-space:nowrap}
+.icon-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);width:34px;height:34px;border-radius:var(--rad-s);font-size:15px;transition:.15s}
+.icon-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+
+/* ---------- layout ---------- */
+#app{height:calc(100vh - 56px);height:calc(100dvh - 56px);display:flex;flex-direction:column}
+#mission-bar{margin:10px 10px 8px;background:var(--panel);border:1px solid var(--border);border-radius:var(--rad);padding:10px 14px;display:flex;align-items:center;gap:12px;position:relative;flex-wrap:wrap}
+.mb-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.mission-chip{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:11px;font-weight:700;padding:6px 11px;border-radius:20px;white-space:nowrap;letter-spacing:.4px}
+.mb-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mb-text strong{font-size:14px}
+.mb-text #mission-objective{font-size:12.5px;color:var(--muted);line-height:1.45}
+.mb-actions{display:flex;gap:8px;align-items:center}
+.btn{border:none;border-radius:var(--rad-s);padding:9px 16px;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,#2f7fe0,#4da3ff);color:#fff}
+.btn-primary:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn-ghost{background:var(--panel2);border:1px solid var(--border2);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent)}
+.btn-ok{background:linear-gradient(135deg,#0e9f6e,#34d399);color:#04120c}
+.btn span.cnt{opacity:.75;font-weight:400;font-size:11px}
+.shake{animation:shake .45s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+#hints-pop{position:absolute;top:calc(100% - 4px);right:12px;width:min(420px,calc(100vw - 24px));background:var(--panel2);border:1px solid var(--border2);border-radius:var(--rad);padding:12px 14px;z-index:60;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+#hints-pop h4{font-size:11px;color:var(--warn);letter-spacing:1px;margin-bottom:8px}
+.hint-item{font-size:12.5px;color:var(--text);line-height:1.5;background:var(--panel);border:1px solid var(--border);border-radius:var(--rad-s);padding:8px 10px;margin-bottom:7px}
+#btn-reveal-hint{width:100%;margin-top:4px}
+
+#grid{flex:1;min-height:0;display:grid;grid-template-columns:290px minmax(0,1fr) clamp(300px,27vw,400px);gap:10px;padding:0 10px 10px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--rad);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+
+/* ---------- left panel (chat + files) ---------- */
+#left-panel{min-width:0}
+.lp-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--panel2)}
+.lp-tab{flex:1;background:none;border:none;color:var(--muted);padding:11px 6px;font-size:12px;font-weight:600;border-bottom:2px solid transparent;letter-spacing:.3px}
+.lp-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel)}
+.lp-view{flex:1;min-height:0;display:none;flex-direction:column}
+.lp-view.active{display:flex}
+#chat-scroll{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+.msg{display:flex;gap:8px;align-items:flex-start}
+.ava{width:30px;height:30px;min-width:30px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#c4b5fd);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 8px rgba(139,92,246,.35)}
+.bubble{background:var(--panel2);border:1px solid var(--border);border-radius:4px 12px 12px 12px;padding:9px 11px;font-size:12.8px;line-height:1.55;max-width:calc(100% - 40px)}
+.b-err{border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.08)}
+.chat-sys{text-align:center;font-size:10.5px;color:var(--faint);letter-spacing:1.2px;text-transform:uppercase;margin:6px 0;border-top:1px dashed var(--border2);padding-top:8px}
+.tcur{display:inline-block;width:7px;height:13px;background:var(--accent);vertical-align:-2px;animation:blink .8s steps(1) infinite;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+.md code{font-family:var(--mono);font-size:11.5px;background:#0a0e14;border:1px solid var(--border2);padding:1px 5px;border-radius:4px;color:#7dd3fc;white-space:nowrap}
+.md strong{color:#a5c8ff}
+.codeblock{background:#0a0e14;border:1px solid var(--border2);border-radius:var(--rad-s);padding:8px 10px;margin:6px 0;overflow-x:auto}
+.codeblock code{font-family:var(--mono);font-size:11.5px;color:#c9d8ee;line-height:1.5;white-space:pre}
+
+/* explorer */
+#explorer{flex:1;min-height:0}
+.expl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--panel2)}
+.expl-title{font-size:10px;color:var(--muted);letter-spacing:1px}
+#tree{flex:1;overflow-y:auto;padding:8px 6px}
+.tree-folder,.tree-file{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--rad-s);font-size:12.5px;font-family:var(--mono)}
+.tree-folder{color:#ffd166;font-weight:600;cursor:pointer}
+.tree-folder:hover,.tree-file:hover{background:var(--panel2)}
+.tw{color:var(--faint);font-size:9px;width:10px}
+.tree-file{color:var(--text);cursor:pointer;padding-left:26px}
+.tree-file .fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-btn{background:var(--panel3);border:1px solid var(--border2);color:var(--muted);border-radius:5px;font-size:10.5px;padding:3px 8px}
+.mini-btn:hover{color:var(--text);border-color:var(--accent)}
+.newrow{display:flex;gap:5px;padding:4px 6px 4px 26px}
+.newrow input{flex:1;background:#0a0e14;border:1px solid var(--accent);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:11.5px;padding:5px 7px;outline:none;min-width:0}
+.root-label{font-size:10px;color:var(--faint);letter-spacing:1px;padding:10px 10px 4px;text-transform:uppercase}
+/* ---------- code panel (editor + terminal) ---------- */
+#code-panel{min-width:0}
+#editor-head{border-bottom:1px solid var(--border);background:var(--panel2);min-height:37px;display:flex;align-items:center}
+#tabs{display:flex;overflow-x:auto;flex:1}
+.tab{display:flex;align-items:center;gap:6px;background:var(--panel2);border:none;border-right:1px solid var(--border);color:var(--muted);padding:9px 12px;font-size:12px;font-family:var(--mono);white-space:nowrap;cursor:pointer;border-top:2px solid transparent}
+.tab.active{background:var(--panel);color:var(--text);border-top-color:var(--accent)}
+.tab .tx{color:var(--faint);font-size:11px;padding:0 2px}
+.tab .tx:hover{color:var(--err)}
+#editor-wrap{flex:1;min-height:0;position:relative;background:#0d1420}
+#editor-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:13px;text-align:center;padding:20px;line-height:1.6}
+#editor-empty p{max-width:420px}
+#editor-body{position:absolute;inset:0}
+#gutter{position:absolute;top:0;bottom:0;left:0;width:46px;background:var(--panel);border-right:1px solid var(--border);overflow:hidden;padding:10px 8px 10px 0;text-align:right;color:var(--faint);font-family:var(--mono);font-size:13px;line-height:1.55;user-select:none}
+#hl,#code{position:absolute;top:0;bottom:0;left:46px;right:0;padding:10px 12px 40vh 12px;font-family:var(--mono);font-size:13px;line-height:1.55;tab-size:2;white-space:pre;word-wrap:normal;overflow:auto}
+#hl{pointer-events:none;color:#c9d8ee;overflow:hidden}
+#code{background:transparent;color:transparent;caret-color:var(--accent);border:none;outline:none;resize:none}
+#code::selection{background:rgba(77,163,255,.25)}
+.tk-tag{color:#7ee787}.tk-attr{color:#ffa657}.tk-str{color:#a5d6ff}.tk-com{color:#5b6c82;font-style:italic}
+.tk-sel{color:#ff9ec4}.tk-prop{color:#7dd3fc}.tk-num{color:#ffcf7d}.tk-kw{color:#c792ea}.tk-obj{color:#82aaff}
+#status-bar{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--border);background:var(--panel2);padding:5px 12px;font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+
+#terminal{height:225px;min-height:120px;border-top:1px solid var(--border);display:flex;flex-direction:column;background:#0a0e14}
+#term-head{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:var(--panel2);border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);letter-spacing:1px}
+#term-scroll{flex:1;overflow-y:auto;padding:8px 12px;font-family:var(--mono);font-size:12.5px;line-height:1.6;cursor:text}
+.tline{white-space:pre-wrap;word-break:break-word}
+.t-cmd{color:#c9d8ee}
+.t-p{color:var(--ok)}
+.t-err{color:var(--err)}
+.t-ok{color:var(--ok)}
+.t-dim{color:var(--muted)}
+.t-dir{color:var(--accent);font-weight:700}
+#term-line{display:flex;gap:7px;align-items:center}
+#term-prompt{color:var(--ok);font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+#term-in{flex:1;background:transparent;border:none;outline:none;color:#e8f1fb;font-family:var(--mono);font-size:12.5px;min-width:40px}
+
+/* ---------- preview panel ---------- */
+#prev-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--panel2);font-size:10px;color:var(--muted);letter-spacing:1px}
+#prev-head .pbtns{display:flex;gap:6px}
+#preview{flex:1;width:100%;border:none;background:#fff}
+#console-drawer{height:132px;border-top:1px solid var(--border);background:#0a0e14;display:flex;flex-direction:column}
+.cd-head{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;font-size:10px;color:var(--muted);letter-spacing:1px;border-bottom:1px solid var(--border);background:var(--panel2)}
+#console-lines{flex:1;overflow-y:auto;padding:6px 12px;font-family:var(--mono);font-size:11.5px;line-height:1.55}
+.cline{white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+.c-error{color:var(--err)}
+.c-warn{color:var(--warn)}
+.c-log{color:#9fd6a0}
+
+/* ---------- overlay / modals ---------- */
+.overlay{position:fixed;inset:0;background:rgba(5,9,14,.78);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal-card{background:var(--panel);border:1px solid var(--border2);border-radius:16px;padding:26px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 70px rgba(0,0,0,.6);animation:pop .25s ease}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-card h2{font-size:19px;margin-bottom:10px}
+.modal-card p{font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:10px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+
+/* intro */
+.intro-card{max-width:460px;text-align:center;background:var(--panel);border:1px solid var(--border2);border-radius:18px;padding:34px 28px;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.intro-logo{font-size:52px;filter:drop-shadow(0 0 18px rgba(77,163,255,.5))}
+.intro-card h1{font-size:30px;margin:8px 0 2px;letter-spacing:1px}
+.intro-sub{color:var(--accent);font-size:12.5px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.intro-text{font-size:13.5px;color:var(--muted);line-height:1.65;margin-bottom:20px}
+.intro-card input{width:100%;background:#0a0e14;border:1px solid var(--border2);border-radius:var(--rad-s);padding:12px 14px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px}
+.intro-card input:focus{border-color:var(--accent)}
+#btn-start,#btn-continue{width:100%}
+.intro-card .btn{margin-bottom:10px}
+.intro-foot{font-size:11px;color:var(--faint);margin-top:8px}
+
+/* celebrate */
+.cel-card{text-align:center;max-width:400px}
+.cel-emoji{font-size:48px}
+.cel-xp{display:inline-block;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.45);color:var(--warn);font-weight:700;font-size:17px;padding:7px 18px;border-radius:22px;margin:10px 0}
+.badge-earn{background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.5);border-radius:var(--rad-s);padding:10px;font-size:13.5px;margin:10px 0;color:#d7c5ff}
+#cel-praise{color:var(--muted);font-size:13.5px}
+#btn-cel-continue{width:100%;margin-top:16px}
+
+/* notebook */
+.nb-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 16px}
+.nb-table td{border:1px solid var(--border);padding:7px 10px;line-height:1.5}
+.nb-table td:first-child{font-family:var(--mono);color:#7dd3fc;white-space:nowrap}
+.nb-table td:last-child{color:var(--muted)}
+.nb-h{font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin:14px 0 6px}
+
+/* quiz */
+#quiz-prog{font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:8px}
+#quiz-q{font-size:15.5px;line-height:1.55;margin-bottom:14px}
+.qopt{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--border2);border-radius:var(--rad-s);padding:11px 13px;font-size:13.5px;color:var(--text);margin-bottom:8px;font-family:var(--mono);transition:.15s}
+.qopt:hover:not(:disabled){border-color:var(--accent)}
+.qopt.correct{background:rgba(52,211,153,.15);border-color:var(--ok);color:#b8f5dd}
+.qopt.wrong{background:rgba(248,113,113,.15);border-color:var(--err);color:#fecaca}
+#quiz-why{background:rgba(77,163,255,.08);border:1px solid rgba(77,163,255,.35);border-radius:var(--rad-s);padding:10px 12px;font-size:12.8px;color:var(--muted);line-height:1.6;margin-top:4px}
+#quiz-score-big{text-align:center;font-size:38px;font-weight:800;color:var(--warn);margin:8px 0}
+
+/* certificate */
+.cert-card{max-width:480px;text-align:center;border:2px solid var(--accent2);box-shadow:0 0 40px rgba(139,92,246,.25),0 24px 70px rgba(0,0,0,.6)}
+.cert-lab{font-size:11px;letter-spacing:3px;color:var(--accent2);text-transform:uppercase}
+.cert-card h2{font-size:24px;margin:8px 0}
+.cert-name{font-size:22px;color:var(--warn);font-weight:800;margin:12px 0 4px}
+.cert-line{font-size:13px;color:var(--muted);line-height:1.65}
+.cert-stats{font-size:13px;color:var(--text);margin:12px 0;letter-spacing:.3px}
+#cert-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0}
+.cert-badge{background:var(--panel2);border:1px solid var(--border2);border-radius:16px;font-size:11.5px;padding:5px 10px;color:#d7c5ff}
+.cert-foot{font-size:10.5px;color:var(--faint);margin-top:10px}
+
+/* ---------- pane nav (mobile) ---------- */
+#pane-nav{display:none;position:fixed;left:0;right:0;bottom:0;height:58px;background:var(--panel);border-top:1px solid var(--border2);z-index:50}
+#pane-nav button{flex:1;background:none;border:none;color:var(--muted);font-size:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px 0}
+#pane-nav button small{font-size:9px;letter-spacing:.3px}
+#pane-nav button.active{color:var(--accent)}
+body.pane #grid{grid-template-columns:1fr;padding-bottom:66px}
+body.pane #mission-bar{margin:8px}
+body.pane #mission-bar .mb-text strong{font-size:13px}
+body.pane #grid > section{display:none}
+body.pane #grid > section.pane-active{display:flex}
+
+@media (max-width:1240px){#grid{grid-template-columns:260px minmax(0,1fr) clamp(260px,24vw,340px)}}
+@media (max-width:1023px){
+  #grid{grid-template-columns:1fr}
+  #grid > section{display:none}
+  #grid > section.pane-active{display:flex}
+  #pane-nav{display:flex}
+  #app{padding-bottom:58px;height:calc(100dvh - 56px)}
+  .head-progress{display:none}
+  .brand small{display:none}
+}
+@media (max-width:640px){
+  .brand strong{font-size:13.5px}
+  #mission-bar{padding:9px 11px;gap:8px}
+  .mission-chip{font-size:10px;padding:5px 9px}
+  .btn{padding:8px 12px;font-size:12.5px}
+  #terminal{height:190px}
+  .mb-left{flex-basis:100%}
+  .mb-actions{margin-left:auto}
+  #editor-body{inset:0}
+  #gutter{width:36px}
+  #hl,#code{left:36px;font-size:13px}
+  .chip{font-size:11px;padding:4px 8px}
+}
+@media (pointer:coarse){#gutter,#hl,#code{font-size:16px;line-height:1.5}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="fx-confetti" style="position:fixed;inset:0;pointer-events:none;z-index:999"></canvas>
+
+<!-- ===== tela inicial ===== -->
+<div id="intro-overlay" class="overlay">
+  <div class="intro-card">
+    <div class="intro-logo">🧪</div>
+    <h1>LabDev</h1>
+    <p class="intro-sub">Laboratório de Desenvolvimento Local</p>
+    <p class="intro-text">Construa seu <strong>primeiro site de verdade</strong> do jeito que os devs fazem: pasta de projeto, terminal, código e navegador — tudo guiado passo a passo pela <strong>Prof.ª Ada</strong>. Em 10 missões você aprende HTML, CSS e JavaScript.</p>
+    <div id="intro-form">
+      <input id="student-name" maxlength="24" placeholder="Como podemos te chamar?" autocomplete="off">
+      <button id="btn-start" class="btn btn-primary">🚀 Começar o laboratório</button>
+    </div>
+    <div id="intro-continue" class="hidden">
+      <button id="btn-continue" class="btn btn-primary">▶ Continuar de onde parei</button>
+      <button id="btn-fresh" class="btn btn-ghost">🗑 Começar do zero</button>
+    </div>
+    <p class="intro-foot">100% offline · seu progresso fica salvo neste navegador</p>
+  </div>
+</div>
+
+<!-- ===== barra superior ===== -->
+<header id="topbar">
+  <div class="brand"><span class="brand-logo">🧪</span><div><strong>LabDev</strong><small>laboratório de desenvolvimento local</small></div></div>
+  <div class="head-progress"><span id="mission-count">Missão 1/10</span><div class="bar"><div id="mission-bar-fill"></div></div></div>
+  <div class="head-right">
+    <span id="xp-chip" class="chip">⭐ 0 XP · Nv. 1</span>
+    <button class="icon-btn" id="btn-notebook" title="Caderno de comandos e conceitos" aria-label="Caderno">📖</button>
+    <button class="icon-btn" id="btn-mute" title="Ativar/desativar som" aria-label="Som">🔊</button>
+    <button class="icon-btn" id="btn-reset" title="Reiniciar laboratório" aria-label="Reiniciar">↺</button>
+  </div>
+</header>
+
+<main id="app">
+  <!-- ===== barra da missão ===== -->
+  <section id="mission-bar">
+    <div class="mb-left">
+      <span id="mission-chip" class="mission-chip">Missão 1</span>
+      <div class="mb-text"><strong id="mission-title">Carregando…</strong><span id="mission-objective"></span></div>
+    </div>
+    <div class="mb-actions">
+      <button id="btn-hints" class="btn btn-ghost">💡 Dicas <span id="hint-count" class="cnt">0/3</span></button>
+      <button id="btn-verify" class="btn btn-primary">✅ Verificar</button>
+      <button id="btn-quiz" class="btn btn-primary hidden">📝 Teste final</button>
+    </div>
+    <div id="hints-pop" class="hidden">
+      <h4>💡 DICAS DA MISSÃO</h4>
+      <div id="hints-list"></div>
+      <button id="btn-reveal-hint" class="btn btn-ghost">Revelar próxima dica</button>
+    </div>
+  </section>
+
+  <div id="grid">
+    <!-- ===== painel esquerdo: chat + arquivos ===== -->
+    <section class="panel" id="left-panel" data-pane="chat">
+      <div class="lp-tabs">
+        <button id="tab-chat" class="lp-tab active">💬 Prof.ª Ada</button>
+        <button id="tab-files" class="lp-tab">📁 Arquivos</button>
+      </div>
+      <div id="chat" class="lp-view active"><div id="chat-scroll"></div></div>
+      <div id="explorer" class="lp-view">
+        <div class="expl-toolbar"><span class="expl-title">EXPLORADOR DE ARQUIVOS</span><button id="btn-new-folder" class="mini-btn">＋ pasta</button></div>
+        <div id="tree"></div>
+      </div>
+    </section>
+
+    <!-- ===== painel central: editor + terminal ===== -->
+    <section class="panel" id="code-panel" data-pane="code">
+      <div id="editor-head"><div id="tabs"></div></div>
+      <div id="editor-wrap">
+        <div id="editor-empty"><p>📄 Nenhum arquivo aberto.<br>Crie o <b>index.html</b> e clique nele em <b>📁 Arquivos</b> para começar a programar.</p></div>
+        <div id="editor-body" class="hidden">
+          <div id="gutter"></div>
+          <pre id="hl" aria-hidden="true"></pre>
+          <textarea id="code" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off" aria-label="Editor de código"></textarea>
+        </div>
+      </div>
+      <div id="status-bar"><span id="st-file">—</span><span id="st-cursor">Ln 1, Col 1</span><span>UTF-8 · LF</span></div>
+      <div id="terminal">
+        <div id="term-head"><span>⌨️ TERMINAL — bash</span><button id="btn-clear-term" class="mini-btn">limpar</button></div>
+        <div id="term-scroll">
+          <div id="term-out"></div>
+          <div id="term-line"><span id="term-prompt">aluno@lab:~$</span><input id="term-in" autocomplete="off" spellcheck="false" aria-label="Terminal"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== painel direito: prévia + console ===== -->
+    <section class="panel" id="preview-panel" data-pane="preview">
+      <div id="prev-head"><span>👁 PRÉVIA DO NAVEGADOR</span><div class="pbtns"><button id="btn-console" class="mini-btn">console</button><button id="btn-refresh" class="mini-btn">↻ atualizar</button></div></div>
+      <iframe id="preview" sandbox="allow-scripts" title="Prévia do site"></iframe>
+      <div id="console-drawer" class="hidden">
+        <div class="cd-head"><span>CONSOLE DO NAVEGADOR</span><button id="btn-clear-console" class="mini-btn">limpar</button></div>
+        <div id="console-lines"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ===== navegação (celular/tablet) ===== -->
+<nav id="pane-nav">
+  <button data-pane="chat" class="active">💬<small>Prof.ª</small></button>
+  <button data-pane="files">📁<small>Arquivos</small></button>
+  <button data-pane="code">💻<small>Código</small></button>
+  <button data-pane="preview">👁<small>Prévia</small></button>
+</nav>
+
+<!-- ===== modais ===== -->
+<div id="modal-celebrate" class="overlay hidden">
+  <div class="modal-card cel-card">
+    <div class="cel-emoji">🎉</div>
+    <h2 id="cel-title">Missão concluída!</h2>
+    <div class="cel-xp" id="cel-xp">+100 XP</div>
+    <div id="cel-badge"></div>
+    <p id="cel-praise"></p>
+    <button id="btn-cel-continue" class="btn btn-primary">Continuar ▶</button>
+  </div>
+</div>
+
+<div id="modal-notebook" class="overlay hidden">
+  <div class="modal-card">
+    <h2>📖 Caderno do Laboratório</h2>
+    <div class="nb-h">Comandos do terminal</div>
+    <table class="nb-table"><tbody id="nb-cmds"></tbody></table>
+    <div class="nb-h">Conceitos</div>
+    <div id="nb-concepts"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="document.getElementById('modal-notebook').classList.add('hidden')">Fechar</button></div>
+  </div>
+</div>
+
+<div id="modal-reset" class="overlay hidden">
+  <div class="modal-card">
+    <h2>↺ Reiniciar o laboratório?</h2>
+    <p>Isso apaga <strong>todo o progresso</strong> — missões, XP, conquistas e os arquivos do projeto. Não tem volta!</p>
+    <div class="modal-actions">
+      <button id="btn-reset-cancel" class="btn btn-ghost">Cancelar</button>
+      <button id="btn-reset-confirm" class="btn btn-primary" style="background:linear-gradient(135deg,#dc2626,#f87171)">Reiniciar tudo</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-quiz" class="overlay hidden">
+  <div class="modal-card">
+    <div id="quiz-body">
+      <div id="quiz-prog"></div>
+      <div id="quiz-q"></div>
+      <div id="quiz-opts"></div>
+      <div id="quiz-why" class="hidden"></div>
+      <div class="modal-actions"><button id="btn-quiz-next" class="btn btn-primary hidden">Próxima ▶</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-cert" class="overlay hidden">
+  <div class="modal-card cert-card">
+    <div class="cert-lab">🧪 Certificado de Conclusão</div>
+    <h2>Laboratório de Desenvolvimento Local</h2>
+    <div class="cert-name" id="cert-name">—</div>
+    <p class="cert-line">concluiu as <strong>10 missões</strong> do laboratório e construiu, do zero, um site completo com <strong>HTML</strong>, <strong>CSS</strong> e <strong>JavaScript</strong> — do terminal ao navegador.</p>
+    <div class="cert-stats" id="cert-stats"></div>
+    <div id="cert-badges"></div>
+    <p class="cert-foot" id="cert-date"></p>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn btn-primary" onclick="document.getElementById('modal-cert').classList.add('hidden')">💜 Continuar no modo livre</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+/* ================= utilidades ================= */
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function md(t){
+  let s=esc(t);
+  const stash=[];
+  s=s.replace(/```(?:[a-z]*)\n?([\s\S]*?)```/g,(m,c)=>{stash.push('<pre class="codeblock"><code>'+c.replace(/\n+$/,'')+'</code></pre>');return '\u0001'+(stash.length-1)+'\u0001';});
+  s=s.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/\n/g,'<br>');
+  s=s.replace(/\u0001(\d+)\u0001/g,(m,i)=>stash[+i]);
+  return s;
+}
+
+/* ================= estado ================= */
+const SAVE_KEY='labdev_save_v1';
+const DEF={name:'',started:false,xp:0,mission:0,folders:[],cwd:'',files:{},openTabs:[],activeTab:null,opened:false,badges:[],hints:{},quizDone:false,quizScore:0,completedAll:false,muted:false};
+let state=DEF;
+function save(){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(state)); }catch(e){} }
+function loadSave(){ try{ const r=localStorage.getItem(SAVE_KEY); if(!r) return null; const o=JSON.parse(r); if(!o||typeof o!=='object') return null; return Object.assign({},DEF,o,{files:o.files&&typeof o.files==='object'?o.files:{},hints:o.hints&&typeof o.hints==='object'?o.hints:{}}); }catch(e){ return null; } }
+
+/* ================= som (WebAudio, sem arquivos) ================= */
+let actx=null;
+function ac(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function tone(f,dur,type,vol,delay){
+  const c=ac(); if(!c) return;
+  type=type||'sine'; vol=vol==null?0.12:vol; delay=delay||0;
+  try{
+    const o=c.createOscillator(),g=c.createGain();
+    o.type=type; o.frequency.value=f;
+    const t0=c.currentTime+delay;
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.linearRampToValueAtTime(vol,t0+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0+dur+0.05);
+  }catch(e){}
+}
+function sfx(n){
+  if(state.muted) return;
+  if(n==='ok'){ tone(523,.12); tone(784,.2,'sine',.12,.1); }
+  else if(n==='err'){ tone(150,.22,'square',.07); }
+  else if(n==='click'){ tone(660,.05,'sine',.045); }
+  else if(n==='win'){ tone(523,.12,'sine',.11); tone(659,.12,'sine',.11,.12); tone(784,.18,'sine',.13,.24); tone(1047,.3,'sine',.11,.4); }
+}
+
+/* ================= confete ================= */
+function confetti(){
+  const cv=$('#fx-confetti'); const ctx=cv.getContext('2d');
+  cv.width=innerWidth; cv.height=innerHeight;
+  const colors=['#4da3ff','#8b5cf6','#34d399','#fbbf24','#f87171','#f472b6'];
+  const P=[];
+  for(let i=0;i<130;i++){
+    P.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*0.3,vx:(Math.random()-0.5)*2.2,vy:2+Math.random()*3.2,s:5+Math.random()*6,c:colors[i%colors.length],r:Math.random()*Math.PI,vr:(Math.random()-0.5)*0.25});
+  }
+  const t0=Date.now();
+  (function loop(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    P.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.62); ctx.restore(); });
+    if(Date.now()-t0<2400) requestAnimationFrame(loop); else ctx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+/* ================= terminal ================= */
+const termOut=$('#term-out'), termIn=$('#term-in'), termPrompt=$('#term-prompt'), termScroll=$('#term-scroll');
+const termHistory=[]; let histIdx=-1;
+function promptStr(){ return 'aluno@lab:~'+(state.cwd?'/'+state.cwd:'')+'$'; }
+function tline(html,cls){ const d=document.createElement('div'); d.className='tline '+(cls||''); d.innerHTML=html; termOut.appendChild(d); termScroll.scrollTop=1e9; while(termOut.children.length>400) termOut.removeChild(termOut.firstChild); }
+function techo(cmd){ tline('<span class="t-p">'+esc(promptStr())+'</span> '+esc(cmd),'t-cmd'); }
+function fileTypeOf(n){ if(/\.html?$/i.test(n)) return 'html'; if(/\.css$/i.test(n)) return 'css'; if(/\.m?js$/i.test(n)) return 'js'; if(/\.md$/i.test(n)) return 'md'; return 'txt'; }
+function fileIconOf(p){ const t=(state.files[p]||{}).type; return {html:'🌐',css:'🎨',js:'⚡',md:'📝',txt:'📄'}[t]||'📄'; }
+function filesIn(dir){
+  return Object.keys(state.files).filter(p=> dir==='' ? !p.includes('/') : (p.startsWith(dir+'/') && !p.slice(dir.length+1).includes('/')));
+}
+function resolveInCwd(name){
+  if(state.cwd){ const p=state.cwd+'/'+name; if(state.files[p]) return p; }
+  if(state.files[name]) return name;
+  return null;
+}
+const HELP=[
+  '<span class="t-dir">Comandos do laboratório:</span>',
+  '  <b>help</b>          lista os comandos',
+  '  <b>ls</b>            lista o conteúdo da pasta atual',
+  '  <b>pwd</b>           mostra o caminho onde você está',
+  '  <b>cd pasta</b>      entra na pasta (cd .. volta)',
+  '  <b>mkdir pasta</b>   cria uma nova pasta',
+  '  <b>touch arq.ext</b> cria um arquivo vazio',
+  '  <b>code arq.ext</b>  abre o arquivo no editor',
+  '  <b>open arq.html</b> abre o site no navegador',
+  '  <b>clear</b>         limpa o terminal'
+];
+function runCommand(raw){
+  const line=String(raw).trim();
+  techo(raw);
+  if(line){ termHistory.push(line); histIdx=termHistory.length; }
+  if(!line){ afterCmd(); return; }
+  const parts=line.split(/\s+/), cmd=parts[0], arg=parts.slice(1).join(' ');
+  switch(cmd){
+    case 'help': HELP.forEach(h=>tline(h,'t-dim')); break;
+    case 'ls': case 'dir': {
+      if(state.cwd){
+        const fs=filesIn(state.cwd);
+        if(!fs.length) tline('(pasta vazia)','t-dim'); else fs.forEach(p=>tline(fileIconOf(p)+' '+esc(p.split('/')[1])));
+      } else {
+        if(!state.folders.length && !filesIn('').length) tline('(vazio — crie sua pasta de projeto com mkdir)','t-dim');
+        state.folders.forEach(f=>tline('📁 <span class="t-dir">'+esc(f)+'/</span>'));
+        filesIn('').forEach(p=>tline(fileIconOf(p)+' '+esc(p)));
+      }
+      break;
+    }
+    case 'pwd': tline('/home/aluno'+(state.cwd?'/'+state.cwd:'')); break;
+    case 'clear': termOut.innerHTML=''; break;
+    case 'mkdir': {
+      if(!arg){ tline('uso: mkdir &lt;nome-da-pasta&gt;','t-dim'); break; }
+      if(!/^[\w][\w.-]*$/.test(arg)){ tline('mkdir: nome inválido — use letras, números ou hífen','t-err'); break; }
+      if(state.cwd){ tline('mkdir: neste laboratório as pastas ficam na raiz — volte com cd ..','t-dim'); break; }
+      if(state.folders.includes(arg)){ tline('mkdir: a pasta "'+esc(arg)+'" já existe','t-err'); }
+      else { state.folders.push(arg); tline('✓ pasta criada: <span class="t-dir">'+esc(arg)+'/</span>','t-ok'); }
+      break;
+    }
+    case 'touch': {
+      if(!arg){ tline('uso: touch &lt;arquivo.ext&gt;','t-dim'); break; }
+      if(!/^[\w][\w.-]*\.[a-zA-Z0-9]+$/.test(arg)){ tline('touch: o arquivo precisa de uma extensão (ex.: index.html)','t-err'); break; }
+      if(!state.cwd){ tline('touch: entre na pasta do projeto antes — cd meu-site','t-err'); break; }
+      const p=state.cwd+'/'+arg;
+      if(state.files[p]){ tline('touch: o arquivo já existe','t-err'); }
+      else { state.files[p]={content:'',type:fileTypeOf(arg)}; tline('✓ arquivo criado: '+esc(p),'t-ok'); }
+      break;
+    }
+    case 'cd': {
+      if(!arg||arg==='~'||arg==='/'){ state.cwd=''; }
+      else if(arg==='..'){ if(state.cwd) state.cwd=''; }
+      else if(!state.cwd){
+        if(state.folders.includes(arg)) state.cwd=arg;
+        else tline('cd: pasta não encontrada: '+esc(arg)+' — crie com mkdir','t-err');
+      }
+      else if(arg===state.cwd){ tline('você já está dentro de ~/'+esc(state.cwd),'t-dim'); }
+      else { tline('cd: primeiro volte com <b>cd ..</b> para trocar de pasta','t-err'); }
+      break;
+    }
+    case 'code': case 'nano': case 'vim': {
+      if(!arg){ tline('uso: '+esc(cmd)+' &lt;arquivo.ext&gt;','t-dim'); break; }
+      const p=resolveInCwd(arg);
+      if(!p){ tline(esc(cmd)+': arquivo não encontrado: '+esc(arg),'t-err'); break; }
+      openInEditor(p); tline('✓ abrindo '+esc(p)+' no editor…','t-ok');
+      break;
+    }
+    case 'open': case 'start': {
+      if(!arg){ tline('uso: open &lt;arquivo.html&gt;','t-dim'); break; }
+      const p=resolveInCwd(arg);
+      if(!p){ tline('open: arquivo não encontrado: '+esc(arg),'t-err'); break; }
+      if(!/\.html?$/i.test(p)){ tline('open: só abrimos arquivos .html no navegador :)','t-dim'); break; }
+      state.opened=true;
+      tline('🌍 abrindo '+esc(p)+' no navegador…','t-ok');
+      tline('a página ao lado é o seu site rodando de verdade!','t-dim');
+      setPane('preview');
+      break;
+    }
+    case 'rm': tline('rm: no laboratório a gente cria coisas, não destrói 😌','t-dim'); break;
+    case 'sudo': tline('sudo: aqui você já tem superpoderes 😄','t-dim'); break;
+    case 'whoami': tline('aluno — futuro dev em formação 🚀'); break;
+    case 'echo': tline(esc(arg)); break;
+    case 'date': tline(new Date().toLocaleString('pt-BR')); break;
+    default: tline(esc(cmd)+': command not found — digite <b>help</b> para ver os comandos','t-err');
+  }
+  afterCmd();
+}
+function afterCmd(){
+  termPrompt.textContent=promptStr();
+  renderTree();
+  save();
+  autoVerify(true);
+}
+termIn.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ const v=termIn.value; termIn.value=''; runCommand(v); }
+  else if(e.key==='ArrowUp'){ if(histIdx>0){ histIdx--; termIn.value=termHistory[histIdx]||''; e.preventDefault(); } }
+  else if(e.key==='ArrowDown'){ if(histIdx<termHistory.length){ histIdx++; termIn.value=termHistory[histIdx]||''; e.preventDefault(); } }
+});
+termScroll.addEventListener('click',()=>termIn.focus());
+$('#btn-clear-term').addEventListener('click',()=>{ termOut.innerHTML=''; termIn.focus(); });
+
+/* ================= explorador de arquivos ================= */
+let collapsed=new Set(), newFileTarget=null, newFolderOpen=false;
+function renderTree(){
+  const tree=$('#tree'); tree.innerHTML='';
+  // linha de criação de pasta
+  if(newFolderOpen){
+    const row=document.createElement('div'); row.className='newrow';
+    row.innerHTML='<input placeholder="nome-da-pasta">';
+    const inp=row.querySelector('input'); inp.focus();
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){ newFolderOpen=false; renderTree(); }
+      if(e.key==='Enter'){
+        const v=inp.value.trim();
+        if(v && /^[\w][\w.-]*$/.test(v) && !state.folders.includes(v)){ state.folders.push(v); newFolderOpen=false; save(); afterCmd(); }
+        else inp.style.borderColor='var(--err)';
+      }
+    });
+    tree.appendChild(row);
+  }
+  state.folders.forEach(f=>{
+    const fb=document.createElement('div'); fb.className='tree-folder';
+    const tw=document.createElement('span'); tw.className='tw'; tw.textContent=collapsed.has(f)?'▸':'▾';
+    const fn=document.createElement('span'); fn.className='fname'; fn.textContent='📁 '+f+'/';
+    const plus=document.createElement('button'); plus.className='mini-btn'; plus.textContent='＋'; plus.title='novo arquivo em '+f;
+    plus.addEventListener('click',e=>{ e.stopPropagation(); newFileTarget=(newFileTarget===f)?null:f; newFolderOpen=false; renderTree(); });
+    fb.appendChild(tw); fb.appendChild(fn); fb.appendChild(plus);
+    fb.addEventListener('click',()=>{ if(collapsed.has(f)) collapsed.delete(f); else collapsed.add(f); newFileTarget=null; renderTree(); });
+    tree.appendChild(fb);
+    if(!collapsed.has(f)){
+      filesIn(f).forEach(p=>{
+        const row=document.createElement('div'); row.className='tree-file';
+        row.innerHTML='<span class="tw"></span><span class="fname">'+fileIconOf(p)+' '+esc(p.split('/')[1])+'</span>';
+        row.addEventListener('click',()=>{ openInEditor(p); setPane('code'); });
+        tree.appendChild(row);
+      });
+      if(newFileTarget===f){
+        const row=document.createElement('div'); row.className='newrow';
+        row.innerHTML='<input placeholder="ex.: index.html">';
+        const inp=row.querySelector('input'); inp.focus();
+        inp.addEventListener('keydown',e=>{
+          if(e.key==='Escape'){ newFileTarget=null; renderTree(); }
+          if(e.key==='Enter'){
+            const v=inp.value.trim();
+            const path=f+'/'+v;
+            if(v && /^[\w][\w.-]*\.[a-zA-Z0-9]+$/.test(v) && !state.files[path]){
+              state.files[path]={content:'',type:fileTypeOf(v)};
+              newFileTarget=null; save(); renderTree(); openInEditor(path); autoVerify(true);
+            } else inp.style.borderColor='var(--err)';
+          }
+        });
+        tree.appendChild(row);
+      }
+    }
+  });
+  const rootFiles=filesIn('');
+  if(rootFiles.length){
+    const lb=document.createElement('div'); lb.className='root-label'; lb.textContent='arquivos na raiz (~)';
+    tree.appendChild(lb);
+    rootFiles.forEach(p=>{
+      const row=document.createElement('div'); row.className='tree-file';
+      row.innerHTML='<span class="tw"></span><span class="fname">'+fileIconOf(p)+' '+esc(p)+'</span>';
+      row.addEventListener('click',()=>{ openInEditor(p); setPane('code'); });
+      tree.appendChild(row);
+    });
+  }
+}
+$('#btn-new-folder').addEventListener('click',()=>{ newFolderOpen=!newFolderOpen; newFileTarget=null; renderTree(); });
+
+/* ================= editor ================= */
+const ta=$('#code'), hl=$('#hl'), gutter=$('#gutter');
+function langOfPath(p){ const t=(state.files[p]||{}).type; return {html:'html',css:'css',js:'js'}[t]||'txt'; }
+function highlight(code,lang){
+  let s=esc(code);
+  const stash=[];
+  const enc=i=>{ let t=''; do{ t=String.fromCharCode(65+(i%26))+t; i=Math.floor(i/26); }while(i>0); return t; };
+  const dec=str=>str.split('').reduce((a,c)=>a*26+(c.charCodeAt(0)-65),0);
+  const protect=(re,cls)=>{ s=s.replace(re,m=>{ stash.push('<span class="'+cls+'">'+m+'</span>'); return '\u0000'+enc(stash.length-1)+'\u0000'; }); };
+  if(lang==='html'){
+    protect(/&lt;!--[\s\S]*?--&gt;/g,'tk-com');
+    protect(/&lt;!DOCTYPE[^&\n]*&gt;/gi,'tk-com');
+    protect(/"[^"\n]*"|'[^'\n]*'/g,'tk-str');
+    protect(/&lt;\/?[a-zA-Z][\w-]*/g,'tk-tag');
+    protect(/[a-zA-Z][\w-]*(?==)/g,'tk-attr');
+  } else if(lang==='css'){
+    protect(/\/\*[\s\S]*?\*\//g,'tk-com');
+    protect(/"[^"\n]*"|'[^'\n]*'/g,'tk-str');
+    protect(/(^|\n)([^{}\n;\u0000][^{}\n]*?)(?=\s*\{)/g,'tk-sel');
+    protect(/[a-zA-Z-]+(?=\s*:)/g,'tk-prop');
+    protect(/(#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?(?:px|em|rem|%|s|ms|vh|vw)?\b)/g,'tk-num');
+  } else if(lang==='js'){
+    protect(/\/\/[^\n]*/g,'tk-com');
+    protect(/\/\*[\s\S]*?\*\//g,'tk-com');
+    protect(/`(?:[^`\\]|\\[\s\S])*`|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'/g,'tk-str');
+    protect(/\b(const|let|var|function|return|if|else|for|while|new|true|false|null|undefined|of|in)\b/g,'tk-kw');
+    protect(/\b(document|window|console)\b/g,'tk-obj');
+    protect(/\b\d+(?:\.\d+)?\b/g,'tk-num');
+  }
+  s=s.replace(/\u0000([A-Z]+)\u0000/g,(m,i)=>stash[dec(i)]);
+  return s;
+}
+function openInEditor(p){
+  if(!state.files[p]) return;
+  if(!state.openTabs.includes(p)) state.openTabs.push(p);
+  state.activeTab=p;
+  renderTabs();
+  ta.value=state.files[p].content||'';
+  syncHl();
+  $('#editor-body').classList.remove('hidden');
+  $('#editor-empty').classList.add('hidden');
+  $('#st-file').textContent=p;
+  updateCursor();
+  if(!isPane()) ta.focus();
+}
+function renderTabs(){
+  const t=$('#tabs'); t.innerHTML='';
+  state.openTabs.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='tab'+(p===state.activeTab?' active':'');
+    b.innerHTML=fileIconOf(p)+' '+esc(p.split('/').pop())+' <span class="tx">✕</span>';
+    b.addEventListener('click',e=>{
+      if(e.target.classList.contains('tx')){ closeTab(p); return; }
+      openInEditor(p);
+    });
+    t.appendChild(b);
+  });
+}
+function closeTab(p){
+  const i=state.openTabs.indexOf(p);
+  if(i>-1) state.openTabs.splice(i,1);
+  if(state.activeTab===p){
+    state.activeTab=state.openTabs[Math.max(0,i-1)]||null;
+    if(state.activeTab) openInEditor(state.activeTab);
+    else { ta.value=''; $('#editor-body').classList.add('hidden'); $('#editor-empty').classList.remove('hidden'); $('#st-file').textContent='—'; }
+  }
+  renderTabs();
+}
+function syncHl(){
+  const v=ta.value;
+  hl.innerHTML=highlight(v,langOfPath(state.activeTab))+'\n';
+  const n=v.split('\n').length;
+  let g=''; for(let i=1;i<=n;i++) g+='<div>'+i+'</div>';
+  gutter.innerHTML=g;
+  hl.scrollTop=ta.scrollTop; hl.scrollLeft=ta.scrollLeft; gutter.scrollTop=ta.scrollTop;
+}
+function updateCursor(){
+  const v=ta.value.slice(0,ta.selectionStart);
+  const ln=v.split('\n');
+  $('#st-cursor').textContent='Ln '+ln.length+', Col '+(ln[ln.length-1].length+1);
+}
+ta.addEventListener('input',()=>{
+  const p=state.activeTab; if(!p) return;
+  state.files[p].content=ta.value;
+  syncHl(); updateCursor();
+  schedulePreview(); save(); autoVerify(false);
+});
+ta.addEventListener('scroll',()=>{ hl.scrollTop=ta.scrollTop; hl.scrollLeft=ta.scrollLeft; gutter.scrollTop=ta.scrollTop; });
+ta.addEventListener('keydown',e=>{
+  if(e.key==='Tab'){
+    e.preventDefault();
+    ta.setRangeText('  ',ta.selectionStart,ta.selectionEnd,'end');
+    ta.dispatchEvent(new Event('input'));
+  } else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); verifyNow(); }
+});
+['keyup','click'].forEach(ev=>ta.addEventListener(ev,updateCursor));
+
+/* ================= prévia ================= */
+const frame=$('#preview');
+const PLACEHOLDER='<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#0d1420;color:#8296ad;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;text-align:center;padding:24px}div{max-width:430px}h2{color:#dce7f5;font-size:18px}b{color:#4da3ff}</style></head><body><div><h2>📡 Aguardando sua página…</h2><p>Crie o <b>index.html</b> e escreva seu primeiro HTML — a prévia mostra seu site aqui, como um navegador de verdade.</p></div></body></html>';
+function resolveHref(href){
+  let h=String(href).trim();
+  if(/^(https?:)?\/\//i.test(h)||h.startsWith('data:')) return null;
+  h=h.replace(/^\.\//,'').replace(/^\//,'');
+  return 'meu-site/'+h;
+}
+function buildDoc(){
+  const f=state.files['meu-site/index.html'];
+  if(!f||!f.content.trim()) return null;
+  let c=f.content;
+  c=c.replace(/<link[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi,(m,href)=>{
+    const p=resolveHref(href); const cf=p&&state.files[p];
+    return cf ? '<style>\n'+cf.content+'\n</style>' : '<!-- '+esc(href)+' não encontrado -->';
+  });
+  c=c.replace(/<script[^>]*src\s*=\s*["']([^"']+)["'][^>]*>\s*<\/script>/gi,(m,src)=>{
+    const p=resolveHref(src); const cf=p&&state.files[p];
+    return cf ? '<script>\n'+cf.content+'\n<\/script>' : '<script>/* '+esc(src)+' não encontrado */<\/script>';
+  });
+  const hook='<script>window.onerror=function(m,s,l){parent.postMessage({__lab:1,type:"error",msg:String(m)+(l?" (linha "+l+")":"")},"*");return false};(function(){var L=console.log;console.log=function(){try{parent.postMessage({__lab:1,type:"log",msg:[].slice.call(arguments).map(function(x){return typeof x==="object"?JSON.stringify(x):String(x)}).join(" ")},"*")}catch(e){}L.apply(console,arguments)}})();<\/script>';
+  if(/<\/head>/i.test(c)) c=c.replace(/<\/head>/i,hook+'</head>');
+  else c=hook+c;
+  return c;
+}
+function refreshPreview(){ frame.srcdoc=buildDoc()||PLACEHOLDER; }
+let pvT=null;
+function schedulePreview(){ clearTimeout(pvT); pvT=setTimeout(refreshPreview,350); }
+function addConsole(type,msg){
+  const el=$('#console-lines');
+  const d=document.createElement('div');
+  d.className='cline c-'+(type==='warn'?'warn':type==='error'?'error':'log');
+  d.textContent=(type==='error'?'⛔ ':type==='warn'?'⚠️ ':'› ')+msg;
+  el.appendChild(d); el.scrollTop=1e9;
+  while(el.children.length>60) el.removeChild(el.firstChild);
+}
+window.addEventListener('message',e=>{
+  const d=e.data;
+  if(d&&d.__lab){ addConsole(d.type,d.msg); if(d.type==='error') $('#console-drawer').classList.remove('hidden'); }
+});
+$('#btn-console').addEventListener('click',()=>$('#console-drawer').classList.toggle('hidden'));
+$('#btn-clear-console').addEventListener('click',()=>{ $('#console-lines').innerHTML=''; });
+$('#btn-refresh').addEventListener('click',()=>{ refreshPreview(); sfx('click'); });
+
+/* ================= chat da Prof.ª Ada ================= */
+const chatScroll=$('#chat-scroll');
+let typingTimer=null, lastTyping=null;
+function trimChat(){ while(chatScroll.children.length>45) chatScroll.removeChild(chatScroll.firstChild); }
+function chatDivider(txt){
+  const d=document.createElement('div'); d.className='chat-sys'; d.textContent='— '+txt+' —';
+  chatScroll.appendChild(d); chatScroll.scrollTop=1e9; trimChat();
+}
+function mentorSay(text,kind){
+  const d=document.createElement('div');
+  kind=kind||'ada';
+  if(kind==='sys'){ d.className='chat-sys'; d.innerHTML=md(text); }
+  else{
+    d.className='msg';
+    d.innerHTML='<div class="ava">'+(kind==='err'?'⚠️':'👩‍💻')+'</div><div class="bubble'+(kind==='err'?' b-err':'')+'"><span class="md"></span></div>';
+    typeHTML(d.querySelector('.md'),md(text));
+  }
+  chatScroll.appendChild(d); chatScroll.scrollTop=1e9; trimChat();
+}
+function typeHTML(el,html){
+  const tokens=html.match(/<[^>]+>|[\s\S]/g)||[];
+  let i=0;
+  if(el._t) clearInterval(el._t);
+  el._html=html;
+  el.innerHTML='';
+  const cur=document.createElement('span'); cur.className='tcur';
+  el.appendChild(cur);
+  lastTyping={el:el,html:html};
+  el._t=setInterval(()=>{
+    for(let k=0;k<3&&i<tokens.length;k++,i++) cur.insertAdjacentHTML('beforebegin',tokens[i]);
+    chatScroll.scrollTop=1e9;
+    if(i>=tokens.length){ clearInterval(el._t); el._t=null; cur.remove(); if(lastTyping&&lastTyping.el===el) lastTyping=null; }
+  },16);
+}
+chatScroll.addEventListener('click',()=>{
+  if(lastTyping){
+    const el=lastTyping.el;
+    if(el._t) clearInterval(el._t);
+    el.innerHTML=el._html||lastTyping.html; el._t=null; lastTyping=null;
+  }
+});
+
+/* ================= missões ================= */
+function hasFolder(n){ return state.folders.includes(n); }
+function hasFile(p){ return !!state.files[p]; }
+function contentOf(p){ return (state.files[p]||{}).content||''; }
+function tagInner(c,re){ const m=c.match(re); if(!m) return null; return m[1].replace(/<[^>]*>/g,'').trim(); }
+
+const MISSIONS=[
+{
+  id:'m1', xp:80, badge:{e:'🚀',t:'Primeiro contato'},
+  title:'mkdir — criando a pasta do projeto',
+  objective:'No **terminal**, crie a pasta do projeto: `mkdir meu-site`',
+  intro:()=>[
+    '**Missão 1 — A pasta do projeto.** Todo projeto de desenvolvimento começa dentro de uma pasta no computador. É assim que se trabalha **localmente**: os arquivos ficam na sua máquina, organizados, antes de ir para a internet.',
+    'Para conversar com o computador usamos o **terminal** (logo abaixo do editor). Clique nele e digite o comando que **cria uma pasta**: `mkdir` (de *make directory* — criar diretório).',
+    'Crie uma pasta com o nome exato `meu-site` e pressione **Enter**. Quando terminar, clique em **✅ Verificar** — ou eu percebo sozinha 😉'
+  ],
+  hints:[
+    'Clique na área preta do **Terminal** para começar a digitar.',
+    '`mkdir` significa *make directory* (criar diretório). A sintaxe é: `mkdir nome-da-pasta`.',
+    'Digite exatamente `mkdir meu-site` e pressione **Enter**.'
+  ],
+  check(){ return {ok:hasFolder('meu-site'),missing:['Crie a pasta **meu-site** no terminal: digite `mkdir meu-site` e pressione Enter.']}; }
+},
+{
+  id:'m2', xp:80, badge:null,
+  title:'cd — entrando na pasta',
+  objective:'Entre na pasta do projeto com `cd meu-site`',
+  intro:()=>[
+    '**Missão 2 — Entre na sua pasta.** A pasta existe, mas o terminal ainda está "do lado de fora" — veja o `~` no prompt `aluno@lab:~$`.',
+    'O comando `cd` (*change directory*) entra numa pasta. Digite `cd meu-site` e o prompt passará a mostrar `~/meu-site` — o terminal avisa sempre onde você está.'
+  ],
+  hints:[
+    'Olhe o prompt `aluno@lab:~$`: o `~` significa "pasta inicial" (home).',
+    '`cd` = *change directory*. Sintaxe: `cd nome-da-pasta`.',
+    'Digite `cd meu-site` e pressione Enter. O prompt deve virar `aluno@lab:~/meu-site$`.'
+  ],
+  check(){ return {ok:state.cwd==='meu-site',missing:['Digite `cd meu-site` no terminal para entrar na pasta — o prompt deve mostrar `~/meu-site`.']}; }
+},
+{
+  id:'m3', xp:100, badge:{e:'📁',t:'Guardião dos arquivos'},
+  title:'touch — criando o index.html',
+  objective:'Crie o arquivo `index.html` dentro de `meu-site` (terminal ou botão ＋)',
+  intro:()=>[
+    '**Missão 3 — O arquivo mais importante da internet.** Todo site tem um `index.html`: é a "porta de entrada" que o navegador abre primeiro quando alguém visita o site.',
+    'Crie esse arquivo vazio com `touch index.html` no terminal — ou clique no botão **＋** ao lado da pasta `meu-site` no painel de **Arquivos**.'
+  ],
+  hints:[
+    'Você já está dentro de `meu-site` (olhe o prompt). `touch` cria um arquivo vazio: `touch nome.extensao`.',
+    'No terminal: `touch index.html`. Ou use o botão **＋** na linha da pasta `meu-site` no painel **Arquivos**.',
+    'O nome precisa ser exatamente `index.html` — minúsculas e com a extensão `.html`.'
+  ],
+  check(){ return {ok:hasFile('meu-site/index.html'),missing:['Crie o arquivo `index.html` dentro de `meu-site`: digite `touch index.html` no terminal.']}; }
+},
+{
+  id:'m4', xp:150, badge:null,
+  title:'A estrutura do HTML',
+  objective:'Abra o `index.html` no editor e escreva o esqueleto HTML5 completo',
+  intro:()=>[
+    '**Missão 4 — O esqueleto HTML.** Chegou a hora de escrever código de verdade! Clique no `index.html` no painel de **Arquivos** para abrir no editor.',
+    'Toda página HTML5 tem esta estrutura: `<!DOCTYPE html>` avisa que é HTML5; `<html>` é a raiz; dentro dela ficam o `<head>` (informações da página) e o `<body>` (o conteúdo que aparece na tela).',
+    'Escreva o esqueleto completo — DOCTYPE, html, head e body, **tudo fechado**. Não copie: digite você mesmo, é assim que se aprende! 💪'
+  ],
+  hints:[
+    'Clique no arquivo `index.html` na aba **Arquivos** (ou digite `code index.html` no terminal) e comece a digitar.',
+    'A ordem importa: `<!DOCTYPE html>` na 1ª linha; depois `<html>`, `<head>`, `</head>`, `<body>`, `</body>` e `</html>`.',
+    'Estrutura completa:\n```\n<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n  <meta charset="UTF-8">\n</head>\n<body>\n</body>\n</html>\n```'
+  ],
+  check(){
+    const c=contentOf('meu-site/index.html');
+    const miss=[];
+    if(!/<\s*!\s*doctype\s+html/i.test(c)) miss.push('Adicione `<!DOCTYPE html>` na primeira linha.');
+    if(!/<html[\s>]/i.test(c)) miss.push('Abra a tag `<html lang="pt-BR">`.');
+    if(!/<head[\s>]/i.test(c)||!/<\/head>/i.test(c)) miss.push('Adicione o `<head>` com o `</head>`.');
+    if(!/<body[\s>]/i.test(c)||!/<\/body>/i.test(c)) miss.push('Adicione o `<body>` com o `</body>`.');
+    if(!/<\/html>/i.test(c)) miss.push('Feche a página com `</html>`.');
+    return {ok:!miss.length,missing:miss};
+  }
+},
+{
+  id:'m5', xp:150, badge:{e:'🏗️',t:'Arquiteto HTML'},
+  title:'Conteúdo: título e texto',
+  objective:'Dê um `<title>` à página e escreva um `<h1>` e um `<p>` no body',
+  intro:()=>[
+    '**Missão 5 — Dê vida à página.** Esqueleto pronto! Agora o conteúdo: o `<title>` (dentro do `<head>`) é o texto que aparece na **aba do navegador**; o `<h1>` é o título grande; o `<p>` é um parágrafo.',
+    'Escreva um título para a aba, um `<h1>` com o nome do seu site e um `<p>` se apresentando. Depois espie a **Prévia** 👁 — você acabou de criar uma página de verdade!'
+  ],
+  hints:[
+    'O `<title>` vai dentro do `<head>`: `<title>Meu Primeiro Site</title>`.',
+    'Dentro do `<body>`: `<h1>Olá, mundo!</h1>` e `<p>Este é meu primeiro site.</p>`.',
+    'Exemplo de body:\n```\n<body>\n  <h1>Bem-vindos ao meu site!</h1>\n  <p>Meu nome é Ada e este é meu primeiro projeto.</p>\n</body>\n```'
+  ],
+  check(){
+    const c=contentOf('meu-site/index.html');
+    const miss=[];
+    const t=tagInner(c,/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if(!t) miss.push('Adicione um `<title>` com texto dentro do `<head>` (aparece na aba do navegador).');
+    const h=tagInner(c,/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    if(!h) miss.push('Adicione um `<h1>…</h1>` com um título dentro do `<body>`.');
+    const p=tagInner(c,/<p[^>]*>([\s\S]*?)<\/p>/i);
+    if(!p) miss.push('Escreva um `<p>…</p>` com um parágrafo sobre você.');
+    return {ok:!miss.length,missing:miss};
+  }
+},
+{
+  id:'m6', xp:150, badge:null,
+  title:'CSS: criando e conectando o style.css',
+  objective:'Crie o `style.css` e conecte ao HTML com `<link>` no `<head>`',
+  intro:()=>[
+    '**Missão 6 — Uma roupa nova para o site (CSS).** Até agora o navegador usou o estilo padrão dele. Para personalizar, criamos um arquivo de **CSS** (`style.css`) e o conectamos ao HTML.',
+    'Crie o `style.css` na pasta do projeto (`touch style.css` ou botão **＋**). Depois, no `index.html`, dentro do `<head>`, conecte os dois com a tag `<link rel="stylesheet" href="style.css">`.'
+  ],
+  hints:[
+    'Crie o arquivo: `touch style.css` no terminal, ou botão **＋** na linha da pasta `meu-site`.',
+    'A conexão é feita dentro do `<head>` com a tag `<link>`. O `rel` diz o tipo de relação; o `href` diz o caminho do arquivo.',
+    'Adicione dentro do `<head>`:\n```\n<link rel="stylesheet" href="style.css">\n```'
+  ],
+  check(){
+    const miss=[];
+    if(!hasFile('meu-site/style.css')) miss.push('Crie o arquivo `style.css` dentro de `meu-site`.');
+    if(!/<link[^>]*href\s*=\s*["'][^"']*style\.css["'][^>]*>/i.test(contentOf('meu-site/index.html')))
+      miss.push('Conecte o CSS no `index.html` com `<link rel="stylesheet" href="style.css">` dentro do `<head>`.');
+    return {ok:!miss.length,missing:miss};
+  }
+},
+{
+  id:'m7', xp:180, badge:{e:'🎨',t:'Estilista CSS'},
+  title:'Estilizando: cores e fontes',
+  objective:'No `style.css`, estilize o `body` (fundo, cor, fonte) e o `h1` (cor)',
+  intro:()=>[
+    '**Missão 7 — Estilizando de verdade.** Abra o `style.css` no editor. A receita do CSS é: `seletor { propriedade: valor; }` — o seletor diz **quem** recebe o estilo, as propriedades dizem **o quê** muda.',
+    'Estilize o `body` (mude o fundo com `background`, a cor do texto com `color`, a fonte com `font-family`) e o `h1` (mude a `color`). A **Prévia** atualiza sozinha a cada digitação!'
+  ],
+  hints:[
+    'Um bloco CSS: `body { background-color: #1a1a2e; }` — o `#` indica uma cor em hexadecimal.',
+    'Faça **dois blocos**: um para o `body` com `background`, outro para o `h1` com `color`.',
+    'Exemplo:\n```\nbody {\n  background-color: #1a1a2e;\n  color: #f0f0f0;\n  font-family: Arial, sans-serif;\n  text-align: center;\n}\nh1 {\n  color: #4da3ff;\n}\n```'
+  ],
+  check(){
+    const css=contentOf('meu-site/style.css');
+    const miss=[];
+    if(!/body\s*\{[^}]*background/i.test(css)) miss.push('No `style.css`, crie uma regra para `body` com a propriedade `background` (ex.: `background-color: #1a1a2e;`).');
+    if(!/h1\s*\{[^}]*color\s*:/i.test(css)) miss.push('Crie uma regra para `h1` mudando a `color` (ex.: `color: #4da3ff;`).');
+    return {ok:!miss.length,missing:miss};
+  }
+},
+{
+  id:'m8', xp:150, badge:null,
+  title:'JavaScript: criando o script.js',
+  objective:'Crie o `script.js` e conecte com `<script src=…>` antes do `</body>`',
+  intro:()=>[
+    '**Missão 8 — JavaScript: o comportamento.** HTML é a estrutura, CSS é o estilo… falta o terceiro pilar: o **JavaScript**, que dá vida e interatividade às páginas.',
+    'Crie o `script.js` (`touch script.js` ou botão **＋**) e conecte no `index.html` com `<script src="script.js"><\/script>`, colocado logo **antes do `</body>`** — boa prática para o HTML carregar primeiro.'
+  ],
+  hints:[
+    'Crie o arquivo `script.js` na pasta do projeto.',
+    'A tag é `<script src="script.js"><\/script>` — o `src` aponta o arquivo, como o `href` no `<link>`.',
+    'Coloque antes do `</body>`:\n```\n<script src="script.js"><\/script>\n</body>\n```'
+  ],
+  check(){
+    const miss=[];
+    if(!hasFile('meu-site/script.js')) miss.push('Crie o arquivo `script.js` dentro de `meu-site`.');
+    if(!/<script[^>]*src\s*=\s*["'][^"']*script\.js["'][^>]*>/i.test(contentOf('meu-site/index.html')))
+      miss.push('Conecte com `<script src="script.js"><\/script>` no `index.html` (de preferência antes do `</body>`).');
+    return {ok:!miss.length,missing:miss};
+  }
+},
+{
+  id:'m9', xp:200, badge:{e:'⚡',t:'Encantador de JS'},
+  title:'Interatividade: botão que responde',
+  objective:'Adicione um `<button>` no HTML e um `addEventListener` no JS',
+  intro:()=>[
+    '**Missão 9 — O primeiro clique!** Vamos programar interatividade: um **botão** no HTML e um "ouvinte de eventos" no JavaScript. Quando alguém clicar, o JS reage.',
+    'No `index.html`, adicione `<button id="botao">…</button>` e um `<p id="mensagem"></p>`. No `script.js`, selecione os elementos com `document.querySelector` e use `addEventListener(\'click\', …)`.',
+    'Depois que o **✅ Verificar** aprovar, **clique no botão lá na Prévia** e veja a mágica acontecer! ✨'
+  ],
+  hints:[
+    'No HTML (dentro do `<body>`):\n```\n<button id="botao">Clique em mim!</button>\n<p id="mensagem"></p>\n```',
+    'No `script.js`, selecione os elementos:\n```\nconst botao = document.querySelector(\'#botao\');\nconst mensagem = document.querySelector(\'#mensagem\');\n```',
+    'Registre o ouvinte do clique:\n```\nbotao.addEventListener(\'click\', function () {\n  mensagem.textContent = \'Funcionou! 🎉\';\n});\n```'
+  ],
+  check(){
+    const html=contentOf('meu-site/index.html'), js=contentOf('meu-site/script.js');
+    const miss=[];
+    if(!/<button/i.test(html)) miss.push('Adicione um `<button>` no `index.html` (com um `id`, ex.: `id="botao"`).');
+    if(!/(addEventListener|onclick)/i.test(js)) miss.push('No `script.js`, use `addEventListener(\'click\', …)` para ouvir o clique.');
+    if(!/(querySelector|getElementById)/i.test(js)) miss.push('No `script.js`, selecione o botão com `document.querySelector(\'#botao\')` ou `document.getElementById(\'botao\')`.');
+    return {ok:!miss.length,missing:miss};
+  }
+},
+{
+  id:'m10', xp:150, badge:{e:'🌐',t:'Deploy local'},
+  title:'Publicando: abra no navegador',
+  objective:'Digite `open index.html` no terminal e faça o **Teste Final**',
+  intro:()=>[
+    '**Missão 10 — Publicando localmente.** Seu site está completo! No desenvolvimento local, o último passo é abrir o projeto no navegador a partir da pasta.',
+    'Digite `open index.html` no terminal — é o navegador lendo os arquivos direto da sua pasta (no computador real, seria um duplo clique no arquivo, ou um servidor em `localhost`).',
+    'Depois faça o **📝 Teste Final** (botão na barra da missão) para fechar o laboratório com chave de ouro! 🎓'
+  ],
+  hints:[
+    'Com o terminal dentro de `meu-site`, digite `open index.html`.',
+    'Se o terminal saiu da pasta, entre de novo com `cd meu-site` antes do `open`.',
+    'O comando é exatamente `open index.html`. Depois clique em **📝 Teste final**.'
+  ],
+  check(){
+    const miss=[];
+    if(!state.opened) miss.push('Abra o site no navegador: digite `open index.html` no terminal (de dentro da pasta `meu-site`).');
+    if(!state.quizDone) miss.push('Faça o **📝 Teste final** (botão na barra da missão).');
+    return {ok:!miss.length,missing:miss};
+  }
+}
+];
+
+/* ================= motor de verificação ================= */
+let celebrating=false;
+function currentMission(){ return MISSIONS[state.mission]||MISSIONS[0]; }
+function evaluate(){
+  if(state.completedAll) return {ok:false,skip:true,missing:[]};
+  return currentMission().check();
+}
+let avT=null;
+function autoVerify(now){
+  if(now){ clearTimeout(avT); autoVerifyNow(); }
+  else { clearTimeout(avT); avT=setTimeout(autoVerifyNow,600); }
+}
+function autoVerifyNow(){
+  if(celebrating||!state.started||state.completedAll) return;
+  const r=evaluate();
+  if(r.ok) celebrate();
+}
+function verifyNow(){
+  if(!state.started) return;
+  if(state.completedAll){ mentorSay('O laboratório já foi concluído! 🏆 Agora é **modo livre**: mexa nos arquivos à vontade e ensine um colega.'); return; }
+  const r=evaluate();
+  if(r.ok){ celebrate(); return; }
+  sfx('err');
+  mentorSay('Ainda não está completo. Confira:\n'+r.missing.join('\n'),'err');
+  const b=$('#btn-verify'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+}
+const PRAISE=['Código limpo e objetivo! ✨','Você está dominando isso! 🔥','Perfeito! Continue assim 💪','Excelente trabalho! 🌟','Isso aí! Dev de verdade 💻'];
+function celebrate(){
+  celebrating=true;
+  const m=currentMission();
+  state.xp+=m.xp;
+  let badgeHtml='';
+  if(m.badge&&!state.badges.includes(m.id)){ state.badges.push(m.id); badgeHtml='<div class="badge-earn">'+m.badge.e+' <span>Conquista desbloqueada: <strong>'+esc(m.badge.t)+'</strong></span></div>'; sfx('win'); }
+  else sfx('ok');
+  const oldLevel=Math.floor((state.xp-m.xp)/250)+1, newLevel=Math.floor(state.xp/250)+1;
+  if(newLevel>oldLevel) badgeHtml+='<div class="badge-earn" style="border-color:rgba(251,191,36,.5);color:#fde68a">🏅 <strong>Nível '+newLevel+'</strong> alcançado!</div>';
+  $('#cel-title').textContent='Missão '+(state.mission+1)+' concluída!';
+  $('#cel-xp').textContent='+'+m.xp+' XP';
+  $('#cel-badge').innerHTML=badgeHtml;
+  $('#cel-praise').textContent=PRAISE[Math.floor(Math.random()*PRAISE.length)];
+  state.mission++;
+  if(state.mission>=MISSIONS.length) state.completedAll=true;
+  save();
+  renderProgress(); renderMissionBar(); renderHints();
+  refreshPreview();
+  confetti();
+  openModal('modal-celebrate');
+}
+
+/* ================= barra da missão + dicas ================= */
+function renderMissionBar(){
+  if(state.completedAll){
+    $('#mission-chip').textContent='🏆 Fim';
+    $('#mission-title').textContent='Laboratório concluído — Modo Livre';
+    $('#mission-objective').innerHTML=md('Mexa nos arquivos, teste novos estilos e ensine um colega. 💜');
+    $('#btn-verify').classList.add('hidden');
+    $('#btn-quiz').classList.add('hidden');
+    return;
+  }
+  const m=currentMission();
+  $('#mission-chip').textContent='Missão '+(state.mission+1);
+  $('#mission-title').textContent=m.title;
+  $('#mission-objective').innerHTML=md(m.objective);
+  $('#btn-verify').classList.remove('hidden');
+  $('#btn-quiz').classList.toggle('hidden',!(state.mission===9&&!state.quizDone));
+}
+function renderProgress(){
+  $('#mission-count').textContent=state.completedAll?'Concluído 🏆':'Missão '+(state.mission+1)+'/10';
+  $('#mission-bar-fill').style.width=(state.completedAll?100:state.mission/MISSIONS.length*100)+'%';
+  $('#xp-chip').textContent='⭐ '+state.xp+' XP · Nv. '+(Math.floor(state.xp/250)+1);
+}
+function renderHints(){
+  const m=MISSIONS[state.mission];
+  const n=state.hints[state.mission]||0;
+  $('#hint-count').textContent=n+'/'+(m?m.hints.length:3);
+  const list=$('#hints-list'); list.innerHTML='';
+  if(m) for(let i=0;i<n&&i<m.hints.length;i++){
+    const d=document.createElement('div'); d.className='hint-item'; d.innerHTML=md(m.hints[i]); list.appendChild(d);
+  }
+  $('#btn-reveal-hint').classList.toggle('hidden',!m||n>=m.hints.length);
+}
+$('#btn-hints').addEventListener('click',e=>{ e.stopPropagation(); $('#hints-pop').classList.toggle('hidden'); renderHints(); });
+$('#btn-reveal-hint').addEventListener('click',()=>{
+  const m=MISSIONS[state.mission]; if(!m) return;
+  const n=state.hints[state.mission]||0;
+  if(n<m.hints.length){ state.hints[state.mission]=n+1; save(); sfx('click'); renderHints(); }
+});
+document.addEventListener('click',e=>{
+  const pop=$('#hints-pop');
+  if(!pop.classList.contains('hidden')&&!pop.contains(e.target)&&e.target!==$('#btn-hints')&&!$('#btn-hints').contains(e.target)) pop.classList.add('hidden');
+});
+$('#btn-verify').addEventListener('click',()=>{ sfx('click'); verifyNow(); });
+
+/* ================= missão atual ================= */
+function startMission(i){
+  state.mission=i;
+  const m=MISSIONS[i];
+  chatDivider('Missão '+(i+1)+' de '+MISSIONS.length);
+  (m.intro()||[]).forEach((t,k)=>setTimeout(()=>mentorSay(t),k*400));
+  if(i===3&&hasFile('meu-site/index.html')) openInEditor('meu-site/index.html');
+  if(i===6&&hasFile('meu-site/style.css')) openInEditor('meu-site/style.css');
+  if(i===8&&hasFile('meu-site/script.js')) openInEditor('meu-site/script.js');
+  renderMissionBar(); renderProgress(); renderHints();
+  refreshPreview(); save();
+}
+
+/* ================= quiz final ================= */
+const QUIZ=[
+  {q:'Qual comando do terminal cria uma **nova pasta**?',
+   opts:['mkdir','cd','touch','ls'],correct:0,
+   why:'`mkdir` (*make directory*) cria pastas. `cd` entra numa pasta, `touch` cria arquivos e `ls` lista o conteúdo.'},
+  {q:'Para que serve a linha `<!DOCTYPE html>`?',
+   opts:['Dizer ao navegador que o documento é HTML5','Criar um link para o arquivo CSS','Adicionar um título à página','Criar uma pasta no projeto'],correct:0,
+   why:'O DOCTYPE é a **declaração** que informa ao navegador qual versão do HTML o documento usa — hoje, o HTML5.'},
+  {q:'Onde colocamos a tag que **conecta o CSS** ao HTML?',
+   opts:['`<link rel="stylesheet" href="style.css">` dentro do `<head>`','Uma tag `<link>` solta no fim do terminal','`<style src="style.css">` no corpo do texto','O CSS conecta sozinho, sem tag'],correct:0,
+   why:'O `<link>` com `rel="stylesheet"` e `href` apontando o arquivo vai sempre dentro do `<head>`.'},
+  {q:'Qual tag conecta o arquivo **JavaScript** ao HTML?',
+   opts:['`<script src="script.js"><\/script>`','`<js href="script.js">`','`<link rel="script">`','`<javascript>script.js</javascript>`'],correct:0,
+   why:'A tag `<script src="…">` é a que carrega o JS — colocada antes do `</body>` para o HTML carregar primeiro.'},
+  {q:'O que faz `botao.addEventListener(\'click\', funcao)`?',
+   opts:['Executa a função quando o botão é clicado','Cria um botão na página','Muda a cor do botão quando a página carrega','Salva o arquivo automaticamente'],correct:0,
+   why:'O `addEventListener` **escuta um evento** (neste caso, o clique) e executa a função quando ele acontece — é assim que o JS reage ao usuário.'}
+];
+let quizI=0, quizRight=0, quizAnswered=false;
+$('#btn-quiz').addEventListener('click',()=>{ quizI=0; quizRight=0; renderQuizQ(); openModal('modal-quiz'); });
+function renderQuizQ(){
+  const q=QUIZ[quizI];
+  quizAnswered=false;
+  $('#quiz-prog').textContent='PERGUNTA '+(quizI+1)+' DE '+QUIZ.length;
+  $('#quiz-q').innerHTML=md(q.q);
+  $('#quiz-why').classList.add('hidden');
+  $('#btn-quiz-next').classList.add('hidden');
+  const box=$('#quiz-opts'); box.innerHTML='';
+  const items=q.opts.map((t,i)=>({t:t,ok:i===q.correct})).sort(()=>Math.random()-0.5);
+  items.forEach(it=>{
+    const b=document.createElement('button'); b.className='qopt'; b.innerHTML=md(it.t);
+    b.addEventListener('click',()=>{
+      if(quizAnswered) return;
+      quizAnswered=true;
+      $$('#quiz-opts .qopt').forEach(x=>{ x.disabled=true; });
+      b.classList.add(it.ok?'correct':'wrong');
+      items.forEach((orig,j)=>{ if(orig.ok) box.children[j].classList.add('correct'); });
+      if(it.ok){ quizRight++; sfx('ok'); } else sfx('err');
+      $('#quiz-why').innerHTML='<strong>💡 '+(it.ok?'Isso!':'Quase!')+'</strong> '+md(q.why);
+      $('#quiz-why').classList.remove('hidden');
+      const nb=$('#btn-quiz-next'); nb.textContent=quizI<QUIZ.length-1?'Próxima ▶':'Ver resultado 🏁'; nb.classList.remove('hidden');
+    });
+    box.appendChild(b);
+  });
+}
+$('#btn-quiz-next').addEventListener('click',()=>{
+  if(quizI<QUIZ.length-1){ quizI++; renderQuizQ(); return; }
+  $('#quiz-body').innerHTML=
+    '<div class="cert-lab">📝 Resultado do teste final</div>'+
+    '<div id="quiz-score-big">'+quizRight+'/'+QUIZ.length+'</div>'+
+    '<p style="text-align:center">'+(quizRight>=4?'Fantástico! Você domina o básico do desenvolvimento local. 🎓':quizRight>=3?'Bom trabalho! Releia o 📖 Caderno para reforçar os detalhes.':'Não desanime! O laboratório fica aberto — revise e jogue de novo.')+'</p>'+
+    '<div class="modal-actions" style="justify-content:center"><button id="btn-quiz-finish" class="btn btn-primary">Finalizar 🎓</button></div>';
+  $('#btn-quiz-finish').addEventListener('click',finishQuiz);
+});
+function finishQuiz(){
+  state.quizDone=true; state.quizScore=quizRight;
+  if(quizRight>=4&&!state.badges.includes('quiz')) state.badges.push('quiz');
+  save();
+  closeModal('modal-quiz');
+  verifyNow();
+}
+
+/* ================= modais / certificado / caderno ================= */
+function openModal(id){ $('#'+id).classList.remove('hidden'); }
+function closeModal(id){ $('#'+id).classList.add('hidden'); }
+$('#btn-cel-continue').addEventListener('click',()=>{
+  closeModal('modal-celebrate');
+  celebrating=false;
+  if(state.completedAll){ showCertificate(); freeMode(); }
+  else startMission(state.mission);
+});
+function freeMode(){
+  mentorSay('🏆 **PARABÉNS, '+(state.name||'explorador(a)')+'!** Você construiu um site completo — do `mkdir` ao navegador. Isso é **desenvolvimento local**: criar na sua própria máquina antes de publicar no mundo.');
+  mentorSay('Agora é **modo livre**: experimente no editor (a prévia atualiza sozinha), crie mais páginas e mostre seu projeto para alguém. Quando quiser recomeçar, use o botão ↺ no topo. 💜');
+}
+function showCertificate(){
+  $('#cert-name').textContent=state.name||'Explorador(a)';
+  $('#cert-stats').innerHTML='⭐ '+state.xp+' XP &nbsp;·&nbsp; Nível '+(Math.floor(state.xp/250)+1)+' &nbsp;·&nbsp; Teste final: '+state.quizScore+'/'+QUIZ.length+' &nbsp;·&nbsp; Dicas usadas: '+Object.values(state.hints).reduce((a,b)=>a+b,0);
+  const ALL=[['m1','🚀','Primeiro contato'],['m3','📁','Guardião dos arquivos'],['m5','🏗️','Arquiteto HTML'],['m7','🎨','Estilista CSS'],['m9','⚡','Encantador de JS'],['m10','🌐','Deploy local'],['quiz','🎓','Mestre do Lab']];
+  $('#cert-badges').innerHTML=ALL.filter(b=>state.badges.includes(b[0])).map(b=>'<span class="cert-badge">'+b[1]+' '+b[2]+'</span>').join('');
+  $('#cert-date').textContent=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})+' · tire um print e mostre ao seu professor!';
+  openModal('modal-cert');
+  sfx('win');
+}
+$('#btn-notebook').addEventListener('click',()=>{ openModal('modal-notebook'); sfx('click'); });
+(function fillNotebook(){
+  const cmds=[['mkdir nome','cria uma pasta (*make directory*)'],['cd nome','entra na pasta · `cd ..` volta'],['ls','lista o conteúdo da pasta atual'],['pwd','mostra o caminho onde você está'],['touch arquivo.ext','cria um arquivo vazio'],['code arquivo','abre o arquivo no editor'],['open arquivo.html','abre o site no navegador'],['clear','limpa o terminal'],['help','lista os comandos do terminal']];
+  $('#nb-cmds').innerHTML=cmds.map(c=>'<tr><td><code>'+esc(c[0])+'</code></td><td>'+md(c[1])+'</td></tr>').join('');
+  const concepts=[['**Desenvolvimento local**','criar e testar o site no próprio computador (pasta + navegador) antes de publicar na internet. No computador real, abrimos com duplo clique ou um servidor em `localhost`.'],['**HTML**','a estrutura e o conteúdo — o esqueleto da página.'],['**CSS**','o estilo: cores, fontes, espaçamentos e layout.'],['**JavaScript**','o comportamento: interatividade e lógica.'],['**Tag**','marcação do HTML entre `< >` que envolve o conteúdo, como `<h1>…</h1>`.'],['**Seletor**','no CSS, o "alvo" da regra — ex.: `body { … }`.'],['**Evento**','algo que acontece na página (ex.: clique), que o JS "escuta" com `addEventListener`.'],['**DOM**','a árvore de elementos que o navegador monta a partir do HTML; o JS a manipula com `querySelector`.']];
+  $('#nb-concepts').innerHTML=concepts.map(c=>'<p style="margin-bottom:9px">'+md(c[0])+' — '+md(c[1])+'</p>').join('');
+})();
+$('#btn-mute').addEventListener('click',()=>{ state.muted=!state.muted; $('#btn-mute').textContent=state.muted?'🔇':'🔊'; save(); if(!state.muted) sfx('click'); });
+$('#btn-reset').addEventListener('click',()=>openModal('modal-reset'));
+$('#btn-reset-cancel').addEventListener('click',()=>closeModal('modal-reset'));
+$('#btn-reset-confirm').addEventListener('click',()=>{ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); });
+
+/* ================= painéis (responsivo) ================= */
+const mq=window.matchMedia('(max-width:1023px)');
+function isPane(){ return mq.matches; }
+function setPane(name){
+  if(!isPane()) return;
+  const map={chat:'left-panel',files:'left-panel',code:'code-panel',preview:'preview-panel'};
+  $$('#grid > section').forEach(s=>s.classList.toggle('pane-active',s.id===map[name]));
+  $$('#pane-nav button').forEach(b=>b.classList.toggle('active',b.dataset.pane===name));
+  if(name==='chat'||name==='files'){
+    $('#tab-chat').classList.toggle('active',name==='chat');
+    $('#tab-files').classList.toggle('active',name==='files');
+    $('#chat').classList.toggle('active',name==='chat');
+    $('#explorer').classList.toggle('active',name==='files');
+    if(name==='files') renderTree();
+  }
+  if(name==='code') setTimeout(()=>ta.focus(),60);
+}
+$$('#pane-nav button').forEach(b=>b.addEventListener('click',()=>{ sfx('click'); setPane(b.dataset.pane); }));
+mq.addEventListener('change',e=>{ if(e.matches) setPane('chat'); else $$('#grid > section').forEach(s=>s.classList.remove('pane-active')); });
+$('#tab-chat').addEventListener('click',()=>{ $('#tab-chat').classList.add('active'); $('#tab-files').classList.remove('active'); $('#chat').classList.add('active'); $('#explorer').classList.remove('active'); });
+$('#tab-files').addEventListener('click',()=>{ $('#tab-files').classList.add('active'); $('#tab-chat').classList.remove('active'); $('#explorer').classList.add('active'); $('#chat').classList.remove('active'); renderTree(); });
+
+/* ================= tela inicial / persistência ================= */
+function closeIntro(){ $('#intro-overlay').classList.add('hidden'); }
+function welcome(){
+  chatDivider('Laboratório iniciado');
+  mentorSay('Olá, **'+(state.name||'explorador(a)')+'**! Bem-vindo(a) ao **Laboratório de Desenvolvimento Local**. Eu sou a Prof.ª Ada 👩‍💻 e vou te guiar missão por missão.');
+  mentorSay('Aqui você vai construir um site **de verdade**, do jeito que os profissionais fazem: numa pasta do computador, com **HTML**, **CSS** e **JavaScript**. Nada de mágica da internet — cada arquivo será criado por você.');
+  mentorSay('Sua bancada: à esquerda ficam o **chat** (aqui!) e os **Arquivos**; no centro o **Editor** e o **Terminal**; à direita a **Prévia** do navegador. Comece pelo **Terminal** — Missão 1! 🚀');
+}
+function initIntro(){
+  const loaded=loadSave();
+  if(loaded&&loaded.started){
+    state=loaded;
+    $('#intro-form').classList.add('hidden');
+    $('#intro-continue').classList.remove('hidden');
+    $('#btn-continue').textContent='▶ Continuar de onde parei ('+(state.completedAll?'concluído':'Missão '+(state.mission+1))+')';
+  }
+  $('#btn-start').addEventListener('click',()=>{
+    state.name=($('#student-name').value.trim()||'Explorador(a)').slice(0,24);
+    state.started=true;
+    save(); closeIntro(); welcome(); startMission(0);
+  });
+  $('#btn-continue').addEventListener('click',()=>{
+    closeIntro();
+    renderProgress(); renderMissionBar(); renderHints(); renderTree(); refreshPreview();
+    if(state.completedAll){
+      mentorSay('Bem-vindo(a) de volta, **'+(state.name||'explorador(a)')+'**! 🏆 O laboratório está **concluído** — agora é **modo livre**: mexa no código à vontade e ensine um colega!');
+    } else {
+      mentorSay('Bem-vindo(a) de volta, **'+(state.name||'explorador(a)')+'**! 👋 Vamos relembrar a missão atual:');
+      mentorSay('**'+currentMission().title+'** — '+currentMission().objective);
+    }
+    chatDivider('Sessão retomada');
+  });
+  $('#btn-fresh').addEventListener('click',()=>{
+    try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+    state=JSON.parse(JSON.stringify(DEF));
+    $('#intro-form').classList.remove('hidden');
+    $('#intro-continue').classList.add('hidden');
+    $('#student-name').value='';
+  });
+  $('#student-name').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#btn-start').click(); });
+}
+
+/* ================= boot ================= */
+function boot(){
+  $('#btn-mute').textContent=state.muted?'🔇':'🔊';
+  initIntro();
+  renderTree();
+  renderProgress();
+  renderMissionBar();
+  renderHints();
+  refreshPreview();
+  termPrompt.textContent=promptStr();
+  if(isPane()) setPane('chat');
+}
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Missão IA — Semana 5: Como uma IA Raciocina e Age?</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,Ubuntu,Arial,sans-serif;background:linear-gradient(165deg,#070f2b 0%,#0b2352 55%,#0a1c46 100%) fixed;color:#eaf1ff;min-height:100vh;line-height:1.55}
+#app{max-width:1000px;margin:0 auto;padding:16px clamp(12px,3vw,24px) 70px}
+header{position:sticky;top:0;z-index:50;background:rgba(7,15,43,.88);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.08);padding:10px clamp(12px,3vw,24px);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;min-width:0}
+header h1{font-size:clamp(.95rem,2.6vw,1.2rem);font-weight:800;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:4px 12px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.chip.gold{color:#ffd76a;border-color:rgba(255,215,106,.4)}
+.icon-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:6px 10px;font-size:1rem;cursor:pointer}
+.icon-btn:hover{background:rgba(255,255,255,.16)}
+footer{position:fixed;bottom:0;left:0;right:0;background:rgba(7,15,43,.9);border-top:1px solid rgba(255,255,255,.08);padding:8px 16px;font-size:.75rem;color:#9db3dc;text-align:center;z-index:40}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:clamp(14px,2.5vw,24px);margin:14px 0;backdrop-filter:blur(4px)}
+h2{color:#fff;font-size:clamp(1.3rem,4vw,1.9rem);margin-bottom:8px}
+h3{color:#9cc0ff;font-size:clamp(1.05rem,3vw,1.3rem);margin-bottom:10px}
+h4{color:#9cc0ff;margin:10px 0 6px;font-size:1rem}
+.card p{margin:8px 0}
+.card ul,.card ol{margin:8px 0 8px 22px;display:flex;flex-direction:column;gap:4px}
+.q{font-size:clamp(1rem,2.8vw,1.15rem);font-weight:700;color:#fff;margin:10px 0}
+.fine{font-size:.85rem;color:#9db3dc}
+.fineprint{font-size:.78rem;color:#8ba0c8;margin-top:10px}
+.btn{display:inline-block;background:linear-gradient(135deg,#2f6bff,#1740c8);color:#fff;border:0;border-radius:12px;padding:12px 22px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(31,90,255,.35);transition:transform .15s,box-shadow .15s;margin:6px 8px 6px 0;text-decoration:none}
+.btn:hover{transform:translateY(-2px);box-shadow:0 9px 22px rgba(31,90,255,.45)}
+.btn.ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);box-shadow:none}
+.btn.gold{background:linear-gradient(135deg,#ffcc4d,#e8a200);color:#241a00;box-shadow:0 6px 18px rgba(232,162,0,.35)}
+.btn.small{padding:8px 14px;font-size:.85rem;margin:4px 6px 4px 0}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
+.hero{text-align:center;padding:clamp(20px,5vw,40px) clamp(14px,3vw,30px)}
+.hero-emoji{font-size:clamp(2.2rem,7vw,3.4rem);margin-bottom:8px}
+.hero .lead{font-size:clamp(1rem,2.8vw,1.15rem);max-width:640px;margin:10px auto 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0}
+.tagchip{background:rgba(92,141,255,.14);border:1px solid rgba(92,141,255,.4);border-radius:999px;padding:4px 12px;font-size:.82rem;font-weight:600;color:#bcd2ff}
+details.theory{background:rgba(0,0,0,.18);border:1px solid rgba(92,141,255,.3);border-radius:14px;padding:6px 16px;margin:14px 0}
+details.theory summary{cursor:pointer;font-weight:800;color:#9cc0ff;padding:8px 0;font-size:1rem}
+details.theory[open] summary{border-bottom:1px dashed rgba(255,255,255,.15);margin-bottom:6px}
+details.theory h3{font-size:1.05rem;margin-top:10px}
+details.theory p,details.theory li{font-size:.95rem}
+.opts{display:grid;gap:10px;margin-top:12px}
+.opt{text-align:left;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.16);border-radius:12px;padding:12px 16px;color:#eaf1ff;font-size:.98rem;cursor:pointer;transition:.15s;word-break:break-word}
+.opt:hover:not(:disabled){border-color:#5c8dff;background:rgba(92,141,255,.12)}
+.opt.ok{border-color:#3ddc84;background:rgba(61,220,132,.16)}
+.opt.bad{border-color:#ff6b6b;background:rgba(255,107,107,.14);animation:shake .3s}
+.opt:disabled{cursor:default}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.fb{border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.97rem}
+.fb.good{background:rgba(61,220,132,.12);border:1px solid rgba(45,200,120,.45)}
+.fb.warn{background:rgba(255,176,66,.1);border:1px solid rgba(255,176,66,.4)}
+.fb.bad{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.45)}
+.hint{background:rgba(92,141,255,.1);border:1px dashed rgba(92,141,255,.55);border-radius:12px;padding:10px 14px;margin-top:12px;font-size:.93rem}
+.match-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.match-col h4{text-align:center;color:#cfe0ff}
+.mitem{width:100%}
+.mitem.sel{border-color:#ffd76a;background:rgba(255,215,106,.16)}
+.mitem.lock{opacity:.55;pointer-events:none;border-color:#3ddc84;background:rgba(61,220,132,.12)}
+.pool,.seq{display:flex;flex-wrap:wrap;gap:10px;min-height:52px;padding:10px;border-radius:12px;border:1.5px dashed rgba(255,255,255,.22);margin-top:6px}
+.seq{border-style:solid;border-color:rgba(61,220,132,.45);background:rgba(61,220,132,.06)}
+.pill{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:999px;padding:9px 16px;color:#eaf1ff;font-size:.9rem;cursor:pointer;transition:.15s}
+.pill:hover{border-color:#5c8dff}
+.pill.done{background:rgba(61,220,132,.14);border-color:#3ddc84;cursor:default}
+.pill.bad{animation:shake .3s;border-color:#ff6b6b}
+.trace{background:rgba(0,0,0,.28);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.tl{padding:8px 12px;border-radius:10px;font-size:.93rem;word-break:break-word}
+.tl.t{background:rgba(255,176,66,.14);border:1px solid rgba(255,176,66,.4)}
+.tl.a{background:rgba(92,141,255,.14);border:1px solid rgba(92,141,255,.45);font-family:ui-monospace,Consolas,Monaco,monospace;font-size:.87rem}
+.tl.o{background:rgba(61,220,132,.12);border:1px solid rgba(61,220,132,.4)}
+.goal{background:rgba(255,215,106,.1);border:1px solid rgba(255,215,106,.4);border-radius:12px;padding:10px 14px;font-weight:700;margin:10px 0}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.toolchip{background:rgba(61,220,132,.1);border:1px solid rgba(61,220,132,.4);border-radius:999px;padding:4px 12px;font-size:.82rem;font-family:ui-monospace,Consolas,monospace}
+.lake-wrap{margin-top:14px;background:rgba(0,0,0,.2);border-radius:12px;padding:12px 14px}
+.lake-wrap label{font-weight:700;color:#cfe0ff;font-size:.92rem}
+.lake-wrap input[type=range]{width:100%;margin:10px 0 4px;accent-color:#3ddc84}
+.lake-label{font-weight:800;color:#ffd76a;margin-bottom:8px}
+.lake{position:relative;height:110px;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.28);background:#0e1c3a}
+.water{position:absolute;left:0;bottom:0;top:0;width:8%;background:linear-gradient(180deg,#2fa7ff,#0b62c4);transition:width .45s ease}
+.pad{position:absolute;right:8px;top:8px;font-size:1.6rem}
+.ladder{list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.ladder li{background:rgba(255,255,255,.06);border-left:4px solid #5c8dff;border-radius:8px;padding:8px 12px;font-size:.93rem}
+.ladder li.here{border-left-color:#ffd76a;background:rgba(255,215,106,.1)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.mini{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px}
+.mini h4{margin-top:0}
+.good-card{border-color:rgba(61,220,132,.45)}
+.bad-card{border-color:rgba(255,107,107,.45)}
+.analogy{margin-top:8px;font-size:.9rem;color:#cfe0ff}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px}
+table{border-collapse:collapse;width:100%;min-width:480px;font-size:.9rem}
+th,td{border:1px solid rgba(255,255,255,.18);padding:8px 10px;text-align:left}
+th{background:rgba(92,141,255,.16);color:#cfe0ff}
+.tot-demo{display:flex;flex-direction:column;gap:10px;align-items:center;margin:12px 0}
+.tnode{background:rgba(92,141,255,.15);border:1.5px solid #5c8dff;border-radius:10px;padding:8px 14px;font-weight:700;font-size:.95rem}
+.tnode.root{background:rgba(255,215,106,.12);border-color:#ffd76a}
+.trow{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.tnode.bad{border-color:#ff6b6b;background:rgba(255,107,107,.1)}
+.tnode.good{border-color:#3ddc84;background:rgba(61,220,132,.1)}
+.quote{background:rgba(255,215,106,.08);border-left:4px solid #ffd76a;padding:10px 14px;border-radius:8px;margin-top:10px;font-size:.98rem}
+.pbar{height:10px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;margin-top:8px}
+.pbar>i{display:block;height:100%;background:linear-gradient(90deg,#2fa7ff,#ffd76a);transition:width .4s}
+.timebar{height:12px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;margin:10px 0}
+.timebar>i{display:block;height:100%;background:#3ddc84;transition:width .1s linear}
+.timebar.low>i{background:#ff6b6b}
+.timeleft{font-weight:800;color:#ffd76a;font-size:.9rem}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:14px}
+.mcard{cursor:pointer;position:relative;transition:transform .15s;padding:16px}
+.mcard:hover{transform:translateY(-3px)}
+.mcard.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.6);transform:none}
+.mcard .num{position:absolute;top:-10px;left:-10px;background:#2f6bff;border-radius:999px;min-width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:800;border:2px solid #0b2352;padding:0 6px}
+.mcard-emoji{font-size:1.8rem;margin-bottom:4px}
+.mcard-tag{font-size:.75rem;color:#9db3dc;text-transform:uppercase;letter-spacing:.5px}
+.mcard h3{font-size:1rem;margin:4px 0 8px;color:#fff}
+.mcard-status{font-size:.85rem;color:#cfe0ff;font-weight:600}
+.prog-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.badges{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.badge{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:8px 12px;font-size:.85rem;text-align:center}
+.badge.off{opacity:.35;filter:grayscale(1)}
+#overlay{position:fixed;inset:0;background:rgba(4,9,26,.72);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+#overlay.show{display:flex}
+.modal{background:linear-gradient(180deg,#0e2a5c,#0a1c46);border:1px solid rgba(255,255,255,.22);border-radius:18px;max-width:480px;width:100%;padding:clamp(18px,4vw,30px);text-align:center;animation:pop .35s}
+@keyframes pop{from{transform:scale(.82);opacity:0}}
+.modal-emoji{font-size:3rem}
+.modal-xp{margin:10px 0;font-size:1.05rem}
+.modal-btns{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#toasts{position:fixed;top:64px;right:16px;z-index:120;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:rgba(61,220,132,.16);border:1px solid #3ddc84;color:#d6ffe8;padding:10px 16px;border-radius:12px;font-weight:800;animation:toastin .3s,fadeout .4s 1.6s forwards;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+@keyframes toastin{from{transform:translateX(40px);opacity:0}}
+@keyframes fadeout{to{opacity:0;transform:translateY(-10px)}}
+.cf{position:fixed;top:-14px;width:9px;height:14px;z-index:130;pointer-events:none;animation:fall linear forwards;border-radius:2px}
+@keyframes fall{to{transform:translateY(108vh) rotate(720deg)}}
+.gloss{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.gloss-item{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 14px;font-size:.93rem}
+.gloss-item b{color:#9cc0ff}
+@media(max-width:640px){
+ .match-grid,.two{grid-template-columns:1fr}
+ header h1{font-size:.9rem}
+ .mcard .num{position:static;margin-bottom:6px}
+ footer{font-size:.68rem}
+}
+@media(min-width:900px){.hero-emoji{letter-spacing:4px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><span style="font-size:1.3rem">🧠</span><h1>Missão IA · Raciocinar &amp; Agir</h1></div>
+ <span class="spacer"></span>
+ <span class="chip gold" id="xpchip">⭐ 0 XP</span>
+ <span class="chip" id="rankchip">🌱 Curioso(a)</span>
+ <button class="icon-btn" id="mutebtn" onclick="toggleMute()" title="Ligar/desligar som">🔊</button>
+ <button class="icon-btn" onclick="resetAll()" title="Reiniciar todo o progresso">♻️</button>
+</header>
+<main id="app"></main>
+<footer>Atividade gamificada de apoio · Semana 5 — Como uma IA Raciocina e Age? · Aprendizado Profundo e IA Generativa · uso acadêmico · progresso salvo neste navegador</footer>
+<div id="overlay" onclick="if(event.target===this)hideModal()"></div>
+<div id="toasts"></div>
+<noscript><p style="padding:20px;text-align:center">Esta atividade precisa de JavaScript habilitado.</p></noscript>
+<script>
+'use strict';
+// ================= DADOS DAS MISSÕES =================
+const MISSIONS=[
+{
+ id:'m1',emoji:'🪷',title:'A Armadilha da Vitória-régia',tag:'Gancho de abertura',
+ theory:`<h3>🪷 O quebra-cabeça que engana cérebros lineares</h3>
+ <p>Uma <b>vitória-régia dobra de tamanho todos os dias</b>. Ela leva <b>48 dias</b> para cobrir o lago inteiro. Quantos dias leva para cobrir <b>metade</b> do lago?</p>
+ <ul><li><b>A maioria diz 24</b> (“metade do lago = metade do tempo”). Parece lógico… e está errado.</li>
+ <li>O raciocínio correto trabalha <b>para trás</b>: no dia 48 o lago está 100% coberto; como a planta <b>dobra a cada dia</b>, no dia 47 ela cobria 50%. <b>Resposta: 47 dias.</b></li></ul>
+ <div class="table-scroll"><table><tr><th>Dia 44</th><th>Dia 45</th><th>Dia 46</th><th>Dia 47</th><th>Dia 48</th></tr>
+ <tr><td>6,25%</td><td>12,5%</td><td>25%</td><td>50%</td><td>100%</td></tr></table></div>
+ <p><b>E o LLM?</b> O Mistral 7B, com prompt direto, respondeu “120” — um absurdo! Com as <b>palavras mágicas</b> “Vamos pensar passo a passo”, ele listou os dias (Day 1: 1 pad… Day 47: metade… Day 48: cheio) e chegou sozinho ao 47. <b>Nada no modelo mudou</b> — só a computação no tempo de teste.</p>
+ <div class="lake-wrap"><label>🌊 Simulador: arraste o dia e veja o lago</label>
+ <input type="range" id="lakeSlider" min="40" max="48" step="1" value="44" oninput="lakeSlide(this.value)">
+ <div class="lake-label" id="lakeLabel">Dia 44 — 6,25% coberto</div>
+ <div class="lake"><div class="water" id="lakeWater"></div><span class="pad">🪷</span></div>
+ <p class="fine">Perceba: o crescimento é lento… lento… e depois EXPLODE. Por isso nossa intuição linear falha.</p></div>`,
+ steps:[
+  {type:'quiz',xp:40,q:'Uma vitória-régia dobra de tamanho todos os dias. Se leva 48 dias para cobrir todo o lago, quantos dias leva para cobrir METADE do lago?',
+   opts:[{t:'24 dias (metade do tempo)'},{t:'47 dias',ok:true},{t:'48 dias'},{t:'12 dias'}],
+   hint:'Trabalhe PARA TRÁS a partir do dia 48: se o lago está 100% coberto no dia 48 e a planta dobra a cada dia, como estava no dia 47?',
+   explain:'<b>Dia 48: 100% → dia 47: 50% → dia 46: 25% → dia 45: 12,5%.</b> O crescimento exponencial engana nossos cérebros lineares (“metade do resultado = metade do esforço”). A percepção-chave: trabalhar para trás passo a passo revela a resposta!',
+   wrongWhy:{0:'Caiu na armadilha linear: metade do lago ≠ metade do tempo. Olhe a tabela para trás a partir do dia 48.',2:'No dia 48 o lago já está 100% coberto — a metade acontece ANTES disso.',3:'“Metade de 12” não faz sentido aqui: pense no DOBRO de cada dia, não na metade do tempo.'}},
+  {type:'quiz',xp:40,q:'O LLM Mistral 7B respondeu “120” para o quebra-cabeça — um absurdo! Sem trocar de modelo, o que o fez acertar na segunda tentativa?',
+   opts:[{t:'Treinar o modelo por mais algumas semanas'},{t:'Trocar por um modelo 10 vezes maior'},{t:'Adicionar “Vamos pensar passo a passo” ao prompt',ok:true},{t:'Aumentar a temperatura do modelo'}],
+   hint:'A “palavra mágica” pede ao modelo que mostre as etapas intermediárias antes da resposta final.',
+   explain:'Não mudamos o modelo — mudamos a <b>computação no tempo de teste</b>: com o raciocínio explícito (Day 1: 1 pad → Day 47: metade → Day 48: cheio), o modelo chegou sozinho ao dia 47. Cada etapa virou um <b>subproblema simples</b> e os tokens intermediários funcionaram como <b>memória de trabalho</b>.'}
+ ]
+},
+{
+ id:'m2',emoji:'⏱️',title:'Trocar Tempo por Precisão',tag:'Computação em tempo de teste',
+ theory:`<h3>⏱️ A mudança de paradigma</h3>
+ <div class="two">
+  <div class="mini"><h4>ML Tradicional</h4><ul><li>Toda a “inteligência” é aprendida no <b>treinamento</b></li><li>Inferência rápida e fixa</li><li>Qualidade do modelo = qualidade do treino</li></ul><p class="analogy"><b>Analogia:</b> prova de livro fechado — tempo fixo, depende do que foi memorizado.</p></div>
+  <div class="mini"><h4>Novo paradigma</h4><ul><li>Gastar mais computação <b>no tempo de inferência</b></li><li>O modelo pode “pensar mais” em problemas difíceis</li><li>Trocar tempo por precisão</li></ul><p class="analogy"><b>Analogia:</b> prova para casa — pensar pelo tempo necessário e verificar o próprio trabalho.</p></div>
+ </div>
+ <h3>🪜 Caminho da OpenAI para AGI</h3>
+ <ul class="ladder">
+  <li><b>L1</b> · IA conversacional — LLMs puros / série GPT (2018)</li>
+  <li class="here"><b>L2</b> · IA de raciocínio — computação em tempo de teste, série o (2024) ← <b>estamos aqui</b></li>
+  <li><b>L3</b> · Agentes autônomos — Devin, Copilot, Operator (2024) ← rumo da indústria</li>
+  <li><b>L4</b> · Inovadores (previsto 2025/2026)</li>
+  <li><b>L5</b> · IA como organização (previsto 2026/2027)</li>
+ </ul>
+ <p><b>Percepção-chave:</b> podemos tornar os modelos mais inteligentes <b>quando respondem</b>, não apenas durante o treinamento. Estamos trocando computação (tempo, tokens) por precisão.</p>`,
+ steps:[
+  {type:'match',xp:60,title:'Ligue cada conceito à sua descrição',left:[
+    {k:'ml',label:'ML Tradicional'},{k:'np',label:'Novo paradigma'},{k:'tt',label:'Computação em tempo de teste'},{k:'n2',label:'Nível 2 (caminho OpenAI)'},{k:'n3',label:'Nível 3 (caminho OpenAI)'}],
+   right:[
+    {k:'n3',label:'Agentes autônomos — Devin, Copilot, Operator'},
+    {k:'ml',label:'Prova de livro fechado: inferência rápida e fixa'},
+    {k:'n2',label:'Raciocinadores — série o, computação em tempo de teste'},
+    {k:'np',label:'Prova para casa: pensar o necessário e verificar'},
+    {k:'tt',label:'Trocar tempo (e tokens) por precisão na inferência'}],
+   hint:'Comece pelos dois mais visuais: livro fechado x prova para casa.',
+   explain:'O ML tradicional concentra toda a inteligência no treino (livro fechado). O novo paradigma gasta mais computação <b>quando responde</b> — a era dos raciocinadores (L2) — e a indústria agora caminha para agentes autônomos (L3).'},
+  {type:'quiz',xp:30,q:'No caminho da OpenAI para AGI, em que nível estamos hoje e para onde vamos?',
+   opts:[{t:'L1 (conversacional) → regressando ao L5'},{t:'L2 (raciocinadores) → movendo para o L3 (agentes)',ok:true},{t:'L5 (IA como organização) → já chegamos lá'},{t:'Nível 0 — a AGI ainda nem começou'}],
+   hint:'O material diz: estamos atualmente nos Raciocinadores, movendo para os Agentes.',
+   explain:'Estamos no <b>Nível 2 (Raciocinadores)</b> — modelos com computação em tempo de teste, como a série o — e nos movemos para o <b>Nível 3 (Agentes autônomos)</b>: sistemas que raciocinam E agem no mundo real. É justamente o tema da Parte 2.'}
+ ]
+},
+{
+ id:'m3',emoji:'🔗',title:'As Palavras Mágicas (CoT)',tag:'Chain-of-Thought',
+ theory:`<h3>🔗 Chain-of-Thought (CoT)</h3>
+ <p><b>Definição:</b> solicitar ao modelo que mostre <b>etapas intermediárias de raciocínio</b> antes de dar a resposta final.</p>
+ <p><b>Como acionar:</b> a frase simples <b>“Vamos pensar passo a passo”</b> · exemplos few-shot com traços de raciocínio · prompts estruturados pedindo explicação.</p>
+ <p><b>Por que funciona:</b> cada etapa é um <b>subproblema mais simples</b>; os tokens intermediários funcionam como <b>memória de trabalho</b>; reduz a chance de <b>pular lógica crucial</b>.</p>
+ <div class="two">
+  <div class="mini bad-card"><h4>❌ Prompt direto</h4><p>Usuário: “Quanto de troco Maria recebe?”<br>Assistente: <b>“Ela recebe R$ 7.”</b> (errado!)</p></div>
+  <div class="mini good-card"><h4>✅ Com Chain-of-Thought</h4><p>1. Custo = R$ 2 × 3 = R$ 6<br>2. Troco = R$ 10 − R$ 6 = <b>R$ 4</b> ✓</p></div>
+ </div>
+ <p>Onde o CoT ajuda mais: diagnóstico médico, depuração de código, análise financeira — tarefas com várias etapas dependentes. Em escrita criativa pura, ajuda menos.</p>`,
+ steps:[
+  {type:'order',xp:60,q:'Monte a cadeia de pensamento correta para: “Ana pagou com R$ 10 por 3 itens de R$ 2. Qual o troco?”',
+   items:['Ler o problema e identificar os dados (preço, quantidade, valor pago)','Calcular o custo total: 3 × 2 = R$ 6','Calcular o troco: 10 − 6 = R$ 4','Verificar o cálculo (a lógica faz sentido?)','Responder: “O troco é R$ 4.”'],
+   hint:'Um bom raciocínio começa entendendo o problema e SÓ depois calcula — e antes de responder, confere.',
+   wrongWhy:'Pense na ordem natural de um raciocínio: primeiro entender, depois calcular, depois conferir e só então responder.',
+   explain:'Essa é a essência do CoT: <b>decompor</b> em subproblemas simples (dados → custo → troco), <b>verificar</b> e só então <b>responder</b>. Cada passo escrito vira “memória de trabalho” que sustenta o próximo.'},
+  {type:'quiz',xp:40,q:'Qual dos prompts abaixo NÃO ajuda o modelo a raciocinar passo a passo?',
+   opts:[{t:'“Vamos pensar passo a passo.”'},{t:'“Resolva este problema. Então verifique sua resposta e corrija quaisquer erros.”'},{t:'“Aqui estão 2 exemplos resolvidos com raciocínio; agora resolva este.”'},{t:'“Responda com uma única palavra, sem mostrar o raciocínio.”',ok:true}],
+   hint:'Duas opções ativam CoT direto ou via exemplos; uma é autorreflexão. Sobrou a que SUPRIME o raciocínio.',
+   explain:'O último prompt força uma resposta final sem etapas intermediárias — exatamente o oposto do CoT. Os outros três acionam raciocínio: frase mágica, autorreflexão (verificar e corrigir) e few-shot com traços de raciocínio.'}
+ ]
+},
+{
+ id:'m4',emoji:'🌳',title:'Árvore de Pensamentos',tag:'Tree-of-Thoughts (ToT)',
+ theory:`<h3>🌳 Tree-of-Thoughts (ToT)</h3>
+ <p>Em vez de <b>um</b> caminho de raciocínio, o ToT explora <b>múltiplos ramos</b>: gera vários próximos passos possíveis, <b>avalia</b> qual caminho é mais promissor e pode <b>retroceder (backtrack)</b> quando um caminho falha.</p>
+ <p><b>Analogia:</b> um jogador de xadrez pensando várias jogadas à frente — e abandonando linhas ruins sem desespero.</p>
+ <div class="tot-demo">
+  <div class="tnode root">🧩 2 × 4 + 6 ÷ 2 = ?</div>
+  <div class="trow">
+   <div class="tnode bad">Caminho A · esquerda→direita · ★ 0,4</div>
+   <div class="tnode good">Caminho B · ordem PEMDAS · ★ 0,8</div>
+  </div>
+ </div>
+ <p>No desafio a seguir <b>você é o modelo</b>: escolha ramos, sinta o custo de um caminho ruim e aprenda a retroceder. Dica: olhe a nota de promessa de cada ramo!</p>`,
+ steps:[
+  {type:'tree',xp:60,problem:'Quanto é 2 × 4 + 6 ÷ 2 ?',
+   branches:{
+    A:{label:'Caminho A: calcular da esquerda para a direita (★ 0,4)',
+       steps:['Passo 1: 2 × 4 = 8','Passo 2: 8 + 6 = 14','Passo 3: 14 ÷ 2 = 7'],
+       result:'Resultado: 7 ✗ — caminho ERRADO! Ignorou a ordem das operações (multiplicação e divisão vêm antes).',
+       verdict:'wrong'},
+    B:{label:'Caminho B: seguir a ordem PEMDAS (★ 0,8)',
+       steps:['Passo 1: multiplicação e divisão primeiro → 2 × 4 = 8 e 6 ÷ 2 = 3','Passo 2: somar os resultados → 8 + 3 = 11'],
+       result:'Resultado: 11 ✓ — caminho CORRETO!',
+       verdict:'ok'}},
+   hint:'Compare as notas de promessa dos ramos (★ 0,4 x ★ 0,8). E se escolher um caminho ruim… o ToT permite voltar!',
+   explain:'Isso é o ToT na prática: <b>ramificar</b> (A e B), <b>avaliar</b> (★ 0,4 x ★ 0,8), <b>retroceder</b> de um caminho falho e seguir pelo mais promissor. O CoT seria seguir UMA linha; o ToT é o jogador de xadrez explorando várias linhas.',
+   explainBack:'Você acabou de fazer um <b>backtrack</b> — retroceder de um caminho ruim é um movimento legítimo do ToT, não um fracasso!'},
+  {type:'quiz',xp:40,q:'Qual é a diferença essencial do Tree-of-Thoughts para o Chain-of-Thought?',
+   opts:[{t:'O ToT é sempre mais rápido que o CoT'},{t:'O ToT explora vários ramos de raciocínio, avalia promessas e retrocede quando um caminho falha',ok:true},{t:'O ToT não usa tokens, só imagens'},{t:'O ToT substitui o treinamento do modelo'}],
+   hint:'Pense no jogador de xadrez: uma linha só ou várias linhas com avaliação?',
+   explain:'O CoT segue <b>uma</b> cadeia de pensamento; o ToT gera <b>vários ramos</b>, atribui notas de promessa, descarta caminhos ruins e <b>retrocede</b> quando necessário. Custo: mais computação no tempo de teste — o mesmo compromisso da Semana: tempo em troca de precisão.'}
+ ]
+},
+{
+ id:'m5',emoji:'🪞',title:'Seja o Crítico da IA',tag:'Autorreflexão e crítica',
+ theory:`<h3>🪞 Autorreflexão e Crítica</h3>
+ <p><b>Padrão:</b> Gerar → Criticar → Refinar.</p>
+ <ol><li>O modelo gera uma resposta inicial.</li><li><b>Verifica o próprio trabalho</b>: “Isso está correto? Deixe-me verificar…”</li><li>Refina a resposta com base na autocrítica.</li></ol>
+ <p><b>Prompt-exemplo:</b> “Resolva este problema. Então verifique sua resposta e corrija quaisquer erros.”</p>
+ <p><b>Benefícios:</b> captura erros antes da resposta final · melhora a precisão em tarefas complexas · é mais robusto que a geração de passada única.</p>
+ <p><b>Modelos racionais (ex.: série o1)</b> têm o Chain-of-Thought <b>integrado à arquitetura</b>. O compromisso (trade-off): respostas mais lentas, porém mais precisas em problemas difíceis.</p>`,
+ steps:[
+  {type:'quiz',xp:70,q:'Um LLM respondeu: “Um trem percorre 60 km em 45 minutos. Velocidade média = 60 ÷ 45 ≈ 1,33 km/h”. Agora seja o CRÍTICO: qual é o erro?',
+   opts:[{t:'A conversão de unidades: 45 min = 0,75 h, então 60 ÷ 0,75 = 80 km/h',ok:true},{t:'A distância deveria ser 45 km, não 60 km'},{t:'A resposta está correta — 1,33 km/h'},{t:'Faltam dados para calcular a velocidade'}],
+   hint:'O modelo quase não errou a conta — errou a CONVERSÃO de minutos para horas. Verifique os dados, não só a aritmética.',
+   explain:'Fase CRITICAR: o erro está na conversão — <b>45 min = 0,75 h</b>, então a velocidade é 60 ÷ 0,75 = <b>80 km/h</b>. Fase REFINAR: reescrever a resposta com a unidade correta. Um crítico bom não confia na resposta de primeira: ele confere os <b>dados</b> e a <b>lógica</b>, passo a passo.',
+   wrongWhy:{1:'A distância (60 km) está correta no enunciado — o problema está na conversão do tempo.',2:'Cuidado! 1,33 km/h significa que o trem percorreria 1 km em 45 minutos — impossível. Sempre teste o resultado contra o bom senso.',3:'Os dados do enunciado são suficientes: distância e tempo. O erro é de conversão de unidades.'}},
+  {type:'quiz',xp:30,q:'Qual prompt ativa o padrão de AUTORREFLEXÃO (Gerar → Criticar → Refinar)?',
+   opts:[{t:'“Resolva este problema. Então verifique sua resposta e corrija quaisquer erros.”',ok:true},{t:'“Responda o mais rápido possível, sem verificar nada.”'},{t:'“Responda com uma única palavra.”'},{t:'“Ignore quaisquer erros na sua resposta.”'}],
+   hint:'Procurar o prompt que pede explicitamente VERIFICAR e CORRIGIR depois de resolver.',
+   explain:'Pedir para <b>verificar e corrigir</b> depois de resolver ativa o loop Gerar → Criticar → Refinar. É uma forma barata de ganhar precisão: os erros são capturados antes da resposta final, não depois.'
+  }
+ ]
+},
+{
+ id:'m6',emoji:'🤖',title:'Monte o Agente',tag:'Arquitetura de agentes',
+ theory:`<h3>🤖 Do raciocínio à ação</h3>
+ <p>Um modelo que raciocina brilhantemente ainda está <b>preso no texto</b>: pode <b>pensar sobre</b> o tempo… mas não pode <b>verificar</b> o tempo. Raciocínio ≠ conhecimento do presente; raciocínio ≠ capacidade de agir.</p>
+ <p><b>Agente de IA</b> = sistema que usa um LLM para <b>raciocinar, decidir e tomar ações em um loop</b> para alcançar um objetivo.</p>
+ <div class="table-scroll"><table><tr><th>Componente</th><th>Função</th><th>Exemplo</th></tr>
+ <tr><td>🧠 LLM (cérebro)</td><td>Raciocínio, planejamento, decisão</td><td>GPT-4, Claude, Llama</td></tr>
+ <tr><td>🔧 Ferramentas</td><td>Interface com o mundo</td><td>Busca na web, calculadora, executor de código</td></tr>
+ <tr><td>💾 Memória</td><td>Manter contexto entre etapas</td><td>Histórico de conversas, banco vetorial</td></tr>
+ <tr><td>🔁 Loop</td><td>Iterar até alcançar o objetivo</td><td>Enquanto não concluído: pensar → agir → observar</td></tr></table></div>
+ <p><b>Tipos de ferramentas:</b> recuperação de informação (busca, bancos de dados, arquivos, APIs) · computação (calculadora, código, análise de dados) · ações externas (e-mail, calendário, dispositivos) · especializadas (imagens, tradução).</p>
+ <p><b>Memória:</b> <b>curto prazo</b> = contexto da conversa, limitado pela janela de contexto, reinicia a cada sessão (como a memória de trabalho humana) · <b>longo prazo</b> = bancos vetoriais/armazenamento externo, persiste entre sessões (como cadernos e referências).</p>
+ <p><b>MCP (Model Context Protocol)</b> padroniza como agentes se conectam a ferramentas: <b>Recursos</b> (fontes de dados), <b>Prompts</b> (templates reutilizáveis) e <b>Ferramentas</b> (funções executáveis). É assim que os agentes ganham suas “mãos”!</p>`,
+ steps:[
+  {type:'match',xp:60,title:'Ligue cada componente do agente à sua função',left:[
+    {k:'llm',label:'🧠 LLM (cérebro)'},{k:'tools',label:'🔧 Ferramentas'},{k:'mem',label:'💾 Memória'},{k:'loop',label:'🔁 Loop'}],
+   right:[
+    {k:'loop',label:'Iterar “pensar → agir → observar” até o objetivo'},
+    {k:'llm',label:'Raciocinar, planejar e decidir'},
+    {k:'mem',label:'Manter o contexto entre as etapas'},
+    {k:'tools',label:'Buscar na web, calcular, executar código'}],
+   hint:'O cérebro decide, as mãos executam no mundo, a memória lembra, o loop repete.',
+   explain:'A fórmula completa de um agente: <b>LLM + Ferramentas + Memória + Loop</b>. O LLM é o cérebro; as ferramentas dão as “mãos”; a memória mantém contexto (curto prazo = conversa, longo prazo = banco vetorial); o loop repete até alcançar o objetivo.'},
+  {type:'quiz',xp:40,q:'Qual pergunta um LLM puro (sem ferramentas) NÃO consegue responder sozinho com confiabilidade?',
+   opts:[{t:'“Escreva um poema sobre o outono.”'},{t:'“Quanto é 2 + 2?”'},{t:'“Qual é a temperatura em Paris AGORA?”',ok:true},{t:'“Traduza “bom dia” para inglês.”'}],
+   hint:'Pense na limitação do raciocínio puro: o modelo está preso no texto. O que ele não pode VERIFICAR no mundo?',
+   explain:'“Agora” exige informação do <b>presente</b> — e o LLM está preso no texto, com <b>corte de conhecimento</b> (knowledge cutoff). Por isso o material demonstra: para “tempo em Paris agora”, o modelo precisa BUSCAR. Precisamos dar ao modelo <b>mãos, não apenas um cérebro melhor</b> — ferramentas via MCP, memória e loop.'}
+ ]
+},
+{
+ id:'m7',emoji:'🔁',title:'Opere o Loop ReAct',tag:'Padrão ReAct',
+ theory:`<h3>🔁 O padrão ReAct</h3>
+ <p><b>ReAct = Raciocinar + Agir</b>, intercalados:</p>
+ <ol><li><b>Pensamento:</b> “Preciso encontrar X. Vou buscar.”</li><li><b>Ação:</b> <code>buscar("X")</code></li><li><b>Observação:</b> “A busca retornou: [resultados]”</li><li><b>Pensamento:</b> “Agora sei X. Em seguida preciso…”</li><li>… repetir até alcançar o objetivo.</li></ol>
+ <p><b>Por que funciona:</b> o raciocínio explícito previne “alucinação” de resultados de ferramentas; cada ação nasce de uma intenção clara; o processo é observável, depurável e auditável.</p>
+ <div class="trace">
+  <div class="tl t">💭 Preciso da população da capital da França.</div>
+  <div class="tl a">🛠️ buscar("capital da França")</div>
+  <div class="tl o">👁️ Paris é a capital da França.</div>
+  <div class="tl t">💭 Agora preciso da população de Paris.</div>
+  <div class="tl a">🛠️ buscar("população de Paris 2024")</div>
+  <div class="tl o">👁️ Paris tem aproximadamente 2,1 milhões de habitantes.</div>
+  <div class="tl t">💭 Tenho a resposta.</div>
+  <div class="tl a">🛠️ responder("A população de Paris, capital da França, é de aproximadamente 2,1 milhões.")</div>
+ </div>
+ <p>Repare: <b>cada Ação</b> vem depois de um <b>Pensamento</b> — intenção antes de agir. A observação alimenta o próximo pensamento.</p>`,
+ steps:[
+  {type:'sim',xp:120,goal:'“Qual é a população da capital do Japão?”',explain:'Missão cumprida! Você rodou um loop <b>ReAct</b> completo: Pensamento (intenção) → Ação (ferramenta) → Observação (resultado) → repetir até responder. Cada ação nasceu de uma intenção clara — assim evitamos “alucinar” resultados e mantemos o processo auditável.',
+   tools:['buscar(consulta)','calcular(expressão)','responder(texto)'],
+   steps:[
+    {q:'Rodada 1 — qual é o PRIMEIRO passo do agente?',
+     opts:[{t:'🛠️ Ação: buscar("população do Japão")',why:'Cuidado: o objetivo pede a capital, não o país inteiro — buscar direto pode retornar a população do Japão (125 milhões), não da capital.'},{t:'💭 Pensamento: “Preciso descobrir primeiro qual é a capital do Japão.”',ok:true,trace:{cls:'t',text:'💭 Preciso descobrir primeiro qual é a capital do Japão.'}},{t:'🛠️ Ação: responder("Não sei.")',why:'Responder sem agir é desistir — o loop existe justamente para investigar antes de responder.'},{t:'👁️ Observação: esperar resultados sem pedir nada',why:'Observação não surge do nada: ela é o RESULTADO de uma ação (a ferramenta responde).'}],
+     hint:'No ReAct, sempre vem primeiro a intenção (Pensamento), depois a ferramenta (Ação).'},
+    {q:'Rodada 2 — agora sim, qual ação executar?',
+     opts:[{t:'🛠️ Ação: calcular("14 × 2")',why:'Sem números para calcular ainda — cálculo antes da busca seria chute.'},{t:'🛠️ Ação: buscar("capital do Japão")',ok:true},{t:'🛠️ Ação: buscar("clima em Tóquio")',why:'O clima não ajuda no objetivo (população) — cada ação deve servir à intenção atual.'},{t:'🛠️ Ação: responder("Tóquio?")',why:'Responder com interrogativa não é responder — falta evidência.'}],
+     trace:{cls:'a',text:'🛠️ buscar("capital do Japão")'}},
+    {auto:{cls:'o',text:'👁️ Observação: A capital do Japão é Tóquio.'}},
+    {q:'Rodada 3 — observação em mãos. Próximo passo?',
+     opts:[{t:'💭 Pensamento: “Agora preciso da população de Tóquio.”',ok:true},{t:'🛠️ Ação: buscar("população da França")',why:'A França era o exemplo do material — aqui o alvo mudou: Tóquio.'},{t:'🛠️ Ação: responder("Tóquio.")',why:'Tóquio responde “qual a capital”, mas o objetivo pede a POPULAÇÃO da capital. Falta metade da resposta.'},{t:'🔁 Ação: reiniciar tudo do zero',why:'A observação já avançou o loop — reiniciar desperdiça contexto (por isso existe a memória!).'}],
+     trace:{cls:'t',text:'💭 Agora preciso da população de Tóquio.'}},
+    {q:'Rodada 4 — qual ferramenta e consulta?',
+     opts:[{t:'🛠️ Ação: buscar("população de Tóquio")',ok:true},{t:'🛠️ Ação: calcular("Tóquio + população")',why:'A calculadora soma números, não busca fatos — essa informação precisa vir de uma fonte (busca).',},{t:'🛠️ Ação: buscar("capital do Japão")',why:'Já sabemos que é Tóquio — repetir a mesma ação seria um loop inútil.'},{t:'👁️ Observação: inventar um número',why:'Inventar resultados é exatamente a “alucinação” que o ReAct evita: a observação DEVE vir da ferramenta.'}],
+     trace:{cls:'a',text:'🛠️ buscar("população de Tóquio")'}},
+    {auto:{cls:'o',text:'👁️ Observação: Tóquio tem cerca de 14 milhões de habitantes (cidade).'}},
+    {q:'Rodada 5 — temos capital + população. E agora?',
+     opts:[{t:'💭 Pensamento: “Tenho tudo — vou formular a resposta final.”',ok:true},{t:'🛠️ Ação: buscar("população de Osaka")',why:'Osaka não foi pedida. Buscas extras sem intenção = custo e risco de confusão.'},{t:'🔁 Voltar para o começo e refazer as buscas',why:'O objetivo já foi alcançado — recomeçar é loop infinito na prática.'},{t:'👁️ Observação: aguardar o usuário terminar',why:'O loop é do agente, não do usuário: quando o objetivo é alcançado, ele responde.'}],
+     trace:{cls:'t',text:'💭 Tenho tudo — vou formular a resposta final.'}},
+    {q:'Rodada final — encerre o loop:',
+     opts:[{t:'🛠️ Ação: responder("A capital do Japão é Tóquio, com cerca de 14 milhões de habitantes.")',ok:true},{t:'🛠️ Ação: responder("O Japão tem 125 milhões de habitantes.")',why:'Isso responde “população do Japão”, não “população da capital” — sem perceber, você deslizou para outra pergunta.'},{t:'🛠️ Ação: buscar("mais um dado só para garantir")',why:'Busca infinita = modo de falha clássico! Agentes precisam de critério de encerramento.'},{t:'👁️ Observação: nova observação mágica',why:'Observação é resultado de ação — e aqui a ação certa é RESPONDER e encerrar o loop.'}],
+     trace:{cls:'a',text:'🛠️ responder("A capital do Japão é Tóquio, com cerca de 14 milhões de habitantes.")'}}
+   ]}
+ ]
+},
+{
+ id:'m8',emoji:'👥',title:'Equipes de Agentes',tag:'Multi-agente (A2A)',
+ theory:`<h3>👥 Agentes trabalhando juntos (A2A)</h3>
+ <p><b>Agente único sofre:</b> limites da janela de contexto · um modelo não é especialista em tudo · tarefas complexas sobrecarregam · sem revisão por pares.</p>
+ <p><b>Multi-agente entrega:</b> <b>especialização</b> (cada agente domina um domínio) · <b>paralelização</b> · <b>modularidade</b> (fácil atualizar/substituir) · <b>robustez</b> (agentes verificam o trabalho uns dos outros) — como uma equipe de pesquisa: papéis especializados, trabalho paralelo, conhecimento diversificado, validação integrada.</p>
+ <div class="table-scroll"><table><tr><th>Padrão</th><th>Ideia</th><th>Melhor para</th><th>Pro</th><th>Contra</th></tr>
+ <tr><td>1️⃣ Pipeline sequencial</td><td>Agente A → B → C → saída (pesquisa → escrita → revisão)</td><td>Tarefas sequenciais</td><td>Simples, previsível, fácil de depurar</td><td>Sem paralelização</td></tr>
+ <tr><td>2️⃣ Hierárquico</td><td>Gerente planeja, delega e sintetiza; trabalhadores executam</td><td>Projetos complexos</td><td>Organizado, escalável</td><td>Gargalo do gerente</td></tr>
+ <tr><td>3️⃣ Colaborativo</td><td>Agentes debatem e refinam ideias até o consenso</td><td>Tarefas criativas e decisões complexas</td><td>Perspectivas diversas</td><td>Risco de loops — precisa de condição de terminação!</td></tr></table></div>
+ <p><b>Estudo de caso (assistente de pesquisa):</b> o usuário pergunta sobre avanços em IA para dobramento de proteínas → o <b>Planejador</b> divide em subtarefas → buscadores consultam <b>papers, notícias e GitHub</b> em paralelo → o <b>Escritor</b> sintetiza → o <b>Crítico</b> verifica (loop de revisão) → resposta final.</p>
+ <div class="two">
+  <div class="mini bad-card"><h4>⚠️ Modos de falha</h4><ul><li><b>Loops infinitos:</b> agente pesquisa para sempre</li><li><b>Alucinações:</b> agente inventa fontes</li><li><b>Explosão de custos:</b> muitas chamadas de API</li><li><b>Informações conflitantes:</b> agentes discordam</li></ul></div>
+  <div class="mini good-card"><h4>🛡️ Mitigações</h4><ul><li>Definir <b>iterações máximas</b></li><li>Exigir <b>citações/fontes</b></li><li><b>Limites de orçamento</b> para chamadas de ferramentas</li><li><b>Humano no loop</b> para decisões críticas</li></ul></div>
+ </div>
+ <p><b>No mundo real:</b> AutoGPT (primeiro agente autônomo popular) · AutoGen (conversações multi-agente, Microsoft) · MetaGPT (equipe de software com papéis: GP, Engenheiro, QA) · CrewAI (equipes hierárquicas com delegação) · Claude Computer Use (automação de desktop com visão + ação).</p>`,
+ steps:[
+  {type:'quiz',xp:30,q:'Cenário 1: um relatório é produzido por três agentes EM SEQUÊNCIA — o agente de pesquisa entrega para o de escrita, que entrega para o de revisão. Qual padrão é esse?',
+   opts:[{t:'Pipeline sequencial',ok:true},{t:'Hierárquico (gerente + trabalhadores)'},{t:'Colaborativo (debate)'},{t:'ReAct'}],
+   hint:'Cada agente completa sua tarefa e PASSA o resultado para o próximo — uma fila de produção.',
+   explain:'É o <b>pipeline sequencial</b>: simples, previsível e fácil de depurar — ideal para geração de conteúdo e pipelines de processamento. Contra: nada de paralelização.'},
+  {type:'quiz',xp:30,q:'Cenário 2: um agente GERENTE divide um projeto complexo em subtarefas, delega a especialistas (pesquisa, escrita, análise) e depois sintetiza os resultados. Qual padrão?',
+   opts:[{t:'Pipeline sequencial'},{t:'Hierárquico (gerente + trabalhadores)',ok:true},{t:'Colaborativo (debate)'},{t:'Nenhum — isso é só um prompt'}],
+   hint:'Quem planeja e delega? Quem sintetiza? Uma hierarquia com chefe e trabalhadores.',
+   explain:'É o <b>hierárquico</b>: o gerente planeja e delega, os trabalhadores executam tarefas específicas, o gerente sintetiza. Organizado e escalável para projetos complexos — com o risco do gargalo no gerente.'},
+  {type:'quiz',xp:30,q:'Cenário 3: três agentes DEBATEM uma decisão difícil — A propõe, B critica e sugere alternativas, C sintetiza as melhores ideias, iterando até o consenso. Qual padrão (e qual cuidado)?',
+   opts:[{t:'Colaborativo — cuidado com loops infinitos: defina condição de terminação',ok:true},{t:'Pipeline — cuidado com gargalo'},{t:'Hierárquico — cuidado com o custo'},{t:'Nenhum padrão — é conversa normal'}],
+   hint:'Sem hierarquia estrita, agentes discutem entre iguais… e podem discutir PARA SEMPRE.',
+   explain:'É o <b>colaborativo</b>: sem hierarquia, perspectivas diversas, ótimo para tarefas criativas. O risco clássico: ficar preso em loops — por isso todo debate precisa de <b>condição de terminação</b> (ex.: máximo de rodadas).'},
+  {type:'match',xp:60,title:'Ligue cada modo de falha à sua mitigação',left:[
+    {k:'loop',label:'Loops infinitos'},{k:'halu',label:'Alucinação de fontes'},{k:'cost',label:'Explosão de custos'},{k:'conf',label:'Informações conflitantes'}],
+   right:[
+    {k:'conf',label:'Humano no loop para decisões críticas'},
+    {k:'loop',label:'Definir iterações máximas'},
+    {k:'halu',label:'Exigir citações/fontes verificáveis'},
+    {k:'cost',label:'Limites de orçamento para chamadas de ferramentas'}],
+   hint:'Cada mal tem um freio específico: tempo, evidência, dinheiro e supervisão humana.',
+   explain:'Guardas essenciais de sistemas multi-agente: <b>iterações máximas</b> (trava o loop), <b>citações exigidas</b> (freia alucinação), <b>orçamento para ferramentas</b> (controla custo) e <b>humano no loop</b> (arbitra conflitos e decisões críticas).'}
+ ]
+},
+{
+ id:'m9',emoji:'👑',title:'Chefe Final: Prova-Relâmpago',tag:'Boss · toda a jornada',
+ theory:`<h3>👑 Prova-relâmpago do Mestre</h3>
+ <p>13 perguntas rápidas cobrindo toda a jornada: computação em tempo de teste, CoT, ToT, autorreflexão, agentes, ReAct, memória, MCP, padrões multi-agente e modos de falha.</p>
+ <ul><li>⏱️ <b>25 segundos</b> por pergunta — tempo esgotado conta como erro.</li><li>⭐ Cada acerto vale <b>15 XP</b> — e não há dicas nesta fase!</li><li>🎯 Sua <b>melhor pontuação</b> fica registrada; pode tentar quantas vezes quiser.</li></ul>
+ <p class="quote"><b>Modelos que geram → Modelos que raciocinam → Sistemas que agem → Equipes que colaboram.</b></p>`,
+ steps:[{type:'boss',xp:195}]
+}
+];
+// ================= CHEFE FINAL =================
+const BOSS=[
+ {q:'Gastar computação adicional durante a inferência, para “pensar mais” em problemas difíceis, chama-se…',
+  opts:[{t:'Fine-tuning'},{t:'Computação em tempo de teste',ok:true},{t:'Janela de contexto'},{t:'Destilação'}],
+  e:'Computação em tempo de teste (test-time compute): trocar tempo e tokens por precisão NA HORA DE RESPONDER.'},
+ {q:'Qual frase é o gatilho clássico do Chain-of-Thought?',
+  opts:[{t:'“Responda em uma palavra.”'},{t:'“Vamos pensar passo a passo.”',ok:true},{t:'“Seja criativo.”'},{t:'“Use mais emojis.”'}],
+  e:'“Vamos pensar passo a passo” pede as etapas intermediárias antes da resposta final — as palavras mágicas da Semana 5.'},
+ {q:'Por que o CoT melhora as respostas?',
+  opts:[{t:'Cada etapa vira um subproblema simples e os tokens intermediários funcionam como memória de trabalho',ok:true},{t:'O modelo consulta a internet internamente'},{t:'O modelo memorizou todas as respostas no treino'},{t:'O prompt aumenta fisicamente a GPU'}],
+  e:'Subproblemas mais simples + memória de trabalho (tokens intermediários) + menos risco de pular lógica crucial.'},
+ {q:'Explorar vários ramos de raciocínio, avaliar a promessa de cada um e retroceder quando um caminho falha é…',
+  opts:[{t:'ReAct'},{t:'Tree-of-Thoughts',ok:true},{t:'MCP'},{t:'Few-shot'}],
+  e:'Tree-of-Thoughts: ramificar, avaliar (notas de promessa) e fazer backtrack — como um jogador de xadrez.'},
+ {q:'No padrão Gerar → Criticar → Refinar, o modelo…',
+  opts:[{t:'Verifica e corrige o próprio trabalho',ok:true},{t:'Pede ajuda a outro usuário'},{t:'Responde sem pensar'},{t:'Reinicia o treinamento'}],
+  e:'Autorreflexão: o modelo checa o próprio trabalho (“Isso está correto?”) e refina antes da resposta final.'},
+ {q:'A “fórmula” de um agente de IA é:',
+  opts:[{t:'LLM + Ferramentas + Memória + Loop',ok:true},{t:'LLM + PDF + Excel'},{t:'Treino + Validação + Teste'},{t:'Prompt + Resposta'}],
+  e:'Agente = LLM (cérebro) + Ferramentas (mãos) + Memória (contexto) + Loop (pensar → agir → observar até o objetivo).'},
+ {q:'A sequência típica do ReAct é:',
+  opts:[{t:'Pensamento → Ação → Observação (e repetir)',ok:true},{t:'Ação → Resposta → Fim'},{t:'Observação → Treino → Ação'},{t:'Resposta → Pensamento'}],
+  e:'Intenção (Pensamento) antes de agir (Ação); a Observação da ferramenta alimenta o próximo Pensamento.'},
+ {q:'Memória que persiste entre sessões, apoiada em bancos vetoriais, é a memória…',
+  opts:[{t:'De curto prazo'},{t:'De longo prazo',ok:true},{t:'De trabalho'},{t:'Do prompt'}],
+  e:'Longo prazo: bancos vetoriais/armazenamento externo que persistem (como cadernos). Curto prazo = contexto da conversa, que reinicia a cada sessão.'},
+ {q:'O MCP (Model Context Protocol) padroniza…',
+  opts:[{t:'Como agentes se conectam a ferramentas: Recursos, Prompts e Ferramentas',ok:true},{t:'O preço dos tokens'},{t:'A janela de contexto dos LLMs'},{t:'O treinamento multimodal'}],
+  e:'MCP: Recursos (fontes de dados) + Prompts (templates reutilizáveis) + Ferramentas (funções executáveis) — as “mãos” dos agentes.'},
+ {q:'Para evitar que equipes de agentes fiquem presas em loops infinitos, define-se…',
+  opts:[{t:'Iterações máximas',ok:true},{t:'Temperatura igual a zero'},{t:'Mais GPUs'},{t:'Prompts maiores'}],
+  e:'Condição de terminação: iterações máximas (e orçamento de ferramentas) travam o loop. Humano no loop arbitra decisões críticas.'},
+ {q:'Pesquisa → Escrita → Revisão em sequência é o padrão…',
+  opts:[{t:'Pipeline sequencial',ok:true},{t:'Colaborativo'},{t:'Hierárquico'},{t:'ReAct'}],
+  e:'Pipeline sequencial: cada agente completa sua tarefa e passa ao próximo — simples, previsível, fácil de depurar.'},
+ {q:'Qual sistema é conhecido por equipes HIERÁRQUICAS de agentes, com delegação de tarefas em equipe?',
+  opts:[{t:'CrewAI',ok:true},{t:'Mistral 7B'},{t:'GAN'},{t:'DALL·E'}],
+  e:'CrewAI: equipes hierárquicas de agentes. AutoGPT foi o primeiro agente autônomo popular; AutoGen faz conversações multi-agente (Microsoft); MetaGPT usa papéis de equipe de software.'},
+ {q:'Complete a jornada da Semana 5: Modelos que geram → Modelos que ____ → Sistemas que ____ → Equipes que ____.',
+  opts:[{t:'Raciocinam / agem / colaboram',ok:true},{t:'Treinam / dormem / reiniciam'},{t:'Custam / param / somem'},{t:'Falam / ouvem / esquecem'}],
+  e:'A grande síntese: modelos que geram → raciocinam (CoT/ToT) → agem (agentes + ReAct) → colaboram (multi-agente/A2A).'}
+];
+// ================= RANKS E GLOSSÁRIO =================
+const RANKS=[
+ [0,'Curioso(a) de IA','🌱'],[150,'Aprendiz de Raciocínio','📗'],[350,'Raciocinador(a) de IA','🧠'],
+ [600,'Agente em Treinamento','🤖'],[850,'Arquiteto(a) de Agentes','🏛️'],[1035,'Mestre da IA Raciocinante','👑']
+];
+const GLOSSARY=[
+ ['Computação em Tempo de Teste','Gastar computação adicional durante a inferência para melhorar a performance do modelo — trocar tempo por precisão.'],
+ ['Cadeia de Pensamento (CoT)','Técnica de prompt que elicita raciocínio passo a passo (“Vamos pensar passo a passo”), decompondo o problema em subproblemas.'],
+ ['Árvore de Pensamentos (ToT)','Explorar múltiplos caminhos de raciocínio com avaliação de promessa e retrocesso (backtrack) quando um ramo falha.'],
+ ['Autorreflexão','Padrão Gerar → Criticar → Refinar: o modelo verifica e corrige o próprio trabalho antes da resposta final.'],
+ ['Modelos Racionais','Modelos com CoT integrado à arquitetura (ex.: série o1). Mais lentos, mais precisos em problemas difíceis.'],
+ ['Agente de IA','Sistema que usa um LLM para raciocinar e executar ações via ferramentas, em um loop, até alcançar um objetivo.'],
+ ['ReAct','Padrão que intercala raciocínio (Pensamento) e ação (Ação + Observação). Raciocínio explícito evita alucinar resultados.'],
+ ['Ferramentas','Interface do agente com o mundo: busca, calculadora, código, APIs, ações externas.'],
+ ['Memória','Curto prazo: contexto da conversa (recomeça por sessão). Longo prazo: bancos vetoriais/externos (persiste entre sessões).'],
+ ['MCP','Model Context Protocol: padroniza a conexão agente↔ferramentas via Recursos, Prompts e Ferramentas.'],
+ ['A2A (Agente para Agente)','Múltiplos agentes especializados colaborando: pipeline, hierárquico e colaborativo.'],
+ ['Modos de falha','Loops infinitos, alucinação de fontes, explosão de custos, informações conflitantes. Mitigações: iterações máximas, citações, orçamento, humano no loop.']
+];
+
+// ================= ESTADO =================
+const KEY='jala_w5_game_v1';
+let S={xp:0,done:{},muted:false,bossBest:0};
+try{const raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+MISSIONS.forEach(m=>{m.maxXp=m.steps.reduce((a,s)=>a+(s.type==='boss'?BOSS.length*15:s.xp),0);});
+let cur={mi:-1,si:0,wrong:0,hint:false,anyWrong:false,anyHint:false,earned:0,msel:null,mfound:0,seq:[],simIdx:0,tree:null,boss:null,timer:null};
+const app=document.getElementById('app');
+const ov=document.getElementById('overlay');
+function STEP(){return MISSIONS[cur.mi].steps[cur.si];}
+function rankFor(xp){let r=RANKS[0];for(const x of RANKS){if(xp>=x[0])r=x;}return r;}
+function starsCount(){let n=0;for(const k in S.done){if(S.done[k].star)n++;}return n;}
+function stopTimer(){if(cur.timer){clearInterval(cur.timer);cur.timer=null;}}
+// ================= ÁUDIO =================
+let AC=null;
+function tone(f,d,t,type){const o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.16,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.05);}
+function sfx(n){if(S.muted)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime;
+ if(n==='ok'){tone(660,.12,t);tone(880,.16,t+.1);}
+ else if(n==='bad'){tone(200,.16,t,'square');tone(150,.2,t+.11,'square');}
+ else if(n==='win'){[523,659,784,1047].forEach((f,i)=>tone(f,.18,t+i*.09));}
+ else if(n==='click'){tone(500,.05,t);}
+ else if(n==='tick'){tone(1200,.03,t);}}catch(e){}}
+// ================= UI AUX =================
+function el(html){const d=document.createElement('div');d.innerHTML=html;return d.firstElementChild;}
+function toast(txt){const t=el('<div class="toast">'+txt+'</div>');document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),2200);}
+function confetti(){const colors=['#ffd76a','#3ddc84','#5c8dff','#ff8fab','#ffffff'];for(let i=0;i<70;i++){const c=el('<i class="cf"></i>');c.style.left=Math.random()*100+'vw';c.style.background=colors[i%5];c.style.animationDuration=(2.2+Math.random()*1.8)+'s';c.style.animationDelay=(Math.random()*.5)+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),5000);}}
+function updateHeader(){document.getElementById('xpchip').textContent='⭐ '+S.xp+' XP';const r=rankFor(S.xp);document.getElementById('rankchip').textContent=r[2]+' '+r[1];document.getElementById('mutebtn').textContent=S.muted?'🔇':'🔊';}
+function toggleMute(){S.muted=!S.muted;save();updateHeader();}
+function resetAll(){if(!confirm('Reiniciar TODO o progresso (XP, insígnias e chefe final)?'))return;try{localStorage.removeItem(KEY);}catch(e){}S={xp:0,done:{},muted:false,bossBest:0};updateHeader();renderHome();}
+function fb(html){const b=document.getElementById('fb');if(b)b.innerHTML=html;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+// ================= TELAS =================
+function renderHome(){stopTimer();
+ const cont=Object.keys(S.done).length;
+ app.innerHTML=`<section class="hero card">
+  <div class="hero-emoji">🪷 🧠 🤖 👥 👑</div>
+  <h2>Missão: Raciocinar &amp; Agir</h2>
+  <p class="lead">Atividade gamificada da <b>Semana 5 — Como uma IA Raciocina e Age?</b> Nove missões com exemplos curtos, desafios reais de entendimento, XP, insígnias e um chefe final contra o relógio.</p>
+  <div class="chips"><span class="tagchip">Computação em tempo de teste</span><span class="tagchip">Chain-of-Thought</span><span class="tagchip">Tree-of-Thoughts</span><span class="tagchip">Autorreflexão</span><span class="tagchip">Agentes</span><span class="tagchip">ReAct</span><span class="tagchip">MCP</span><span class="tagchip">Multi-agente (A2A)</span></div>
+  <p><button class="btn" onclick="startMission(${cont>=MISSIONS.length?0:cont})">${cont===0?'🚀 Começar missão 1':(cont>=MISSIONS.length?'🔥 Rejogar a primeira missão':'▶ Continuar da missão '+(cont+1))}</button>
+  <button class="btn ghost" onclick="renderMap()">🗺️ Ver mapa de missões</button></p>
+  <div class="mini" style="text-align:left;max-width:640px;margin:14px auto 0"><h4>Como jogar</h4>
+  <ol><li>Leia o exemplo 📘 de cada missão (30 segundos) — ele prepara o desafio.</li>
+  <li>Enfrente o desafio: quiz, ordenar raciocínios, ligar conceitos, retroceder em árvores, operar um agente.</li>
+  <li>Errou? Tente de novo: o XP cai um pouco, mas você sempre recebe o <b>porquê</b>.</li>
+  <li>💡 Dicas custam 25% do XP da etapa — use com sabedoria.</li>
+  <li>Complete as 9 missões e enfrente o <b>👑 Chefe Final</b> cronometrado.</li></ol></div>
+  <p class="fineprint">💾 O progresso é salvo automaticamente neste navegador. Ideal para estudar DEPOIS da leitura do material da semana — o jogo testa, corrige e explica.</p>
+ </section>`;}
+function renderMap(){stopTimer();
+ const r=rankFor(S.xp);const doneN=Object.keys(S.done).length;
+ const cards=MISSIONS.map((m,i)=>{const d=S.done[m.id];const unlocked=i===0||!!S.done[MISSIONS[i-1].id];
+  return `<div class="mcard card ${unlocked?'':'locked'}" ${unlocked?'role="button" tabindex="0" onclick="startMission('+i+')"':''}>
+   <span class="num">${i+1}</span><div class="mcard-emoji">${m.emoji}</div>
+   <div class="mcard-tag">${m.tag}</div><h3>${m.title}</h3>
+   <div class="mcard-status">${d?((d.star?'🌟 Concluída':'✅ Concluída')+' · '+d.xp+' XP'):(unlocked?'▶ Jogar · até '+m.maxXp+' XP':'🔒 Complete a missão anterior')}</div>
+  </div>`;}).join('');
+ app.innerHTML=`<div class="card"><div class="prog-head"><h2 style="margin:0">🗺️ Mapa de missões</h2><span class="spacer"></span><span class="chip gold">⭐ ${S.xp} XP</span><span class="chip">${r[2]} ${r[1]}</span></div>
+  <div class="pbar"><i style="width:${Math.round(doneN/MISSIONS.length*100)}%"></i></div>
+  <p class="fine">${doneN} de ${MISSIONS.length} missões · ${starsCount()} estrela(s) 🌟 · melhor chefe: ${S.bossBest} XP</p></div>
+  <div class="map-grid">${cards}</div>
+  <div class="card" style="text-align:center">${doneN>=MISSIONS.length?'<h3>👑 Todas as missões concluídas!</h3><button class="btn gold" onclick="renderFinal()">Ver resultado final e glossário</button>':'<p class="fine">Complete a última missão para desbloquear o resultado final e o glossário da semana.</p>'}</div>`;
+}
+function startMission(i){cur={mi:i,si:0,wrong:0,hint:false,anyWrong:false,anyHint:false,earned:0,msel:null,mfound:0,seq:[],simIdx:0,tree:null,boss:null,timer:null};renderMission();}
+function nextStep(){cur.si++;cur.wrong=0;cur.hint=false;if(cur.si>=MISSIONS[cur.mi].steps.length){completeMission();}else{renderStep();window.scrollTo({top:0,behavior:'smooth'});}}
+function renderMission(){stopTimer();const m=MISSIONS[cur.mi];
+ app.innerHTML=`<div class="card"><div class="prog-head"><button class="btn small ghost" onclick="renderMap()">← Mapa</button><div><div class="mcard-tag">${m.tag}</div><h2 style="margin:2px 0">${m.emoji} ${m.title}</h2></div><span class="spacer"></span><span class="chip gold" id="missxp">0 / ${m.maxXp} XP</span></div>
+ <div class="pbar"><i id="missbar" style="width:0%"></i></div></div>
+ <details class="theory" open><summary>📘 Exemplo e teoria (leia em 30 s)</summary>${m.theory}</details>
+ <div id="stepbox"></div>`;
+ renderStep();}
+function updateMissionUI(){const m=MISSIONS[cur.mi];const b=document.getElementById('missbar');const x=document.getElementById('missxp');if(b)b.style.width=Math.round(cur.earned/m.maxXp*100)+'%';if(x)x.textContent=cur.earned+' / '+m.maxXp+' XP';}
+function renderStep(){updateMissionUI();const st=STEP();
+ if(st.type==='quiz')renderQuiz(st);
+ else if(st.type==='match')renderMatch(st);
+ else if(st.type==='order')renderOrder(st);
+ else if(st.type==='tree')renderTree(st);
+ else if(st.type==='sim')renderSim(st);
+ else if(st.type==='boss')renderBoss();}
+function calcXP(st){let m=cur.wrong===0?1:cur.wrong===1?.6:cur.wrong===2?.4:.3;if(cur.hint)m*=.75;return Math.max(10,Math.round(st.xp*m/5)*5);}
+function hintBtn(extra){return `<div class="hintline"><button class="btn small ghost" onclick="toggleHint()">💡 Dica (−25% XP)</button>${extra||''}</div><div id="hintbox" class="hint" style="display:none"></div>`;}
+function toggleHint(){const st=STEP();cur.hint=true;cur.anyHint=true;const b=document.getElementById('hintbox');if(b){b.style.display='block';b.innerHTML=st.hint||st.q;}const btn=document.querySelector('.hintline button');if(btn)btn.disabled=true;sfx('click');}
+function finishStep(explain){const st=STEP();const gain=calcXP(st);cur.earned+=gain;toast('+'+gain+' XP');sfx('ok');updateMissionUI();
+ fb(`<div class="fb good"><b>+${gain} XP</b><br>${explain||''}</div><div style="margin-top:12px"><button class="btn" onclick="nextStep()">${cur.si+1<MISSIONS[cur.mi].steps.length?'Próximo desafio →':'Finalizar missão ✨'}</button></div>`);}
+// ---- QUIZ ----
+function renderQuiz(st){
+ document.getElementById('stepbox').innerHTML=`<div class="card"><h3>🎯 Desafio</h3><p class="q">${st.q}</p>
+ <div class="opts">${st.opts.map((o,i)=>`<button class="opt" id="opt${i}" onclick="answerQuiz(${i})"><b>${'ABCD'[i]}.</b> ${o.t}</button>`).join('')}</div>
+ ${hintBtn()}<div id="fb" aria-live="polite"></div></div>`;}
+function answerQuiz(i){const st=STEP();const btn=document.getElementById('opt'+i);if(!btn||btn.disabled)return;
+ if(st.opts[i].ok){sfx('ok');btn.classList.add('ok');document.querySelectorAll('.opts .opt').forEach(b=>b.disabled=true);
+  fb('<div class="fb warn"><b>Resposta certa! Veja o porquê:</b></div>');finishStep(st.explain);}
+ else{cur.wrong++;cur.anyWrong=true;sfx('bad');btn.classList.add('bad');btn.disabled=true;
+  const why=(st.wrongWhy&&st.wrongWhy[i])||'Não é essa. Releia o exemplo 📘 e tente novamente.';
+  fb(`<div class="fb bad"><b>Tente de novo!</b> ${why}</div>`);}}
+// ---- MATCH ----
+function renderMatch(st){cur.msel=null;cur.mfound=0;
+ document.getElementById('stepbox').innerHTML=`<div class="card"><h3>🎯 Desafio</h3><p class="q">${st.title}</p>
+ <div class="match-grid"><div class="match-col"><h4>Coluna 1</h4>${st.left.map(o=>`<button class="opt mitem" id="L${o.k}" onclick="matchClick('L','${o.k}')">${o.label}</button>`).join('')}</div>
+ <div class="match-col"><h4>Coluna 2</h4>${st.right.map(o=>`<button class="opt mitem" id="R${o.k}" onclick="matchClick('R','${o.k}')">${o.label}</button>`).join('')}</div></div>
+ ${hintBtn()}<div id="fb" aria-live="polite"></div></div>`;}
+function matchClick(side,k){const st=STEP();sfx('click');
+ if(side==='L'){cur.msel=k;document.querySelectorAll('.match-col:first-child .mitem').forEach(b=>b.classList.toggle('sel',b.id==='L'+k));
+  fb('<div class="fb warn">Agora clique no item da Coluna 2 que corresponde a <b>'+document.getElementById('L'+k).textContent+'</b>.</div>');return;}
+ if(!cur.msel){fb('<div class="fb warn">Primeiro clique em um item da <b>Coluna 1</b>.</div>');return;}
+ const L=document.getElementById('L'+cur.msel),R=document.getElementById('R'+k);
+ if(k===cur.msel){L.classList.remove('sel');L.classList.add('lock');R.classList.add('lock');cur.mfound++;sfx('ok');
+  if(cur.mfound===st.left.length){finishStep(st.explain);}
+  else{fb('<div class="fb good"><b>✅ Par correto!</b> '+cur.mfound+' de '+st.left.length+' encontrados.</div>');}}
+ else{cur.wrong++;cur.anyWrong=true;sfx('bad');R.classList.add('bad');setTimeout(()=>R.classList.remove('bad'),500);
+  fb('<div class="fb bad"><b>❌ Não combina.</b> Pense no exemplo 📘 e tente outro par.</div>');}
+ cur.msel=null;}
+// ---- ORDER ----
+function renderOrder(st){cur.seq=[];
+ const order=shuffle([...st.items.keys()]);
+ document.getElementById('stepbox').innerHTML=`<div class="card"><h3>🎯 Desafio</h3><p class="q">${st.q}</p>
+ <p class="fine">Clique as etapas, uma por vez, na ordem correta de um raciocínio passo a passo.</p>
+ <h4>Sequência construída:</h4><div class="seq" id="seqbox"><span class="fine">…</span></div>
+ <h4>Etapas embaralhadas:</h4><div class="pool">${order.map(i=>`<button class="pill" id="pool${i}" onclick="pickOrder(${i})">${st.items[i]}</button>`).join('')}</div>
+ ${hintBtn('<button class="btn small ghost" onclick="undoOrder()">↩︎ Desfazer último</button>')}<div id="fb" aria-live="polite"></div></div>`;}
+function pickOrder(i){const st=STEP();const need=cur.seq.length;const btn=document.getElementById('pool'+i);
+ if(need<st.items.length&&i===need){sfx('ok');cur.seq.push(i);btn.style.display='none';
+  const seq=document.getElementById('seqbox');if(cur.seq.length===1)seq.innerHTML='';
+  seq.insertAdjacentHTML('beforeend','<span class="pill done">'+cur.seq.length+'. '+st.items[i]+'</span>');
+  if(cur.seq.length===st.items.length){finishStep(st.explain);}
+  else{sfx('click');fb('<div class="fb good"><b>Boa!</b> Próxima etapa…</div>');setTimeout(()=>{if(cur.seq.length===i+1)fb('');},700);}}
+ else{cur.wrong++;cur.anyWrong=true;sfx('bad');btn.classList.add('bad');setTimeout(()=>btn.classList.remove('bad'),500);
+  fb('<div class="fb bad"><b>Ainda não.</b> '+(st.wrongWhy||'Pense: o que precisa vir ANTES disso?')+'</div>');}}
+function undoOrder(){const st=STEP();if(!cur.seq.length)return;sfx('click');const last=cur.seq.pop();
+ document.getElementById('pool'+last).style.display='';const seq=document.getElementById('seqbox');
+ if(!cur.seq.length)seq.innerHTML='<span class="fine">…</span>';
+ else{const pills=seq.querySelectorAll('.pill.done');if(pills.length)pills[pills.length-1].remove();}}
+// ---- TREE (ToT) ----
+function renderTree(st){cur.tree={stage:'pick',path:null,idx:0,visitedA:false};
+ document.getElementById('stepbox').innerHTML=`<div class="card"><h3>🎯 Desafio</h3>
+ <div class="tot-demo"><div class="tnode root">🧩 ${st.problem}</div></div>
+ <p class="q">Você é o modelo. Dois ramos de raciocínio estão disponíveis — escolha um (e se errar, lembre: o ToT permite retroceder!):</p>
+ <div class="opts" id="treeOpts"><button class="opt" onclick="treePick('A')">🅰️ ${st.branches.A.label}</button><button class="opt" onclick="treePick('B')">🅱️ ${st.branches.B.label}</button></div>
+ ${hintBtn()}<div id="fb" aria-live="polite"></div></div>`;}
+function treePick(p){const st=STEP();sfx('click');cur.tree.path=p;cur.tree.idx=0;
+ document.getElementById('treeOpts').innerHTML='';
+ treeNext(st);}
+function treeNext(st){const br=st.branches[cur.tree.path];
+ if(cur.tree.idx<br.steps.length){sfx('click');
+  fb('<div class="fb warn"><b>'+br.steps[cur.tree.idx]+'</b></div><div style="margin-top:10px"><button class="btn small" onclick="treeStepFwd()">Próximo passo →</button></div>');return;}
+ // caminho concluído
+ if(br.verdict==='ok'){sfx('ok');fb('<div class="fb good"><b>'+br.result+'</b></div>');finishStep(st.explain);}
+ else{sfx('bad');cur.anyWrong=true;fb('<div class="fb bad"><b>'+br.result+'</b><br>Conselho do ToT: <b>retroceda (backtrack)</b> para o nó anterior e teste outro ramo.</div><div style="margin-top:10px"><button class="btn gold" onclick="treeBack()">↩️ Retroceder (backtrack)</button></div>');}}
+function treeStepFwd(){const st=STEP();cur.tree.idx++;treeNext(st);}
+function treeBack(){const st=STEP();sfx('click');cur.tree.stage='pick';cur.tree.idx=0;
+ document.getElementById('treeOpts').innerHTML='<button class="opt" onclick="treePick(\'A\')">🅰️ '+st.branches.A.label+'</button><button class="opt" onclick="treePick(\'B\')">🅱️ '+st.branches.B.label+'</button>';
+ fb('<div class="fb warn"><b>Backtrack executado!</b> Voltamos ao nó de decisão. Agora escolha o ramo mais promissor…</div>');}
+// ---- SIM (ReAct) ----
+function renderSim(st){cur.simIdx=0;
+ document.getElementById('stepbox').innerHTML=`<div class="card"><h3>🎯 Simulação: você é o agente</h3>
+ <div class="goal">🎯 Objetivo: ${st.goal}</div>
+ <div class="tools"><b style="margin-right:4px">Ferramentas:</b>${st.tools.map(t=>`<span class="toolchip">${t}</span>`).join('')}</div>
+ <p class="fine">Escolha o próximo passo do loop a cada rodada. 💭 Pensamento · 🛠️ Ação · 👁️ Observação (gerada pela ferramenta).</p>
+ <div class="trace" id="traceBox"><span class="fine">O trace do agente aparece aqui…</span></div>
+ <div id="simArea"></div>${hintBtn()}<div id="fb" aria-live="polite"></div></div>`;
+ simAdvance(st);}
+function pushTrace(cls,text){const box=document.getElementById('traceBox');if(box){if(box.firstElementChild&&box.firstElementChild.classList.contains('fine'))box.innerHTML='';box.insertAdjacentHTML('beforeend','<div class="tl '+cls+'">'+text+'</div>');}}
+function simAdvance(st){const s=st.steps[cur.simIdx];
+ if(!s){finishStep(st.explain);return;}
+ if(s.auto){pushTrace(s.auto.cls,s.auto.text);cur.simIdx++;simAdvance(st);return;}
+ document.getElementById('simArea').innerHTML=`<p class="q">${s.q}</p><div class="opts">${s.opts.map((o,i)=>`<button class="opt" id="sopt${i}" onclick="simAnswer(${i})">${o.t}</button>`).join('')}</div>`;}
+function simAnswer(i){const st=STEP();const s=st.steps[cur.simIdx];const btn=document.getElementById('sopt'+i);
+ if(s.opts[i].ok){sfx('ok');btn.classList.add('ok');document.querySelectorAll('#simArea .opt').forEach(b=>b.disabled=true);
+  if(s.trace)pushTrace(s.trace.cls,s.trace.text);cur.simIdx++;
+  fb('<div class="fb good"><b>✅ Passo correto do loop!</b> '+(s.why||'')+'</div>');
+  setTimeout(()=>{fb('');simAdvance(st);},900);}
+ else{cur.wrong++;cur.anyWrong=true;sfx('bad');btn.classList.add('bad');btn.disabled=true;
+  fb('<div class="fb bad"><b>O loop travou aqui!</b> '+(s.opts[i].why||'Releia o padrão ReAct.')+'</div>');}}
+// ---- BOSS ----
+function renderBoss(){cur.boss={i:0,earned:0,ok:0,tleft:25};bossNext();}
+function bossNext(){const b=cur.boss;
+ if(b.i>=BOSS.length){bossEnd();return;}
+ const q=BOSS[b.i];b.tleft=25;sfx('click');
+ document.getElementById('stepbox').innerHTML=`<div class="card"><h3>👑 Pergunta ${b.i+1} de ${BOSS.length}</h3>
+ <div class="timebar" id="tbar"><i id="tbfill" style="width:100%"></i></div>
+ <p class="timeleft" id="tleft">⏱️ 25,0 s</p>
+ <p class="q">${q.q}</p><div class="opts">${q.opts.map((o,i)=>`<button class="opt" id="bopt${i}" onclick="bossAnswer(${i})"><b>${'ABCD'[i]}.</b> ${o.t}</button>`).join('')}</div>
+ <div id="fb" aria-live="polite"></div></div>`;
+ stopTimer();
+ cur.timer=setInterval(()=>{b.tleft-=.1;const fill=document.getElementById('tbfill');const tl=document.getElementById('tleft');const bar=document.getElementById('tbar');
+  if(!fill){stopTimer();return;}
+  fill.style.width=Math.max(0,b.tleft/25*100)+'%';tl.textContent='⏱️ '+Math.max(0,b.tleft).toFixed(1)+' s';
+  if(b.tleft<8)bar.classList.add('low');
+  if(b.tleft<=0){stopTimer();bossAnswer(-1);}},100);}
+function bossAnswer(i){stopTimer();const b=cur.boss;if(!b)return;
+ const q=BOSS[b.i];document.querySelectorAll('.opts .opt').forEach(x=>x.disabled=true);
+ if(i>=0&&q.opts[i].ok){b.earned+=15;b.ok++;sfx('ok');document.getElementById('bopt'+i).classList.add('ok');
+  fb('<div class="fb good"><b>+15 XP!</b> '+q.e+'</div><div style="margin-top:12px"><button class="btn" onclick="bossFwd()">'+(b.i+1<BOSS.length?'Próxima pergunta →':'Ver resultado 👑')+'</button></div>');}
+ else{const wasTimeout=(i<0);sfx('bad');if(i>=0)document.getElementById('bopt'+i).classList.add('bad');
+  const okIdx=q.opts.findIndex(o=>o.ok);document.getElementById('bopt'+okIdx).classList.add('ok');
+  fb('<div class="fb bad"><b>'+(wasTimeout?'⏱️ Tempo esgotado! Resposta: ':'❌ Não é essa. Resposta: ')+'ABCD'[okIdx]+'.</b> '+q.e+'</div><div style="margin-top:12px"><button class="btn" onclick="bossFwd()">'+(b.i+1<BOSS.length?'Próxima pergunta →':'Ver resultado 👑')+'</button></div>');}}
+function bossFwd(){cur.boss.i++;bossNext();}
+function bossEnd(){const b=cur.boss;cur.earned=b.earned;cur.anyWrong=b.ok<BOSS.length;
+ S.bossBest=Math.max(S.bossBest||0,b.earned);
+ completeMission();}
+// ================= CONCLUSÃO =================
+function completeMission(){stopTimer();const m=MISSIONS[cur.mi];const prev=S.done[m.id]||null;
+ const star=(!cur.anyWrong&&!cur.anyHint)||!!(prev&&prev.star);
+ const best=Math.max(cur.earned,prev?prev.xp:0);
+ const grant=prev?Math.max(0,best-prev.xp):cur.earned;
+ S.xp+=grant;S.done[m.id]={xp:best,star:star};save();updateHeader();sfx('win');confetti();
+ const last=cur.mi===MISSIONS.length-1;
+ const rBefore=rankFor(S.xp-grant),rAfter=rankFor(S.xp);
+ ov.innerHTML=`<div class="modal"><div class="modal-emoji">${m.emoji}</div><h2>Missão ${cur.mi+1} concluída!</h2>
+ <p class="modal-xp">XP desta jogada: <b>${cur.earned}</b>${prev?' · recorde desta missão: <b>'+best+' XP</b>':''}</p>
+ <p>${star?'🌟 <b>Impecável!</b> Sem erros e sem dicas — estrela garantida.':'✅ Concluída! Rejogue sem errar para ganhar a estrela 🌟'}</p>
+ ${rAfter[0]>rBefore[0]?'<p class="modal-xp">🏅 <b>Subiu de ranking:</b> '+rAfter[2]+' '+rAfter[1]+'!</p>':''}
+ <div class="modal-btns"><button class="btn ghost" onclick="hideModal();renderMap()">🗺️ Mapa</button>
+ ${last?'<button class="btn gold" onclick="hideModal();renderFinal()">👑 Resultado final</button>':'<button class="btn" onclick="hideModal();startMission('+(cur.mi+1)+')">Próxima missão →</button>'}</div></div>`;
+ ov.classList.add('show');}
+function hideModal(){ov.classList.remove('show');}
+// ================= FINAL =================
+function renderFinal(){stopTimer();const r=rankFor(S.xp);
+ const badges=MISSIONS.map(m=>{const d=S.done[m.id];return `<span class="badge ${d?'':'off'}">${m.emoji}<br>${d?(d.star?'🌟':'✅'):'🔒'} ${m.title}</span>`;}).join('');
+ app.innerHTML=`<div class="card" style="text-align:center"><div class="hero-emoji">${r[2]}</div><h2>${r[1]}</h2>
+ <p>Ranking final alcançado com <b>${S.xp} XP</b> · ${starsCount()} de ${MISSIONS.length} estrelas 🌟 · melhor chefe: <b>${S.bossBest} XP</b> de ${BOSS.length*15}</p>
+ <div class="badges">${badges}</div>
+ <p class="quote"><b>Modelos que geram → Modelos que raciocinam → Sistemas que agem → Equipes que colaboram.</b><br>Agora você vivenciou essa jornada na pele do modelo e do agente!</p>
+ <p><button class="btn gold" onclick="startMission(${MISSIONS.length-1})">🔁 Reenfrentar o Chefe Final</button><button class="btn ghost" onclick="renderMap()">🗺️ Mapa</button></p></div>
+ <div class="card"><h3>🎓 Conexão com o seu Projeto Final</h3>
+ <ul><li><b>Marco desta semana:</b> implementar um agente simples com <b>pelo menos uma ferramenta</b> e usar <b>Cadeia de Pensamento</b> no raciocínio do agente.</li>
+ <li>Perguntas para guiar: que ferramentas seu assistente precisa? Que tarefas de múltiplas etapas ele deve lidar? Onde ele pode falhar (loops, alucinações, custos)?</li>
+ <li>Defina desde já: <b>iterações máximas</b>, exigência de <b>citações</b>, <b>orçamento</b> de chamadas e <b>humano no loop</b> para decisões críticas.</li></ul></div>
+ <details class="theory"><summary>📖 Glossário da Semana 5</summary><div class="gloss">${GLOSSARY.map(g=>`<div class="gloss-item"><b>${g[0]}</b> — ${g[1]}</div>`).join('')}</div></details>
+ <div class="card" style="text-align:center"><p class="fine">Próxima semana no curso: <b>Como Construímos IA Segura?</b> — alucinações, alinhamento, proteções e testes adversários.</p>
+ <button class="btn ghost" onclick="resetAll()">♻️ Recomeçar do zero</button></div>`;}
+// ================= BOOT =================
+lakeSlide(44);
+function lakeSlide(v){const pct=100*Math.pow(2,v-48);const w=document.getElementById('lakeWater');const l=document.getElementById('lakeLabel');
+ if(!w)return;w.style.width=Math.max(2,Math.min(100,pct))+'%';
+ l.textContent='Dia '+v+' — '+(pct>=99.9?'100% coberto!':pct.toFixed(pct<1?2:1).replace('.',',')+'% coberto');
+ l.style.color=pct>=50?'#3ddc84':'#ffd76a';}
+updateHeader();renderHome();
+</script>
+</body>
+</html>
