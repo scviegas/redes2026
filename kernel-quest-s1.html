@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KERNEL QUEST — Conceitos Iniciais de SO (S1)</title>
+<style>
+/* ============ RESET / VARS ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#040b06; --panel:#071409; --line:rgba(61,255,124,.35);
+  --green:#3dff7c; --dim:#1f8f4a; --amber:#ffb347; --red:#ff5c5c; --cyan:#5cf2ff;
+  --text:#c9f6d8; --dark:#052312;
+}
+html{height:100%}
+body{
+  min-height:100%; background:
+    radial-gradient(ellipse at 50% 40%, rgba(28,80,44,.35), transparent 65%),
+    var(--bg);
+  color:var(--text);
+  font-family:"Courier New", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-x:hidden; line-height:1.5;
+}
+/* ============ CRT OVERLAY ============ */
+#crt-overlay{position:fixed;inset:0;pointer-events:none;z-index:900;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
+  mix-blend-mode:multiply;}
+#crt-overlay::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+  animation:flick 4s infinite;}
+@keyframes flick{0%,100%{opacity:.75}45%{opacity:.9}47%{opacity:.68}50%{opacity:.85}}
+/* ============ LAYOUT ============ */
+.wrap{width:min(1060px,94vw);margin:0 auto;padding:clamp(12px,2vw,24px) 0}
+.narrow{width:min(780px,94vw)}
+.panel{
+  border:1px solid var(--line); background:rgba(7,20,9,.88); border-radius:10px;
+  padding:clamp(14px,3vw,28px); box-shadow:inset 0 0 24px rgba(61,255,124,.08), 0 0 18px rgba(0,0,0,.6);
+  margin-bottom:18px;
+}
+h1,h2,h3{color:var(--green);text-shadow:0 0 10px rgba(61,255,124,.45);font-weight:700}
+h1{font-size:clamp(1.5rem,5vw,2.6rem);letter-spacing:.06em}
+h2{font-size:clamp(1.1rem,3.4vw,1.6rem)}
+h3{font-size:clamp(1rem,2.6vw,1.2rem)}
+.sub{color:var(--cyan);font-size:clamp(.72rem,2.2vw,.95rem);margin:4px 0 14px;letter-spacing:.04em}
+p{font-size:clamp(.86rem,2.4vw,1rem);margin:8px 0}
+b{color:#eafff2}
+.muted{color:#7fbf9a;font-size:.85em}
+.hidden{display:none!important}
+/* ============ BUTTONS ============ */
+.btn{
+  display:inline-block;cursor:pointer;background:rgba(61,255,124,.1);color:var(--green);
+  border:1px solid var(--green);border-radius:6px;padding:.6em 1.1em;
+  font-family:inherit;font-size:clamp(.8rem,2.4vw,.95rem);font-weight:700;letter-spacing:.05em;
+  transition:.15s;text-shadow:0 0 6px rgba(61,255,124,.5);
+}
+.btn:hover:not(:disabled){background:var(--green);color:#04170a;text-shadow:none;box-shadow:0 0 16px rgba(61,255,124,.5)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.amber{border-color:var(--amber);color:var(--amber);background:rgba(255,179,71,.08);text-shadow:0 0 6px rgba(255,179,71,.5)}
+.btn.amber:hover:not(:disabled){background:var(--amber);color:#1d1104}
+.btn.danger{border-color:var(--red);color:var(--red);background:rgba(255,92,92,.07)}
+.btn.danger:hover:not(:disabled){background:var(--red);color:#200404}
+.btn.small{padding:.35em .7em;font-size:.78rem}
+.btn.big{flex:1 1 220px;padding:.9em 1em;font-size:clamp(.9rem,3vw,1.05rem)}
+.key{display:inline-block;border:1px solid currentColor;border-radius:4px;padding:0 .45em;margin-left:.4em;font-size:.75em;opacity:.8}
+.btn-back{cursor:pointer;background:none;border:1px solid var(--line);color:#9fdab6;border-radius:6px;padding:.3em .7em;font-family:inherit;font-size:.85rem}
+.btn-back:hover{border-color:var(--green);color:var(--green)}
+/* ============ SCREENS ============ */
+.screen{display:none;min-height:100vh;padding-bottom:40px}
+.screen.active{display:block;animation:scrIn .35s}
+@keyframes scrIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* ============ BOOT ============ */
+#scr-boot{padding:clamp(16px,4vw,48px)}
+#boot-log{white-space:pre-wrap;color:var(--green);font-size:clamp(.72rem,2.4vw,.95rem);
+  text-shadow:0 0 8px rgba(61,255,124,.4);min-height:70vh}
+#boot-log .err{color:var(--red);text-shadow:0 0 8px rgba(255,92,92,.5)}
+#boot-log .warn{color:var(--amber)}
+.cursor{display:inline-block;width:.6em;height:1em;background:var(--green);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#boot-skip{position:fixed;bottom:16px;left:0;right:0;text-align:center;color:#5f9f7c;font-size:.78rem;animation:blink 2s steps(1) infinite}
+/* ============ HUB ============ */
+.hub-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.hub-head .titlebox h1{font-size:clamp(1.3rem,4.5vw,2.2rem)}
+.rank{color:var(--amber);font-size:clamp(.78rem,2.4vw,.95rem)}
+.bar{height:14px;border:1px solid var(--line);border-radius:8px;background:#05180c;overflow:hidden}
+.bar>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--dim),var(--green));box-shadow:0 0 10px rgba(61,255,124,.6);transition:width .5s}
+.bar.red>span{background:linear-gradient(90deg,#7a1d1d,var(--red));box-shadow:0 0 10px rgba(255,92,92,.6)}
+.bar.amber>span{background:linear-gradient(90deg,#8f5a1f,var(--amber))}
+.xpwrap{flex:1 1 260px;min-width:220px}
+.xplabel{font-size:.75rem;color:#9fdab6;display:flex;justify-content:space-between;margin-bottom:3px}
+.hub-btns{display:flex;gap:8px;flex-wrap:wrap}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-bottom:22px}
+.card{border:1px solid var(--line);border-radius:10px;background:rgba(10,28,14,.85);padding:16px;display:flex;flex-direction:column;gap:8px;position:relative;transition:.2s}
+.card .ico{font-size:1.7rem}
+.card h3{margin:0}
+.card .pts{color:var(--cyan);font-size:.78rem}
+.card .desc{font-size:.82rem;color:#9fdab6;flex:1}
+.card.locked{opacity:.45;filter:grayscale(.6)}
+.card.done{border-color:var(--amber);box-shadow:0 0 14px rgba(255,179,71,.25)}
+.card.done::after{content:"✔ CONCLUÍDA";position:absolute;top:10px;right:10px;color:var(--amber);font-size:.7rem;letter-spacing:.05em}
+.card .st{font-size:.75rem;color:#7fbf9a}
+.card button{align-self:flex-start}
+.ach-title{margin:6px 0 10px;color:#7fbf9a;font-size:.9rem;letter-spacing:.1em}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.ach{border:1px dashed rgba(61,255,124,.25);border-radius:8px;padding:10px 12px;font-size:.78rem;color:#5f8f74}
+.ach.got{border-style:solid;border-color:var(--amber);color:var(--amber);background:rgba(255,179,71,.06);box-shadow:0 0 10px rgba(255,179,71,.2)}
+.ach b{display:block;margin-bottom:2px}
+/* ============ MISSION COMMON ============ */
+.m-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.m-head h2{flex:1 1 auto}
+.score{color:var(--cyan);font-size:.9rem;white-space:nowrap}
+.m-brief{color:#bfeccf;font-size:clamp(.82rem,2.3vw,.95rem);border-left:3px solid var(--cyan);padding-left:10px;margin-bottom:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 16px}
+.chips button{
+  cursor:pointer;font-family:inherit;font-size:clamp(.75rem,2.2vw,.88rem);text-align:left;
+  background:rgba(61,255,124,.08);color:var(--text);border:1px solid var(--line);border-radius:6px;
+  padding:.55em .8em;transition:.15s;line-height:1.35}
+.chips button:hover{border-color:var(--green);background:rgba(61,255,124,.18)}
+.chips button:disabled{opacity:.25;cursor:not-allowed}
+.timeline{list-style:none;counter-reset:step;margin:6px 0 14px}
+.timeline li{
+  counter-increment:step;position:relative;margin:0 0 10px 2.4em;padding:.5em .8em;
+  border:1px solid rgba(61,255,124,.3);border-radius:6px;background:rgba(61,255,124,.06);
+  font-size:clamp(.75rem,2.2vw,.88rem)}
+.timeline li::before{
+  content:counter(step);position:absolute;left:-2.1em;top:.35em;width:1.7em;height:1.7em;
+  border-radius:50%;border:1px solid var(--green);color:var(--green);display:flex;
+  align-items:center;justify-content:center;font-size:.8em;background:#051a0c}
+.timeline li .why{display:block;color:#7fbf9a;font-size:.78em;margin-top:2px}
+.timeline li.hit{animation:pop .25s}
+@keyframes pop{0%{transform:scale(.92)}60%{transform:scale(1.04)}100%{transform:none}}
+.msg{min-height:1.6em;font-size:clamp(.8rem,2.3vw,.92rem);margin:8px 0}
+.msg.ok{color:var(--green)}.msg.bad{color:var(--red)}.msg.info{color:var(--cyan)}
+.m-foot{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.status{font-size:.85rem;color:#9fdab6;margin-bottom:8px}
+.hearts span{color:var(--red);text-shadow:0 0 8px rgba(255,92,92,.6)}
+.hearts .off{color:#3a2a2a;text-shadow:none}
+/* ============ M2 ARCADE ============ */
+.arena{position:relative;height:clamp(230px,34vh,320px);overflow:hidden;border:1px solid var(--line);border-radius:10px;margin:10px 0;
+  background:linear-gradient(180deg,rgba(5,20,10,.5),rgba(9,34,17,.65));}
+.arena .lane{position:absolute;top:0;bottom:0;width:1px;background:rgba(61,255,124,.15)}
+.fall-chip{
+  position:absolute;top:-10px;left:50%;transform:translate(-50%,0);
+  max-width:86%;padding:.6em 1em;border:1px solid var(--cyan);border-radius:8px;
+  background:rgba(5,30,38,.92);color:var(--cyan);font-size:clamp(.75rem,2.3vw,.92rem);
+  text-align:center;line-height:1.35;box-shadow:0 0 14px rgba(92,242,255,.35);z-index:5;
+  transition:transform 4.2s linear;}
+.fall-chip.fly-u{transition:.45s;transform:translate(-150%,40px) rotate(-14deg);opacity:.15;border-color:var(--green)}
+.fall-chip.fly-k{transition:.45s;transform:translate(50%,40px) rotate(14deg);opacity:.15;border-color:var(--amber)}
+.fall-chip.crash{border-color:var(--red);color:var(--red);animation:shake .3s 3}
+@keyframes shake{25%{margin-left:-6px}75%{margin-left:6px}}
+.duo{display:flex;gap:12px;flex-wrap:wrap}
+.m2-btns{margin-top:12px}
+.verdict{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:clamp(.75rem,2.2vw,.9rem);padding:4px}
+.verdict.ok{color:var(--green)}.verdict.bad{color:var(--red)}
+/* ============ M3 MEMORY ============ */
+.m3grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:12px 0}
+.tile{
+  min-height:92px;border:1px solid var(--line);border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;
+  font-size:clamp(.68rem,2vw,.82rem);line-height:1.3;background:#08240f;color:var(--green);
+  transition:.2s;user-select:none;-webkit-user-select:none}
+.tile:hover{border-color:var(--green)}
+.tile.open{background:#0c3a1c;color:#eafff2;border-color:var(--green);box-shadow:0 0 12px rgba(61,255,124,.3)}
+.tile.wrong{background:#2a0d0d;border-color:var(--red);color:var(--red)}
+.tile.match{background:#123a2a;border-color:var(--amber);color:var(--amber);cursor:default;box-shadow:0 0 10px rgba(255,179,71,.25)}
+.tile .q{font-size:1.6rem;color:var(--dim)}
+/* ============ M4 TOWER ============ */
+.tower li{border-color:rgba(92,242,255,.35);background:rgba(92,242,255,.05)}
+.tower li::before{border-color:var(--cyan);color:var(--cyan)}
+.opts{display:grid;gap:10px;margin:12px 0}
+.opts button{
+  cursor:pointer;font-family:inherit;text-align:left;font-size:clamp(.78rem,2.3vw,.92rem);
+  padding:.7em 1em;border-radius:8px;line-height:1.4;
+  background:rgba(61,255,124,.06);color:var(--text);border:1px solid var(--line);transition:.15s}
+.opts button:hover:not(:disabled){border-color:var(--green);background:rgba(61,255,124,.16)}
+.opts button.right{border-color:var(--green);background:rgba(61,255,124,.25);color:#eafff2}
+.opts button.wrong{border-color:var(--red);background:rgba(255,92,92,.15);color:var(--red)}
+.opts button:disabled{cursor:default;opacity:.85}
+/* ============ M5 BOSS ============ */
+.boss-row{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch;margin-bottom:12px}
+#boss-art{
+  flex:0 0 auto;color:var(--red);text-shadow:0 0 12px rgba(255,92,92,.55);
+  font-size:clamp(.55rem,1.6vw,.78rem);line-height:1.15;text-align:center;
+  animation:bossGlitch 2.4s infinite;white-space:pre}
+@keyframes bossGlitch{0%,88%,100%{transform:none}90%{transform:translateX(3px) skewX(3deg);filter:hue-rotate(40deg)}93%{transform:translateX(-3px)}96%{transform:none}}
+.boss-bars{flex:1 1 260px;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.boss-bars .lbl{font-size:.75rem;color:#9fdab6}
+.bossq{border:1px solid rgba(255,92,92,.4);border-radius:8px;background:rgba(40,8,8,.4);padding:12px 14px;font-size:clamp(.85rem,2.5vw,1rem);margin-bottom:6px}
+.combo{color:var(--amber);font-size:.85rem;min-height:1.4em}
+/* ============ CODEX ============ */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tabs button{
+  cursor:pointer;font-family:inherit;font-size:clamp(.7rem,2.1vw,.82rem);padding:.5em .8em;
+  background:rgba(61,255,124,.06);color:#9fdab6;border:1px solid var(--line);border-radius:6px}
+.tabs button.on{color:#04170a;background:var(--green);border-color:var(--green);font-weight:700}
+.tabs button .rd{color:var(--amber)}
+.codex-body h3{margin-top:14px}
+.codex-body ul{margin:8px 0 8px 1.2em}
+.codex-body li{margin:4px 0;font-size:clamp(.82rem,2.3vw,.95rem)}
+.terms{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.term{border:1px dashed var(--cyan);color:var(--cyan);border-radius:6px;padding:.35em .7em;font-size:.75rem}
+.tip{border-left:3px solid var(--amber);padding:6px 10px;background:rgba(255,179,71,.07);color:#ffd9a3;font-size:.85rem;margin:10px 0;border-radius:0 6px 6px 0}
+/* ============ FINAL / CERT ============ */
+.cert{text-align:center;border:2px double var(--amber);background:rgba(20,16,4,.5)}
+.cert h1{color:var(--amber);text-shadow:0 0 12px rgba(255,179,71,.5)}
+.cert .seal{font-size:2rem;margin:8px 0}
+.cert .stats{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:14px 0}
+.cert .stat{border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:.85rem}
+.cert .stat b{display:block;color:var(--cyan);font-size:1.2rem}
+.cert input{
+  font-family:inherit;font-size:1rem;text-align:center;background:#062010;color:var(--green);
+  border:1px solid var(--green);border-radius:6px;padding:.5em;width:min(320px,86vw);margin:8px 0}
+/* ============ TOAST ============ */
+#toasts{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:950;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(440px,92vw)}
+.toast{border:1px solid var(--amber);background:#161004;color:var(--amber);border-radius:8px;padding:.6em 1em;font-size:.85rem;text-align:center;box-shadow:0 0 18px rgba(255,179,71,.3);animation:scrIn .3s}
+.toast.green{border-color:var(--green);background:#04160a;color:var(--green);box-shadow:0 0 18px rgba(61,255,124,.3)}
+/* ============ RESPONSIVE ============ */
+@media (max-width:640px){
+  .m-head{gap:6px}
+  .btn-back{order:-1}
+  .boss-row{flex-direction:column}
+  #boss-art{align-self:center}
+  .duo{flex-direction:column}
+  .btn.big{flex-basis:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+@media print{
+  body{background:#fff;color:#000}
+  #crt-overlay,#toasts,.m-foot{display:none!important}
+  .screen{display:none!important}
+  #scr-final{display:block!important}
+  #scr-final .panel{border-color:#a86f00;background:#fff}
+  #scr-final h1,#scr-final h2{color:#7a5200;text-shadow:none}
+  #scr-final .stat b{color:#005f4b}
+  #scr-final .muted{color:#444}
+  .cert input{border-color:#7a5200;color:#222;background:#fff}
+}
+</style>
+</head>
+<body>
+<div id="crt-overlay"></div>
+<div id="toasts"></div>
+
+<!-- ==================== BOOT ==================== -->
+<section id="scr-boot" class="screen active">
+  <pre id="boot-log"></pre>
+  <div id="boot-skip">[ clique ou pressione qualquer tecla para pular a inicialização ]</div>
+</section>
+
+<!-- ==================== BRIEFING ==================== -->
+<section id="scr-brief" class="screen">
+  <div class="wrap narrow">
+    <div class="panel">
+      <h1 class="glitch">KERNEL QUEST</h1>
+      <p class="sub">// S1 — CONCEITOS INICIAIS DE SISTEMAS OPERACIONAIS &amp; VIRTUALIZAÇÃO</p>
+      <div id="brief-text"></div>
+      <button id="brief-btn" class="btn hidden">▶ ASSUMIR O KERNEL</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== HUB ==================== -->
+<section id="scr-hub" class="screen">
+  <div class="wrap">
+    <div class="panel hub-panel">
+      <div class="hub-head">
+        <div class="titlebox">
+          <h1>👑 SALA DO KERNEL</h1>
+          <div class="rank" id="hub-rank"></div>
+        </div>
+        <div class="xpwrap">
+          <div class="xplabel"><span>EXPERIÊNCIA</span><span id="hub-xp">0 / 680 XP</span></div>
+          <div class="bar"><span id="hub-xpbar"></span></div>
+        </div>
+        <div class="hub-btns">
+          <button class="btn small" data-scr="codex">📖 CODEX</button>
+          <button class="btn small" id="btn-mute">🔊 SOM</button>
+          <button class="btn small danger" id="btn-reset">⟲ RESET</button>
+        </div>
+      </div>
+      <p class="muted">// Complete as missões na ordem. Cada missão destrava a seguinte. O CODEX tem todo o conteúdo de estudo da S1.</p>
+    </div>
+    <div id="mission-grid" class="cards"></div>
+    <div class="ach-title">// CONQUISTAS <span id="ach-count"></span></div>
+    <div id="ach-grid" class="ach-grid"></div>
+    <div id="final-cta" class="hidden" style="margin-top:20px;text-align:center">
+      <button id="btn-final" class="btn big amber">🎓 INTEGRALIZAR SISTEMA — GERAR CERTIFICADO</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== M1 SEQUÊNCIA DE BOOT ==================== -->
+<section id="scr-m1" class="screen">
+  <div class="wrap narrow"><div class="panel">
+    <div class="m-head">
+      <button class="btn-back" data-scr="hub">◀ HUB</button>
+      <h2>M1 — SEQUÊNCIA DE BOOT</h2><span id="m1-score" class="score">0 pts</span>
+    </div>
+    <p class="m-brief">O QUARTZ-9000 não liga há 40 anos. Clique nos procedimentos <b>NA ORDEM CORRETA</b> para dar o boot. Cada erro custa 15 pontos.</p>
+    <div class="status" id="m1-progress"></div>
+    <div id="m1-pool" class="chips"></div>
+    <ol id="m1-timeline" class="timeline"></ol>
+    <div id="m1-msg" class="msg"></div>
+    <div class="m-foot">
+      <button id="m1-restart" class="btn small hidden">↺ REINICIAR</button>
+      <button id="m1-done" class="btn hidden">CONTINUAR ▶</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ==================== M2 ARCADE PRIVILÉGIOS ==================== -->
+<section id="scr-m2" class="screen">
+  <div class="wrap narrow"><div class="panel">
+    <div class="m-head">
+      <button class="btn-back" data-scr="hub">◀ HUB</button>
+      <h2>M2 — DESPACHANTE DE PRIVILÉGIOS</h2><span id="m2-score" class="score">0</span>
+    </div>
+    <p class="m-brief">Instruções estão caindo no barramento! Antes que uma instrução atravesse o firewall, despache-a: operações comuns vão para o <b>MODO USUÁRIO</b> (A); instruções privilegiadas que mexem no hardware exigem o <b>MODO KERNEL</b> (L). 3 travamentos = missão falha.</p>
+    <div class="status" id="m2-status"></div>
+    <div id="m2-arena" class="arena"></div>
+    <div class="bar"><span id="m2-timer"></span></div>
+    <div class="duo m2-btns">
+      <button id="m2-user" class="btn big">MODO USUÁRIO<span class="key">A</span></button>
+      <button id="m2-kernel" class="btn big amber">MODO KERNEL<span class="key">L</span></button>
+    </div>
+    <div id="m2-msg" class="msg"></div>
+    <div class="m-foot">
+      <button id="m2-start" class="btn">▶ INICIAR DESPACHO</button>
+      <button id="m2-restart" class="btn small hidden">↺ REINICIAR</button>
+      <button id="m2-done" class="btn hidden">CONTINUAR ▶</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ==================== M3 MEMÓRIA DE SYSCALLS ==================== -->
+<section id="scr-m3" class="screen">
+  <div class="wrap narrow"><div class="panel">
+    <div class="m-head">
+      <button class="btn-back" data-scr="hub">◀ HUB</button>
+      <h2>M3 — MEMÓRIA DO KERNEL: SYSCALLS</h2><span id="m3-moves" class="score">0 jogadas</span>
+    </div>
+    <p class="m-brief">O cache da tabela de chamadas de sistema foi corrompido! Vire as fichas e encontre os <b>6 pares</b>: cada syscall com o serviço que ela executa. Menos jogadas = mais XP.</p>
+    <div id="m3-grid" class="m3grid"></div>
+    <div id="m3-msg" class="msg"></div>
+    <div class="m-foot">
+      <button id="m3-restart" class="btn small hidden">↺ REINICIAR</button>
+      <button id="m3-done" class="btn hidden">CONTINUAR ▶</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ==================== M4 ARQUITETO DO SISTEMA ==================== -->
+<section id="scr-m4" class="screen">
+  <div class="wrap narrow"><div class="panel">
+    <div class="m-head">
+      <button class="btn-back" data-scr="hub">◀ HUB</button>
+      <h2>M4 — ARQUITETO DO SISTEMA</h2><span id="m4-score" class="score">0 pts</span>
+    </div>
+    <p class="m-brief">Você recebeu a chave de projeto do novo SO do laboratório. FASE 1: monte a pilha de camadas na ordem correta (da base ao topo). FASE 2: escolha a arquitetura certa para cada exigência do cliente.</p>
+    <div id="m4-progress" class="status"></div>
+    <div id="m4-ph1">
+      <h3>// FASE 1 — A PILHA DE CAMADAS</h3>
+      <div id="m4-pool" class="chips"></div>
+      <ol id="m4-tower" class="timeline tower"></ol>
+    </div>
+    <div id="m4-ph2" class="hidden">
+      <h3>// FASE 2 — PROJETO DO CLIENTE</h3>
+      <div id="m4-quiz"></div>
+    </div>
+    <div id="m4-msg" class="msg"></div>
+    <div class="m-foot">
+      <button id="m4-restart" class="btn small hidden">↺ REINICIAR</button>
+      <button id="m4-done" class="btn hidden">CONTINUAR ▶</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ==================== M5 BOSS ==================== -->
+<section id="scr-m5" class="screen">
+  <div class="wrap narrow"><div class="panel">
+    <div class="m-head">
+      <button class="btn-back" data-scr="hub">◀ HUB</button>
+      <h2>M5 — BOSS FINAL: MALWARE.EXE</h2><span id="m5-score" class="score">0 pts</span>
+    </div>
+    <p class="m-brief">Um vírus arcaico invadiu o barramento e quer corromper o seu kernel! Responda corretamente para atacá-lo. Acertos em sequência formam COMBO e causam dano extra. Resposta errada ou tempo esgotado custa 1 ponto de estabilidade.</p>
+    <div class="boss-row">
+      <pre id="boss-art">    ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+  ▄▀█▀▀░░▒▒▓▓ MALWARE.EXE ▓▓▒▒░░▀▀█▄
+ ▐▌  ▄▄▄   ◤●◢   ◤●◢   ▄▄▄   ▌▙
+ ██   ▀     ▀▄▄▄▄▄▀     ▀    ██
+ ▓▓▄  ◣▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁◢  ▄▓▓
+  ▀▓▓▄▄▄  INSTALLING... ▄▄▄▓▓▀
+     ▀▀▀▀▓▓▓▄▄▄▄▄▓▓▓▀▀▀▀</pre>
+      <div class="boss-bars">
+        <div class="lbl">HP DO MALWARE.EXE</div>
+        <div class="bar red"><span id="m5-bosshp"></span></div>
+        <div class="lbl">SUA ESTABILIDADE</div>
+        <div class="bar"><span id="m5-playerhp"></span></div>
+        <div class="combo" id="m5-combo"></div>
+      </div>
+    </div>
+    <div id="m5-q" class="bossq"></div>
+    <div id="m5-opts" class="opts"></div>
+    <div class="bar"><span id="m5-timer"></span></div>
+    <div id="m5-msg" class="msg"></div>
+    <div class="m-foot">
+      <button id="m5-start" class="btn">▶ ENFRENTAR O MALWARE</button>
+      <button id="m5-restart" class="btn small hidden">↺ REINICIAR</button>
+      <button id="m5-done" class="btn hidden">CONTINUAR ▶</button>
+    </div>
+  </div></div>
+</section>
+
+<!-- ==================== CODEX ==================== -->
+<section id="scr-codex" class="screen">
+  <div class="wrap"><div class="panel">
+    <div class="m-head">
+      <button class="btn-back" data-scr="hub">◀ HUB</button>
+      <h2>📖 CODEX DO KERNEL</h2>
+      <span class="score" id="codex-progress"></span>
+    </div>
+    <p class="muted">// Resumo de estudo dos Conceitos Iniciais (S1). Leia antes de cada missão — leitura completa libera a conquista ERUDITO.</p>
+    <div id="codex-tabs" class="tabs"></div>
+    <div id="codex-content" class="codex-body"></div>
+  </div></div>
+</section>
+
+<!-- ==================== FINAL ==================== -->
+<section id="scr-final" class="screen">
+  <div class="wrap narrow"><div class="panel cert" id="cert">
+    <h1>CERTIFICADO DE KERNEL</h1>
+    <p class="sub">// KERNEL QUEST — S1: CONCEITOS INICIAIS DE SISTEMAS OPERACIONAIS E VIRTUALIZAÇÃO</p>
+    <div class="seal">🖥️👑🖥️</div>
+    <p>Este documento certifica que o operador</p>
+    <input id="cert-name" placeholder="DIGITE SEU NOME DE OPERADOR" maxlength="40" autocomplete="off">
+    <p>assumiu o controle do kernel do QUARTZ-9000, concluiu as 5 missões do módulo S1 e demonstrou domínio dos conceitos de sistemas operacionais, modos de acesso, chamadas de sistema, estruturas de SO e virtualização.</p>
+    <div class="stats">
+      <div class="stat"><b id="cert-xp">0</b>XP TOTAL</div>
+      <div class="stat"><b id="cert-rank">—</b>PATENTE</div>
+      <div class="stat"><b id="cert-ach">0/10</b>CONQUISTAS</div>
+    </div>
+    <p class="muted" id="cert-date"></p>
+    <div class="m-foot" style="justify-content:center">
+      <button id="btn-print" class="btn small">🖨️ IMPRIMIR / SALVAR PDF</button>
+      <button class="btn small" data-scr="hub">◀ VOLTAR AO HUB</button>
+    </div>
+  </div></div>
+</section>
+
+<script>
+"use strict";
+/* ================================================================
+   KERNEL QUEST — S1 Conceitos Iniciais de SO & Virtualização
+   ================================================================ */
+var $ = function(s){ return document.querySelector(s); };
+var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+/* ---------------- ESTADO ---------------- */
+var SAVE_KEY = "kernelquest-s1-v1";
+var state = { xp:0, done:{}, ach:[], codexRead:[], muted:false, name:"" };
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(raw){ var d = JSON.parse(raw);
+      state.xp = d.xp||0; state.done = d.done||{}; state.ach = d.ach||[];
+      state.codexRead = d.codexRead||[]; state.muted = !!d.muted; state.name = d.name||"";
+    }
+  }catch(e){}
+}
+
+/* ---------------- SOM (WebAudio) ---------------- */
+var actx = null;
+function beep(kind){
+  if(state.muted) return;
+  try{
+    if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state === "suspended") actx.resume();
+    var seq = { ok:[[880,.07],[1320,.09]], bad:[[220,.18]], type:[null], click:[[660,.05]],
+                win:[[660,.09],[880,.09],[1100,.09],[1320,.16]], boss:[[110,.3],[82,.3]],
+                ach:[[988,.08],[1319,.14]] }[kind] || [[660,.05]];
+    var t0 = actx.currentTime;
+    seq.forEach(function(n,i){
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = kind==="boss" ? "sawtooth" : "square";
+      o.frequency.value = n[0];
+      g.gain.setValueAtTime(.06, t0+i*.09);
+      g.gain.exponentialRampToValueAtTime(.0001, t0+i*.09+n[1]);
+      o.connect(g).connect(actx.destination);
+      o.start(t0+i*.09); o.stop(t0+i*.09+n[1]+.02);
+    });
+  }catch(e){}
+}
+
+/* ---------------- TOAST ---------------- */
+function toast(msg, green){
+  var t = document.createElement("div");
+  t.className = "toast" + (green ? " green" : "");
+  t.textContent = msg;
+  $("#toasts").appendChild(t);
+  setTimeout(function(){ t.style.opacity="0"; t.style.transition="opacity .4s"; }, 2600);
+  setTimeout(function(){ t.remove(); }, 3100);
+}
+
+/* ---------------- NAVEGAÇÃO ---------------- */
+function show(id){
+  $$(".screen").forEach(function(s){ s.classList.remove("active"); });
+  $("#scr-"+id).classList.add("active");
+  window.scrollTo(0,0);
+  if(id==="hub") renderHub();
+  if(id==="codex") renderCodex();
+  if(id==="final") renderCert();
+}
+document.addEventListener("click", function(ev){
+  var b = ev.target.closest("[data-scr]");
+  if(b){
+    beep("click");
+    var scr = b.getAttribute("data-scr");
+    if(scr==="m1") startM1(); if(scr==="m2") show("m2");
+    if(scr==="m3") startM3(); if(scr==="m4") startM4();
+    if(scr==="m5") show("m5");
+    show(scr);
+  }
+});
+
+/* ---------------- MISSÕES (metadados) ---------------- */
+var TOTAL_XP = 680;
+var MISSIONS = [
+  { id:"m1", ico:"⚡", title:"SEQUÊNCIA DE BOOT", pts:100, desc:"Ordene o processo de boot do QUARTZ-9000: do Power-ON à tela de login.", tag:"Boot & inicialização" },
+  { id:"m2", ico:"🛡️", title:"DESPACHANTE DE PRIVILÉGIOS", pts:120, desc:"Classifique instruções em MODO USUÁRIO x MODO KERNEL antes que atravessem o firewall.", tag:"Modos de acesso & interrupções" },
+  { id:"m3", ico:"🧠", title:"MEMÓRIA DO KERNEL: SYSCALLS", pts:120, desc:"Reconstrua a tabela de chamadas de sistema encontrando os 6 pares.", tag:"Chamadas de sistema" },
+  { id:"m4", ico:"🏛️", title:"ARQUITETO DO SISTEMA", pts:140, desc:"Monte a pilha de camadas e escolha a estrutura de SO ideal para cada cliente.", tag:"Estruturas de SO" },
+  { id:"m5", ico:"👾", title:"BOSS: MALWARE.EXE", pts:200, desc:"Quiz final contra o vírus arcaico. 10 perguntas cobrindo toda a S1.", tag:"Revisão geral + virtualização" }
+];
+var RANKS = [
+  [0,   "ESTAGIÁRIO DO KERNEL"],
+  [150, "OPERADOR DE SISTEMA"],
+  [300, "TÉCNICO DE BARRAMENTO"],
+  [480, "HACKER DE SISTEMA"],
+  [620, "ADMINISTRADOR SUPREMO"],
+  [680, "⭐ LENDA DO SILÍCIO ⭐"]
+];
+function rankFor(xp){
+  var r = RANKS[0][1];
+  for(var i=0;i<RANKS.length;i++){ if(xp >= RANKS[i][0]) r = RANKS[i][1]; }
+  return r;
+}
+
+/* ---------------- CONQUISTAS ---------------- */
+var ACHS = [
+  { id:"m1",  nome:"PRIMEIRO BOOT",       desc:"Conclua a Missão 1" },
+  { id:"m1p", nome:"ZERAR O POST",        desc:"Missão 1 sem nenhum erro" },
+  { id:"m2",  nome:"DESPACHANTE",         desc:"Conclua a Missão 2" },
+  { id:"m2p", nome:"FIREWALL IMPENETRÁVEL", desc:"Missão 2 sem travamentos" },
+  { id:"m3",  nome:"CACHE RESTAURADO",    desc:"Conclua a Missão 3" },
+  { id:"m3p", nome:"MEMÓRIA DE ELEFANTE", desc:"Missão 3 em até 10 jogadas" },
+  { id:"m4",  nome:"ARQUITETO-CHEFE",     desc:"Conclua a Missão 4" },
+  { id:"m5",  nome:"VOCÊ É O KERNEL",     desc:"Derrote o MALWARE.EXE" },
+  { id:"codex", nome:"ERUDITO DO KERNEL", desc:"Leia os 5 tópicos do Codex" },
+  { id:"all", nome:"LENDÁRIO",            desc:"Complete todas as missões" }
+];
+function grantAch(id){
+  if(state.ach.indexOf(id) === -1){
+    state.ach.push(id); save();
+    var a = ACHS.find(function(x){ return x.id===id; });
+    toast("🏆 CONQUISTA: " + a.nome);
+    beep("ach");
+  }
+}
+function checkAllDone(){
+  var n = 0; MISSIONS.forEach(function(m){ if(state.done[m.id]) n++; });
+  if(n === 5){ grantAch("all"); $("#final-cta").classList.remove("hidden"); }
+  return n === 5;
+}
+
+/* ---------------- XP ---------------- */
+function addXP(n, reason){
+  state.xp = Math.min(TOTAL_XP, state.xp + n);
+  save();
+  if(reason){ toast("+" + n + " XP — " + reason, true); }
+  beep("ok");
+}
+
+/* ---------------- HUB ---------------- */
+function missionUnlocked(i){
+  if(i === 0) return true;
+  return !!state.done[MISSIONS[i-1].id];
+}
+function renderHub(){
+  $("#hub-rank").textContent = "PATENTE: " + rankFor(state.xp);
+  $("#hub-xp").textContent = state.xp + " / " + TOTAL_XP + " XP";
+  $("#hub-xpbar").style.width = (100*state.xp/TOTAL_XP) + "%";
+  var g = $("#mission-grid"); g.innerHTML = "";
+  MISSIONS.forEach(function(m, i){
+    var unlocked = missionUnlocked(i), done = !!state.done[m.id];
+    var c = document.createElement("div");
+    c.className = "card" + (done?" done":unlocked?"":" locked");
+    var btn = "";
+    if(done) btn = '<button class="btn small" data-scr="'+m.id+'">↺ REJOGAR</button>';
+    else if(unlocked) btn = '<button class="btn small" data-scr="'+m.id+'">▶ JOGAR</button>';
+    else btn = '<button class="btn small" disabled>🔒 DESBLOQUEIA AO CONCLUIR '+MISSIONS[i-1].ico+'</button>';
+    c.innerHTML = '<div class="ico">'+m.ico+'</div><h3>'+m.title+'</h3>'
+      + '<div class="pts">'+m.tag+' — até '+m.pts+' XP</div>'
+      + '<div class="desc">'+m.desc+'</div>' + btn;
+    g.appendChild(c);
+  });
+  var got = 0, html = "";
+  ACHS.forEach(function(a){
+    var has = state.ach.indexOf(a.id) !== -1;
+    if(has) got++;
+    html += '<div class="ach'+(has?" got":"")+'"><b>'+(has?"🏆 ":"🔒 ")+a.nome+'</b>'+a.desc+'</div>';
+  });
+  $("#ach-grid").innerHTML = html;
+  $("#ach-count").textContent = "("+got+"/"+ACHS.length+")";
+  if(checkAllDone()) $("#final-cta").classList.remove("hidden");
+  else $("#final-cta").classList.add("hidden");
+  $("#btn-mute").textContent = state.muted ? "🔇 SOM" : "🔊 SOM";
+}
+$("#btn-mute").addEventListener("click", function(){
+  state.muted = !state.muted; save();
+  this.textContent = state.muted ? "🔇 SOM" : "🔊 SOM";
+});
+$("#btn-reset").addEventListener("click", function(){
+  if(confirm("Reiniciar TODO o progresso (XP, missões e conquistas)?")){
+    state = { xp:0, done:{}, ach:[], codexRead:[], muted:state.muted, name:"" };
+    save(); renderHub(); toast("Sistema formatado. Progresso zerado.", true);
+  }
+});
+$("#btn-final").addEventListener("click", function(){ show("final"); });
+
+/* ---------------- CODEX ---------------- */
+var CODEX = [
+  { id:"c1", nome:"O QUE É UM SO", html:
+    '<p>Um <b>Sistema Operacional</b> é o programa fundamental que faz a ponte entre o hardware e as aplicações. Ele atua em dois papéis complementares: como <b>gerenciador de recursos</b>, decide quem usa a CPU, a memória, os discos e os dispositivos de I/O — de forma justa e eficiente; e como <b>máquina estendida (ou virtual)</b>, esconde a complexidade do hardware atrás de abstrações simples: em vez de comandar um disco setor por setor, o programador usa "arquivos".</p>'
+   +'<p>Um computador sem SO exigiria que cada aplicação controlasse diretamente os dispositivos — e duas aplicações disputariam a mesma impressora ao mesmo tempo. O SO resolve isso com <b>multiprogramação</b> (vários programas na memória para manter a CPU ocupada), <b>proteção</b> (um programa não pode apagar o outro) e <b>abstração</b> (interfaces estáveis por cima de hardware que muda).</p>'
+   +'<ul><li><b>Kernel:</b> o núcleo do SO, executando com plenos privilégios.</li>'
+   +'<li><b>Programa de sistema:</b> utilitário que roda em modo usuário (shell, editor).</li>'
+   +'<li><b>Interrupção:</b> sinal do hardware que interrompe a CPU para tratar eventos.</li></ul>',
+    terms:["Kernel","Multiprogramação","Abstração","Proteção","Interrupção"],
+    tip:"TIP DA MISSÃO M1: o boot sempre segue Power-ON → POST → BIOS/UEFI → Bootloader → Kernel → Init/Serviços → Login." },
+  { id:"c2", nome:"MODOS DE ACESSO & INTERRUPÇÕES", html:
+    '<p>Para se proteger de si mesma e das aplicações, a CPU opera em dois níveis: no <b>modo usuário</b>, um subconjunto de instruções é proibido; no <b>modo kernel</b> (supervisor), tudo é permitido. Instruções como <b>I/O direto, HALT, desligar interrupções e programar o timer</b> são <b>privilegiadas</b>: só o kernel as executa.</p>'
+   +'<p>Quando um programa tenta executar uma instrução privilegiada em modo usuário, a hardware dispara um <b>trap</b> (exceção) e o controle passa ao SO, que normalmente encerra o infrator. O caminho oposto também existe: qualquer chamada de sistema faz o CPU <b>mudar de modo usuário para kernel</b> (a porta de entrada oficial).</p>'
+   +'<ul><li><b>Interrupção:</b> gerada pelo hardware (disco terminou leitura, tecla pressionada) — é assíncrona.</li>'
+   +'<li><b>Trap/Exceção:</b> gerada pelo próprio programa (divisão por zero, instrução ilegal).</li>'
+   +'<li><b>Timer:</b> o SO programa um temporizador para retomar o controle e impedir que um processo monopolize a CPU.</li></ul>',
+    terms:["Modo usuário","Modo kernel","Instrução privilegiada","Trap","Timer"],
+    tip:"TIP DA MISSÃO M2: se a instrução toca o hardware direto (disco, I/O, timer, HALT, interrupções) → MODO KERNEL. Se é só cálculo/variável → MODO USUÁRIO." },
+  { id:"c3", nome:"CHAMADAS DE SISTEMA (SYSCALLS)", html:
+    '<p>Chamada de sistema é a <b>interface oficial entre o programa do usuário e o kernel</b>. Ao chamar <code>read()</code>, a biblioteca coloca o número da syscall num registrador e dispara uma instrução de trap; a CPU muda ao modo kernel, o SO valida os parâmetros, executa o serviço e devolve o controle. É uma porta com guarda: parâmetros inválidos são recusados.</p>'
+   +'<p>As syscalls clássicas de processos: <code>fork()</code> cria um clone do processo pai; <code>exec()</code> substitui o programa em execução; <code>wait()</code> faz o pai aguardar o filho; <code>kill()</code> envia sinais; <code>open/read/write/close()</code> manipulam arquivos via descritores. Programadores raramente chamam syscalls diretamente — usam APIs de biblioteca (como a libc), que são mais portáveis e escondem os detalhes.</p>'
+   +'<ul><li>Cada syscall custa uma <b>troca de modo</b> (usuário→kernel), que é mais cara que uma chamada de função comum.</li>'
+   +'<li>O <b>shell</b> é um exemplo: lê o comando, faz fork, exec e espera o resultado.</li></ul>',
+    terms:["Syscall","Trap de syscall","fork/exec","Descritor de arquivo","Biblioteca (libc)"],
+    tip:"TIP DA MISSÃO M3: memorize o casal — fork cria, exec substitui, wait espera, kill sinaliza, open abre, read lê." },
+  { id:"c4", nome:"ESTRUTURAS DE SO", html:
+    '<p>Como organizar milhões de linhas de kernel? Cada estrutura é um trade-off:</p>'
+   +'<ul><li><b>Monolítica:</b> tudo dentro do kernel (sistemas UNIX clássicos, MS-DOS). Comunicação por chamadas de função — <b>rápida</b> — mas um driver com falha pode derrubar o sistema inteiro.</li>'
+   +'<li><b>Microkernel:</b> no kernel ficam só o mínimo (IPC, escalonamento, memória básica); drivers e sistemas de arquivos rodam como <b>serviços no espaço de usuário</b> (MINIX, QNX). Mais confiável e seguro; o custo é o <b>overhead das mensagens</b> entre componentes.</li>'
+   +'<li><b>Camadas:</b> cada camada só usa serviços da camada inferior (THE, Multics). Organiza e facilita depurar, mas definir as fronteiras é difícil e cada travessia de camada custa tempo.</li>'
+   +'<li><b>Módulos carregáveis + híbrida:</b> kernel-base com módulos plugáveis em tempo de execução. O Linux moderno é um <b>monolítico modular</b>; o Windows e o macOS são <b>híbridos</b> — núcleo pequeno para segurança, mas com desempenho monolítico.</li></ul>',
+    terms:["Monolítico","Microkernel","Camadas","Módulos","Híbrido (Linux/Windows)"],
+    tip:"TIP DA MISSÃO M4: pilha de baixo para cima = HARDWARE → KERNEL → SYSCALLS → BIBLIOTECAS/SHELL → APLICATIVOS." },
+  { id:"c5", nome:"VIRTUALIZAÇÃO", html:
+    '<p>Virtualização é <b>criar uma máquina virtual (VM) — um computador inteiro em software</b> — sobre um host físico. O <b>hypervisor (VMM)</b> é o software que gerencia as VMs e distribui CPU, memória e I/O entre elas:</p>'
+   +'<ul><li><b>Hypervisor Tipo 1 (bare metal):</b> roda <b>diretamente sobre o hardware</b> — VMware ESXi, Microsoft Hyper-V, Xen, KVM. Máxima eficiência, usado em data centers.</li>'
+   +'<li><b>Hypervisor Tipo 2 (hosted):</b> roda <b>como um programa dentro de um SO hospedeiro</b> — VirtualBox, VMware Workstation. Mais simples para desktop e laboratório.</li></ul>'
+   +'<p>Benefícios: <b>isolamento</b> (uma VM travada não derruba as outras), <b>consolidação</b> (vários servidores em uma máquina), <b>snapshots e migração</b> de VMs ao vivo, e rodar sistemas diferentes no mesmo hardware. A VM enxerga uma "máquina" completa; o SO convidado (guest) nem sabe que é virtual.</p>'
+   +'<p><b>Containers</b> (Docker) vão além: em vez de virtualizar o hardware, compartilham o kernel do host e isolam apenas processos — são muito mais leves, mas cada container usa o mesmo kernel do sistema hospedeiro.</p>',
+    terms:["Hypervisor Tipo 1","Hypervisor Tipo 2","VM (guest/host)","Snapshot","Containers"],
+    tip:"TIP DA MISSÃO M5: Tipo 1 = bare metal (ESXi/Hyper-V/Xen/KVM); Tipo 2 = sobre o SO host (VirtualBox/VMware Workstation)." }
+];
+var curCodex = 0;
+function renderCodex(){
+  var tabs = "";
+  CODEX.forEach(function(c, i){
+    var rd = state.codexRead.indexOf(c.id) !== -1;
+    tabs += '<button data-ct="'+i+'" class="'+(i===curCodex?"on":"")+'">'+c.nome+(rd?' <span class="rd">✔</span>':'')+'</button>';
+  });
+  $("#codex-tabs").innerHTML = tabs;
+  var c = CODEX[curCodex];
+  $("#codex-content").innerHTML = c.html
+    + '<div class="tip">'+c.tip+'</div>'
+    + '<div class="terms">'+c.terms.map(function(t){return '<span class="term">'+t+'</span>';}).join("")+'</div>'
+    + '<div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">'
+    + (curCodex>0 ? '<button class="btn small" data-ct="'+(curCodex-1)+'">◀ ANTERIOR</button>' : '')
+    + (curCodex<CODEX.length-1 ? '<button class="btn small" data-ct="'+(curCodex+1)+'">PRÓXIMO ▶</button>' : '<button class="btn" data-scr="hub">MISSÕES ▶</button>')
+    + '</div>';
+  if(state.codexRead.indexOf(c.id) === -1){
+    state.codexRead.push(c.id); save();
+    if(state.codexRead.length === 5) grantAch("codex");
+  }
+  $("#codex-progress").textContent = "LIDOS: " + state.codexRead.length + "/5";
+  $$("#codex-tabs [data-ct]").forEach(function(b){
+    b.addEventListener("click", function(){ curCodex = parseInt(b.getAttribute("data-ct"),10); beep("click"); renderCodex(); });
+  });
+  $$("#codex-content [data-ct]").forEach(function(b){
+    b.addEventListener("click", function(){ curCodex = parseInt(b.getAttribute("data-ct"),10); beep("click"); renderCodex(); });
+  });
+}
+
+/* ---------------- BOOT SEQUENCE ---------------- */
+var BOOT_LINES = [
+  ["QUARTZ-9000 BIOS v2.11 — ZAI MICRO SYSTEMS",""],
+  ["COPYRIGHT (C) 2058-2098 — TODOS OS DIREITOS RESERVADOS",""],
+  ["",""],
+  ["POST: VERIFICANDO MEMÓRIA........ 640K OK",""],
+  ["CPU: Z-8000 @ 4.77 MHz........... OK",""],
+  ["DETECTANDO DISCO RÍGIDO.......... OK",""],
+  ["TECLADO.......................... OK",""],
+  ["CARREGANDO KERNEL................ FALHA CRÍTICA","err"],
+  ["SETOR DE BOOT CORROMPIDO........  0xDEADBEEF","err"],
+  ["QUARTZ-9000 OFFLINE HÁ 40 ANOS.... MEMÓRIA DEGRADADA","warn"],
+  ["",""],
+  [">> MODO DE RECUPERAÇÃO ATIVADO","warn"],
+  [">> INICIANDO PROFESSOR.SYS (IA ASSISTENTE)...",""],
+  [">> AGUARDANDO UM OPERADOR HUMANO PARA ASSUMIR O KERNEL...","warn"],
+  ["",""],
+  ["[ CLIQUE OU PRESSIONE QUALQUER TECLA PARA ASSUMIR ]",""]
+];
+var bootDone = false, bootTimer = null;
+function runBoot(){
+  var log = $("#boot-log");
+  log.innerHTML = "";
+  var li = 0, ci = 0, out = "", spanOpen = false;
+  function typeStep(){
+    if(bootDone) return;
+    if(li >= BOOT_LINES.length){
+      bootFinished();
+      return;
+    }
+    var line = BOOT_LINES[li][0], cls = BOOT_LINES[li][1];
+    if(ci === 0 && cls){
+      out += '<span class="'+cls+'">'; spanOpen = true;
+    }
+    if(ci < line.length){
+      out += line[ci]; ci++;
+      log.innerHTML = out + (spanOpen?"</span>":"") + '<span class="cursor"></span>';
+      bootTimer = setTimeout(typeStep, line[ci-1] === "\n" ? 30 : 14);
+    } else {
+      if(spanOpen){ out += "</span>"; spanOpen = false; }
+      out += "\n"; li++; ci = 0;
+      log.innerHTML = out + '<span class="cursor"></span>';
+      bootTimer = setTimeout(typeStep, line ? 60 : 30);
+    }
+  }
+  typeStep();
+}
+function bootFinished(){
+  bootDone = true;
+  $("#boot-log").innerHTML = BOOT_LINES.map(function(l){
+    return l[1] ? '<span class="'+l[1]+'">'+l[0]+'</span>' : l[0];
+  }).join("\n");
+  setTimeout(function(){ if(!$("#scr-brief").classList.contains("active")) startBrief(); }, 500);
+}
+function skipBoot(){
+  if(bootDone) return;
+  clearTimeout(bootTimer);
+  bootFinished();
+}
+function startBrief(){
+  show("brief");
+  var text =
+   'OPERADOR, bom te ver de novo. Eu sou o PROFESSOR.SYS, a IA que cuida deste laboratório.\n\n'
+  +'Há 40 anos a máquina QUARTZ-9000 desliga. Seu kernel corrompeu-se e, com ele, todo o conhecimento de Sistemas Operacionais desta sala.\n\n'
+  +'Sem o kernel, não há sistema operacional: ninguém gerencia a CPU, a memória, os dispositivos.\n\n'
+  +'A CADEIRA TEM UM LUGAR LIVRE: você. Assuma o posto de KERNEL e restaure o sistema, missão por missão — boot, modos de acesso, syscalls, estruturas e a defesa final contra o MALWARE.EXE.\n\n'
+  +'O CODEX (botão 📖) guarda os resumos de estudo do módulo S1. Consulte antes de cada missão.\n\n'
+  +'O sistema está nas suas mãos, OPERADOR.';
+  var el = $("#brief-text"), i = 0, done = false, tmr = null;
+  function step(){
+    if(done) return;
+    if(i < text.length){
+      el.textContent = text.slice(0, i+1);
+      el.innerHTML = el.textContent.replace(/\n/g,"<br>") + '<span class="cursor"></span>';
+      i++;
+      tmr = setTimeout(step, text[i-1] === "\n" ? 40 : 18);
+    } else finish();
+  }
+  function finish(){
+    done = true; clearTimeout(tmr);
+    el.innerHTML = text.replace(/\n/g,"<br>");
+    $("#brief-btn").classList.remove("hidden");
+  }
+  el.onclick = finish;
+  $("#brief-btn").onclick = function(){ beep("click"); show("hub"); };
+  step();
+}
+document.addEventListener("keydown", function(){
+  if($("#scr-boot").classList.contains("active")) skipBoot();
+});
+$("#scr-boot").addEventListener("click", skipBoot);
+
+/* ================================================================
+   M1 — SEQUÊNCIA DE BOOT
+   ================================================================ */
+var M1_STEPS = [
+  { t:"POWER-ON — energia chega à placa-mãe", why:"A fonte envia reset à CPU; o processador começa num endereço fixo da ROM." },
+  { t:"POST — Power-On Self Test", why:"O firmware testa RAM, teclado e dispositivos básicos antes de qualquer outra coisa." },
+  { t:"BIOS/UEFI localiza o dispositivo de boot", why:"Ele consulta a ordem de boot e lê o primeiro setor (MBR/GPT) do disco." },
+  { t:"BOOTLOADER (GRUB) é carregado na memória", why:"O primeiro estágio é minúsculo; ele sabe localizar e carregar o segundo estágio." },
+  { t:"Bootloader carrega o KERNEL na RAM e transfere o controle", why:"O kernel é colocado em memória protegida e a execução muda para ele." },
+  { t:"Kernel inicializa drivers, montagem do FS e cria o INIT (PID 1)", why:"O primeiro processo do usuário nasce: systemd/init em sistemas modernos." },
+  { t:"Serviços do sistema sobem e a TELA DE LOGIN aparece", why:"Daemons de rede, log e interfaces são iniciados; o sistema está pronto." }
+];
+var m1State = null;
+function startM1(){
+  show("m1");
+  m1State = { next:0, errors:0, xp:0 };
+  var pool = $("#m1-pool"), tl = $("#m1-timeline"), msg = $("#m1-msg");
+  pool.innerHTML = ""; tl.innerHTML = ""; msg.textContent = ""; msg.className = "msg";
+  $("#m1-restart").classList.add("hidden"); $("#m1-done").classList.add("hidden");
+  $("#m1-score").textContent = "100 pts disponíveis";
+  var order = M1_STEPS.map(function(s,i){ return i; })
+    .map(function(i){ return [Math.random(), i]; })
+    .sort(function(a,b){ return a[0]-b[0]; })
+    .map(function(p){ return p[1]; });
+  // garante que a ordem embaralhada não comece certa demais (simples: sempre ok, clique valida)
+  order.forEach(function(i){
+    var b = document.createElement("button");
+    b.textContent = M1_STEPS[i].t;
+    b.addEventListener("click", function(){ pickM1(i, b); });
+    pool.appendChild(b);
+  });
+  updM1Progress();
+}
+function updM1Progress(){
+  $("#m1-progress").textContent = "PASSOS MONTADOS: " + m1State.next + " / 7 — ERROS: " + m1State.errors;
+}
+function pickM1(i, btn){
+  if(!m1State || m1State.next >= 7) return;
+  var msg = $("#m1-msg"), tl = $("#m1-timeline");
+  if(i === m1State.next){
+    beep("ok");
+    btn.disabled = true;
+    var li = document.createElement("li");
+    li.className = "hit";
+    li.innerHTML = M1_STEPS[i].t + '<span class="why">✓ ' + M1_STEPS[i].why + '</span>';
+    tl.appendChild(li);
+    m1State.next++;
+    $("#m1-score").textContent = Math.max(40, 100 - m1State.errors*15) + " pts";
+    msg.className = "msg ok";
+    msg.textContent = "CORRETO! " + (m1State.next < 7 ? "Continue a sequência…" : "Boot completo: o sistema vive!");
+    updM1Progress();
+    if(m1State.next === 7) endM1();
+  } else {
+    beep("bad");
+    m1State.errors++;
+    m1State.xp = Math.max(40, 100 - m1State.errors*15);
+    btn.style.borderColor = "var(--red)"; btn.style.color = "var(--red)";
+    setTimeout(function(){ btn.style.borderColor=""; btn.style.color=""; }, 450);
+    msg.className = "msg bad";
+    msg.textContent = "⚠ FALHA NO BOOT! Este não é o próximo passo. (-15 pts) Dica: " + M1_STEPS[m1State.next].t.split("—")[0];
+    updM1Progress();
+  }
+  $("#m1-score").textContent = Math.max(40, 100 - m1State.errors*15) + " pts";
+}
+function endM1(){
+  var xp = Math.max(40, 100 - m1State.errors*15);
+  state.done.m1 = xp; save();
+  grantAch("m1");
+  if(m1State.errors === 0) grantAch("m1p");
+  if(!state.done._m1xp || state.done._m1xp < xp){ addXP(xp, "Missão 1 — SEQUÊNCIA DE BOOT"); state.done._m1xp = xp; save(); }
+  $("#m1-restart").classList.remove("hidden");
+  $("#m1-done").classList.remove("hidden");
+  checkAllDone();
+}
+$("#m1-restart").addEventListener("click", function(){ beep("click"); startM1(); });
+$("#m1-done").addEventListener("click", function(){ beep("click"); show("hub"); });
+
+/* ================================================================
+   M2 — DESPACHANTE DE PRIVILÉGIOS (arcade)
+   ================================================================ */
+var M2_ITEMS = [
+  { t:"ADD R1, R2 — somar dois registradores", k:"user", why:"Puro cálculo da ULA: qualquer programa faz isso sem pedir licença." },
+  { t:"IN — ler porta de entrada/saída direta", k:"kernel", why:"I/O direto é instrução PRIVILEGIADA: só o kernel fala com o hardware." },
+  { t:"LOAD X — carregar variável da memória", k:"user", why:"Acessar a própria memória do processo é operação comum." },
+  { t:"HALT — parar a CPU", k:"kernel", why:"Desligar o processador privilegiado? Só o kernel. Imagine um app fazendo isso!" },
+  { t:"CLI — desativar interrupções", k:"kernel", why:"Silenciar interrupções travaria o escalonador: privilegiada." },
+  { t:"MULT — multiplicar ponto flutuante", k:"user", why:"Aritmética é o dia a dia do modo usuário." },
+  { t:"SET_TIMER — programar o temporizador", k:"kernel", why:"O timer devolve o controle ao SO: se qualquer um o programasse, acabaria a proteção." },
+  { t:"STORE — gravar resultado em variável local", k:"user", why:"Gravar na própria memória: tranquilo." },
+  { t:"ESCREVER BLOCO DIRETO NO DISCO", k:"kernel", why:"Disco é hardware compartilhado: o kernel media tudo (senão um app apagaria o outro)." },
+  { t:"OUT — escrever em porta de I/O", k:"kernel", why:"Como o IN: acesso direto a dispositivo é privilegiado." },
+  { t:"DIV — dividir registradores", k:"user", why:"Se der divisão por zero, a exceção avisa o SO — mas a instrução é comum." },
+  { t:"DESLIGAR O DISCO (spin-down)", k:"kernel", why:"Controlar energia de hardware: modo kernel." }
+];
+var m2State = null;
+function showM2(){
+  show("m2");
+}
+function startM2(){
+  m2State = { i:0, score:0, hp:3, order:[], timer:null, playing:false };
+  var order = M2_ITEMS.map(function(x,i){ return i; })
+    .map(function(i){ return [Math.random(), i]; })
+    .sort(function(a,b){ return a[0]-b[0]; })
+    .map(function(p){ return p[1]; });
+  m2State.order = order;
+  $("#m2-msg").textContent = ""; $("#m2-msg").className = "msg";
+  $("#m2-done").classList.add("hidden");
+  $("#m2-restart").classList.add("hidden");
+  $("#m2-start").classList.remove("hidden");
+  $("#m2-score").textContent = "0";
+  $("#m2-arena").innerHTML = '<div class="fall-chip" id="m2-chip" style="opacity:0"></div>';
+  updM2Status();
+  $("#m2-timer").style.width = "100%";
+}
+function updM2Status(){
+  var hearts = "";
+  for(var i=0;i<3;i++) hearts += '<span class="'+(i < m2State.hp ? "on":"off")+'">♥</span>';
+  $("#m2-status").innerHTML = "PACOTE " + (m2State.i+1) + "/12 — TRAVAMENTOS: " + hearts;
+}
+function nextM2(){
+  if(!m2State.playing) return;
+  if(m2State.i >= m2State.order.length){ endM2(true); return; }
+  var idx = m2State.order[m2State.i];
+  var item = M2_ITEMS[idx];
+  var arena = $("#m2-arena"), chip = $("#m2-chip");
+  if(!chip){ m2State.playing = false; return; }
+  chip.className = "fall-chip";
+  chip.style.transition = "none";
+  chip.style.transform = "translate(-50%, 0)";
+  chip.style.opacity = "1";
+  chip.textContent = item.t;
+  var dur = Math.max(3000, 4600 - m2State.i*150);
+  var h = arena.clientHeight || 280;
+  updM2Status();
+  m2State.roundStart = Date.now();
+  m2State.item = item;
+  m2State.dur = dur;
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      chip.style.transition = "transform " + dur + "ms linear";
+      chip.style.transform = "translate(-50%, " + (h + 60) + "px)";
+    });
+  });
+  m2State.timer = setTimeout(function(){ answerM2(null); }, dur + 60);
+}
+function answerM2(choice){
+  if(!m2State || !m2State.playing) return;
+  clearTimeout(m2State.timer);
+  m2State.playing = false;
+  var item = m2State.item, msg = $("#m2-msg"), chip = $("#m2-chip");
+  var elapsed = Date.now() - m2State.roundStart;
+  var correct = choice === item.k;
+  var v = document.createElement("div");
+  v.className = "verdict " + (correct ? "ok" : "bad");
+  if(choice === null){
+    chip.classList.add("crash");
+    v.textContent = "⚡ CRASH! O pacote atravessou o firewall sem despacho. " + item.why;
+    m2State.hp--;
+    beep("bad");
+  } else if(correct){
+    var bonus = Math.max(0, Math.round(5 * (1 - elapsed/m2State.dur)));
+    var pts = 10 + bonus;
+    m2State.score += pts;
+    chip.classList.add(choice === "user" ? "fly-u" : "fly-k");
+    v.textContent = "✓ DESPACHADO! +" + pts + (bonus>0 ? " (bônus de reflexo +" + bonus + ")" : "") + " " + item.why;
+    msg.className = "msg ok";
+    beep("ok");
+  } else {
+    m2State.hp--;
+    chip.classList.add("crash");
+    v.textContent = "✗ MODO ERRADO! " + item.why;
+    beep("bad");
+  }
+  $("#m2-arena").appendChild(v);
+  setTimeout(function(){ v.remove(); }, 1600);
+  $("#m2-score").textContent = m2State.score;
+  updM2Status();
+  msg.className = correct ? "msg ok" : "msg bad";
+  msg.textContent = (choice === null ? "⚡ " : correct ? "✓ " : "✗ ") + item.why;
+  m2State.i++;
+  if(m2State.hp <= 0){ endM2(false); return; }
+  setTimeout(function(){ m2State.playing = true; nextM2(); }, 900);
+}
+function endM2(win){
+  m2State.playing = false;
+  clearTimeout(m2State.timer);
+  var chip = $("#m2-chip"); if(chip) chip.style.opacity = "0";
+  var msg = $("#m2-msg");
+  if(win){
+    var xp = Math.min(120, m2State.score * 1.0); // máx 15*12=180 → cap 120
+    xp = Math.round(Math.max(60, Math.min(120, xp)));
+    state.done.m2 = xp; save();
+    grantAch("m2");
+    if(m2State.hp === 3) grantAch("m2p");
+    if(!state.done._m2xp || state.done._m2xp < xp){ addXP(xp, "Missão 2 — DESPACHANTE"); state.done._m2xp = xp; save(); }
+    msg.className = "msg ok";
+    msg.textContent = "🏆 Firewall 100% estável! Pontuação: " + m2State.score + ". XP ganho: " + xp;
+    $("#m2-done").classList.remove("hidden");
+    beep("win");
+  } else {
+    msg.className = "msg bad";
+    msg.textContent = "💀 3 travamentos — o barramento caiu. Estude o CODEX (Modos de Acesso) e tente de novo!";
+    beep("boss");
+  }
+  $("#m2-restart").classList.remove("hidden");
+  $("#m2-start").classList.add("hidden");
+  checkAllDone();
+}
+$("#m2-start").addEventListener("click", function(){ beep("click"); this.classList.add("hidden"); m2State.playing = true; nextM2(); });
+$("#m2-user").addEventListener("click", function(){ answerM2("user"); });
+$("#m2-kernel").addEventListener("click", function(){ answerM2("kernel"); });
+$("#m2-restart").addEventListener("click", function(){ beep("click"); startM2(); });
+$("#m2-done").addEventListener("click", function(){ beep("click"); show("hub"); });
+document.addEventListener("keydown", function(e){
+  if(!$("#scr-m2").classList.contains("active")) return;
+  var k = (e.key || "").toLowerCase();
+  if(k === "a") answerM2("user");
+  if(k === "l") answerM2("kernel");
+});
+
+/* ================================================================
+   M3 — MEMÓRIA DO KERNEL (pares de syscalls)
+   ================================================================ */
+var M3_PAIRS = [
+  { a:"fork()", b:"Cria um novo processo — cópia quase idêntica do processo pai" },
+  { a:"exec()", b:"Substitui a imagem do processo por um programa completamente novo" },
+  { a:"open()", b:"Abre um arquivo e devolve um descritor para as próximas operações" },
+  { a:"read()", b:"Lê dados de um arquivo/descritor para o buffer do processo" },
+  { a:"kill()", b:"Envia um sinal a um processo (ex.: pedido de término)" },
+  { a:"wait()", b:"Pai suspende-se até que um processo filho termine" }
+];
+var m3State = null;
+function startM3(){
+  show("m3");
+  m3State = { open:[], matched:0, moves:0, lock:false };
+  var grid = $("#m3-grid");
+  grid.innerHTML = ""; $("#m3-msg").textContent = ""; $("#m3-msg").className = "msg";
+  $("#m3-restart").classList.add("hidden"); $("#m3-done").classList.add("hidden");
+  $("#m3-moves").textContent = "0 jogadas";
+  var cards = [];
+  M3_PAIRS.forEach(function(p, i){
+    cards.push({ pair:i, side:"a" }); cards.push({ pair:i, side:"b" });
+  });
+  cards = cards.map(function(c){ return [Math.random(), c]; })
+    .sort(function(x,y){ return x[0]-y[0]; })
+    .map(function(p){ return p[1]; });
+  cards.forEach(function(c){
+    var t = document.createElement("div");
+    t.className = "tile";
+    t.innerHTML = '<span class="q">?</span>';
+    t.addEventListener("click", function(){ flipM3(c, t); });
+    grid.appendChild(t);
+  });
+}
+function flipM3(card, tile){
+  if(m3State.lock || tile.classList.contains("open") || tile.classList.contains("match")) return;
+  // blindagem: limpa qualquer resíduo de estado (evita soft-lock)
+  document.querySelectorAll("#m3-grid .tile.open").forEach(function(t){
+    if(!m3State.open.some(function(x){ return x.tile === t; })){
+      t.className = "tile"; t.innerHTML = '<span class="q">?</span>';
+    }
+  });
+  if(m3State.open.length >= 2) m3State.open = [];
+  beep("click");
+  tile.classList.add("open");
+  var p = M3_PAIRS[card.pair];
+  tile.innerHTML = card.side === "a" ? '<b>'+p.a+'</b>' : p.b;
+  m3State.open.push({ card:card, tile:tile });
+  if(m3State.open.length === 2){
+    m3State.moves++;
+    $("#m3-moves").textContent = m3State.moves + " jogadas";
+    var A = m3State.open[0], B = m3State.open[1];
+    if(A.card.pair === B.card.pair){
+      m3State.open = [];
+      m3State.matched++;
+      A.tile.classList.add("match"); B.tile.classList.add("match");
+      A.tile.classList.remove("open"); B.tile.classList.remove("open");
+      beep("ok");
+      $("#m3-msg").className = "msg ok";
+      $("#m3-msg").textContent = "✓ PAR RESTAURADO: " + M3_PAIRS[A.card.pair].a;
+      if(m3State.matched === 6) endM3();
+    } else {
+      m3State.lock = true;
+      beep("bad");
+      A.tile.classList.add("wrong"); B.tile.classList.add("wrong");
+      setTimeout(function(){
+        [A,B].forEach(function(x){
+          x.tile.className = "tile";
+          x.tile.innerHTML = '<span class="q">?</span>';
+        });
+        m3State.open = []; m3State.lock = false;
+      }, 850);
+    }
+  }
+}
+function endM3(){
+  var extra = m3State.moves <= 10 ? 20 : m3State.moves <= 14 ? 10 : 0;
+  var xp = Math.min(120, 100 + extra);
+  state.done.m3 = xp; save();
+  grantAch("m3");
+  if(m3State.moves <= 10) grantAch("m3p");
+  if(!state.done._m3xp || state.done._m3xp < xp){ addXP(xp, "Missão 3 — MEMÓRIA DO KERNEL"); state.done._m3xp = xp; save(); }
+  var msg = $("#m3-msg");
+  msg.className = "msg ok";
+  msg.textContent = "🏆 Tabela de syscalls restaurada em " + m3State.moves + " jogadas! XP: " + xp + (extra ? " (bônus de memória!)" : "");
+  $("#m3-restart").classList.remove("hidden");
+  $("#m3-done").classList.remove("hidden");
+  beep("win");
+  checkAllDone();
+}
+$("#m3-restart").addEventListener("click", function(){ beep("click"); startM3(); });
+$("#m3-done").addEventListener("click", function(){ beep("click"); show("hub"); });
+
+/* ================================================================
+   M4 — ARQUITETO DO SISTEMA (fase 1: pilha / fase 2: quiz)
+   ================================================================ */
+var M4_LAYERS = [
+  { t:"HARDWARE — CPU, memória RAM, discos, dispositivos", why:"A base física que tudo depende." },
+  { t:"KERNEL — gerencia processos, memória e I/O em modo privilegiado", why:"Camada mais baixa de software: fala com o hardware." },
+  { t:"CHAMADAS DE SISTEMA (SYSCALLS) — porta de entrada dos serviços", why:"Interface oficial entre programas e o kernel." },
+  { t:"BIBLIOTECAS & SHELL — libc, interpretador de comandos", why:"Empacotam syscalls em funções amigáveis." },
+  { t:"APLICATIVOS — navegador, jogos, editores", why:"Topo da pilha: só usa o que as camadas de baixo oferecem." }
+];
+var M4_QUIZ = [
+  { q:"CLIENTE 1: 'Sou um sistema crítico de aviação. Se UM driver travar, o sistema INTEIRO não pode cair, nem um instante.'",
+    opts:["Arquitetura MONOLÍTICA","Arquitetura MICROKERNEL","Arquitetura EM CAMADAS","Sem sistema operacional"],
+    right:1,
+    why:"No microkernel, drivers e serviços rodam no espaço de usuário: um componente falho pode ser reiniciado sem derrubar o kernel. (Custo: overhead de mensagens IPC.)" },
+  { q:"CLIENTE 2: 'Quero DESEMPENHO máximo: componentes conversando por simples chamadas de função dentro do kernel, como no UNIX clássico.'",
+    opts:["Arquitetura MONOLÍTICA","Arquitetura MICROKERNEL","Arquitetura EM CAMADAS","Somente hardware"],
+    right:0,
+    why:"Monolítico = tudo em modo kernel, comunicação direta e rápida. O preço: um bug em qualquer driver pode derrubar tudo." },
+  { q:"CLIENTE 3: 'Preciso carregar e descarregar drivers SEM reiniciar o sistema, como módulos plugáveis (estilo Linux moderno).'",
+    opts:["Monolítico puro sem módulos","Monolítico MODULAR (módulos carregáveis)","Microkernel com nenhum serviço no kernel","Camadas fixas"],
+    right:1,
+    why:"O Linux é um monolítico modular: núcleo robusto + módulos carregáveis em runtime (lsmod/modprobe), juntando desempenho e flexibilidade." },
+  { q:"CLIENTE 4: 'Quero cada função bem separada em NÍVEIS hierárquicos: uma camada só usa a de baixo, como no THE/Holanda.'",
+    opts:["Monolítica","Microkernel","Estrutura EM CAMADAS","Módulos carregáveis"],
+    right:2,
+    why:"Camadas facilitam organizar e depurar (falha isolada por nível), mas definir fronteiras é difícil e cada travessia custa desempenho." }
+];
+var m4State = null;
+function startM4(){
+  show("m4");
+  m4State = { next:0, errors:0, qi:0, right:0, ph1xp:0, ph2xp:0 };
+  var pool = $("#m4-pool"), tw = $("#m4-tower");
+  pool.innerHTML = ""; tw.innerHTML = "";
+  $("#m4-msg").textContent = ""; $("#m4-msg").className = "msg";
+  $("#m4-ph1").classList.remove("hidden");
+  $("#m4-ph2").classList.add("hidden");
+  $("#m4-restart").classList.add("hidden"); $("#m4-done").classList.add("hidden");
+  $("#m4-score").textContent = "140 pts disponíveis";
+  $("#m4-progress").textContent = "FASE 1/2 — NÍVEIS EMPILHADOS: 0/5";
+  var order = M4_LAYERS.map(function(s,i){ return i; })
+    .map(function(i){ return [Math.random(), i]; })
+    .sort(function(a,b){ return a[0]-b[0]; })
+    .map(function(p){ return p[1]; });
+  order.forEach(function(i){
+    var b = document.createElement("button");
+    b.textContent = M4_LAYERS[i].t;
+    b.addEventListener("click", function(){ pickM4(i, b); });
+    pool.appendChild(b);
+  });
+}
+function pickM4(i, btn){
+  if(m4State.next >= 5) return;
+  var msg = $("#m4-msg"), tw = $("#m4-tower");
+  if(i === m4State.next){
+    beep("ok");
+    btn.disabled = true;
+    var li = document.createElement("li");
+    li.className = "hit";
+    li.innerHTML = M4_LAYERS[i].t + '<span class="why">✓ ' + M4_LAYERS[i].why + '</span>';
+    tw.appendChild(li);
+    m4State.next++;
+    $("#m4-progress").textContent = "FASE 1/2 — NÍVEIS EMPILHADOS: " + m4State.next + "/5 — ERROS: " + m4State.errors;
+    msg.className = "msg ok";
+    if(m4State.next < 5) msg.textContent = "✓ Nível empilhado! Continue da base ao topo…";
+    else { msg.textContent = "✓ PILHA COMPLETA! Agora o projeto do cliente…"; setTimeout(m4Phase2, 900); }
+  } else {
+    beep("bad");
+    m4State.errors++;
+    btn.style.borderColor = "var(--red)"; btn.style.color = "var(--red)";
+    setTimeout(function(){ btn.style.borderColor=""; btn.style.color=""; }, 450);
+    msg.className = "msg bad";
+    msg.textContent = "⚠ Nível errado! (-10 pts) Dica: deve vir " + (m4State.next === 0 ? "na BASE" : "acima de: " + M4_LAYERS[m4State.next-1].t.split("—")[0]);
+  }
+  $("#m4-score").textContent = Math.max(30, 60 - m4State.errors*10) + " pts";
+}
+function m4Phase2(){
+  m4State.ph1xp = Math.max(30, 60 - m4State.errors*10);
+  $("#m4-ph1").classList.add("hidden");
+  $("#m4-ph2").classList.remove("hidden");
+  renderM4Q();
+}
+function renderM4Q(){
+  var q = M4_QUIZ[m4State.qi];
+  var qel = $("#m4-quiz");
+  var html = '<p><b>' + q.q + '</b></p><div class="opts">';
+  q.opts.forEach(function(o, i){ html += '<button data-o="'+i+'">'+o+'</button>'; });
+  html += '</div>';
+  qel.innerHTML = html;
+  $("#m4-score").textContent = (m4State.ph1xp + m4State.ph2xp) + " pts";
+  $$("#m4-quiz [data-o]").forEach(function(b){
+    b.addEventListener("click", function(){ answerM4(parseInt(b.getAttribute("data-o"),10), b); });
+  });
+}
+function answerM4(i, btn){
+  var q = M4_QUIZ[m4State.qi];
+  $$("#m4-quiz [data-o]").forEach(function(b){
+    b.disabled = true;
+    var idx = parseInt(b.getAttribute("data-o"),10);
+    if(idx === q.right) b.classList.add("right");
+  });
+  var msg = $("#m4-msg");
+  if(i === q.right){
+    beep("ok");
+    m4State.right++;
+    m4State.ph2xp += 20;
+    msg.className = "msg ok";
+    msg.textContent = "✓ PROJETO APROVADO! +" + 20 + " pts — " + q.why;
+  } else {
+    beep("bad");
+    btn.classList.add("wrong");
+    msg.className = "msg bad";
+    msg.textContent = "✗ O cliente recusou. " + q.why;
+  }
+  $("#m4-score").textContent = (m4State.ph1xp + m4State.ph2xp) + " pts";
+  m4State.qi++;
+  setTimeout(function(){
+    if(m4State.qi < 4) renderM4Q();
+    else endM4();
+  }, 2100);
+}
+function endM4(){
+  var xp = m4State.ph1xp + m4State.ph2xp;
+  state.done.m4 = xp; save();
+  grantAch("m4");
+  if(!state.done._m4xp || state.done._m4xp < xp){ addXP(xp, "Missão 4 — ARQUITETO DO SISTEMA"); state.done._m4xp = xp; save(); }
+  var msg = $("#m4-msg");
+  msg.className = "msg ok";
+  msg.textContent = "🏆 Projeto aceito pelo laboratório! XP: " + xp + "/140.";
+  $("#m4-restart").classList.remove("hidden");
+  $("#m4-done").classList.remove("hidden");
+  beep("win");
+  checkAllDone();
+}
+$("#m4-restart").addEventListener("click", function(){ beep("click"); startM4(); });
+$("#m4-done").addEventListener("click", function(){ beep("click"); show("hub"); });
+
+/* ================================================================
+   M5 — BOSS FINAL: MALWARE.EXE
+   ================================================================ */
+var M5_Q = [
+  { q:"Qual é a principal função de um SISTEMA OPERACIONAL?",
+    opts:["Apenas executar jogos em tela cheia","Gerenciar os recursos do hardware e fornecer abstrações às aplicações","Compilar e depurar código-fonte","Substituir fisicamente o hardware"],
+    right:1, why:"O SO é gerenciador de recursos (CPU, memória, I/O) e máquina estendida que abstrai o hardware." },
+  { q:"Um programa em MODO USUÁRIO tenta executar HALT (instrução privilegiada). O que acontece?",
+    opts:["Executa normalmente","A CPU reinicia sozinha","O hardware dispara um TRAP e o SO normalmente encerra o infrator","A instrução é promovida a modo kernel"],
+    right:2, why:"Proteção do dual-mode: instrução privilegiada fora do kernel gera trap/exceção." },
+  { q:"O que é uma CHAMADA DE SISTEMA (syscall)?",
+    opts:["Um vírus arcaico","A interface oficial pela qual um programa pede um serviço ao kernel","Uma ligação entre dois servidores","Uma interrupção externa do disco"],
+    right:1, why:"A syscall muda a CPU usuário→kernel, o SO valida os parâmetros, executa o serviço e retorna." },
+  { q:"Qual instrução abaixo é PRIVILEGIADA (só no modo kernel)?",
+    opts:["ADD R1, R2","SET_TIMER — programar o temporizador","LOAD X — carregar variável","MULT — multiplicar"],
+    right:1, why:"Timer, I/O direto, HALT e CLI tocam o hardware/estado global: só o kernel." },
+  { q:"No hypervisor TIPO 1, o hypervisor roda…",
+    opts:["Dentro de um SO hospedeiro","Dentro de uma VM guest","Diretamente sobre o hardware (bare metal)","Dentro do navegador"],
+    right:2, why:"Tipo 1 = bare metal: ESXi, Hyper-V, Xen, KVM. Tipo 2 roda sobre o SO host." },
+  { q:"Qual destes é um hypervisor TIPO 2 (hosted)?",
+    opts:["VMware ESXi","Xen","KVM","VirtualBox"],
+    right:3, why:"VirtualBox/VMware Workstation rodam como programas dentro do SO hospedeiro." },
+  { q:"A grande vantagem do MICROKERNEL é…",
+    opts:["Zero overhead de comunicação","Kernel mínimo: falha em driver/serviço não derruba o sistema","Não precisar de memória","Não usar syscalls"],
+    right:1, why:"Serviços fora do kernel = mais confiável e seguro; paga-se o custo das mensagens (IPC)." },
+  { q:"A grande desvantagem do kernel MONOLÍTICO é…",
+    opts:["Impossível de compilar","Só roda em mainframes","Uma falha em um driver pode derrubar o sistema inteiro","Não suporta múltiplos usuários"],
+    right:2, why:"Tudo em modo kernel: rápido, mas um bug em qualquer componente compromete o todo." },
+  { q:"Para que serve uma INTERRUPÇÃO?",
+    opts:["Avisar a CPU de eventos assíncronos (ex.: disco terminou a leitura)","Apagar a memória RAM","Criar processos novos","Deixar a CPU mais lenta de propósito"],
+    right:0, why:"Com interrupções, a CPU não fica em espera ativa: continua trabalhando até ser avisada." },
+  { q:"Qual NÃO é um benefício típico da VIRTUALIZAÇÃO?",
+    opts:["Isolamento entre VMs","Snapshots e migração de VMs ao vivo","Eliminar a necessidade de sistema operacional","Consolidar vários servidores em um único hardware"],
+    right:2, why:"VMs continuam precisando de SO (guest). A virtualização economiza hardware — não substitui o SO." }
+];
+var m5State = null;
+function startM5(){
+  show("m5");
+  m5State = { qi:0, bossHP:80, player:3, combo:0, wrongs:0, order:[], timer:null, playing:false };
+  var order = M5_Q.map(function(x,i){ return i; })
+    .map(function(i){ return [Math.random(), i]; })
+    .sort(function(a,b){ return a[0]-b[0]; })
+    .map(function(p){ return p[1]; });
+  m5State.order = order;
+  $("#m5-msg").textContent = ""; $("#m5-msg").className = "msg";
+  $("#m5-opts").innerHTML = ""; $("#m5-q").textContent = "";
+  $("#m5-score").textContent = "0 pts";
+  $("#m5-combo").textContent = "";
+  $("#m5-restart").classList.add("hidden"); $("#m5-done").classList.add("hidden");
+  $("#m5-start").classList.remove("hidden");
+  updM5Bars();
+  $("#m5-timer").style.transition = "none";
+  $("#m5-timer").style.width = "100%";
+}
+function updM5Bars(){
+  $("#m5-bosshp").style.width = Math.max(0, m5State.bossHP) / 80 * 100 + "%";
+  $("#m5-playerhp").style.width = m5State.player / 3 * 100 + "%";
+}
+function nextM5Q(){
+  if(!m5State.playing) return;
+  if(m5State.qi >= 10){ endM5(false); return; }
+  var q = M5_Q[m5State.order[m5State.qi]];
+  $("#m5-q").textContent = "Q" + (m5State.qi+1) + "/10 — " + q.q;
+  $("#m5-msg").textContent = ""; $("#m5-msg").className = "msg";
+  var opts = q.opts.map(function(o,i){ return [Math.random(), o, i]; })
+    .sort(function(a,b){ return a[0]-b[0]; });
+  var html = "";
+  opts.forEach(function(p){ html += '<button data-o="'+p[2]+'">'+p[1]+'</button>'; });
+  $("#m5-opts").innerHTML = html;
+  $$("#m5-opts [data-o]").forEach(function(b){
+    b.addEventListener("click", function(){ m5Answer(parseInt(b.getAttribute("data-o"),10)); });
+  });
+  var t = $("#m5-timer");
+  t.style.transition = "none"; t.style.width = "100%";
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      t.style.transition = "width 15000ms linear";
+      t.style.width = "0%";
+    });
+  });
+  m5State.timer = setTimeout(function(){ m5Answer(null); }, 15200);
+}
+function m5Answer(i){
+  if(!m5State || !m5State.playing) return;
+  clearTimeout(m5State.timer);
+  m5State.playing = false;
+  var q = M5_Q[m5State.order[m5State.qi]];
+  var msg = $("#m5-msg");
+  $$("#m5-opts [data-o]").forEach(function(b){
+    b.disabled = true;
+    var idx = parseInt(b.getAttribute("data-o"),10);
+    if(idx === q.right) b.classList.add("right");
+  });
+  var correct = (i === q.right);
+  if(correct){
+    m5State.combo++;
+    var dmg = 10 + Math.min(8, (m5State.combo-1)*2);
+    m5State.bossHP -= dmg;
+    m5State.score = Math.max(0, m5State.score + dmg);
+    beep("ok");
+    msg.className = "msg ok";
+    msg.textContent = "⚔ ACERTOU! Dano: " + dmg + (m5State.combo>1 ? " (COMBO x" + m5State.combo + "!)" : "") + " " + q.why;
+    $("#m5-combo").textContent = m5State.combo > 1 ? "🔥 COMBO x" + m5State.combo : "";
+  } else {
+    m5State.combo = 0;
+    m5State.wrongs++;
+    m5State.player--;
+    if(i !== null){ $$("#m5-opts [data-o]").forEach(function(b){
+      if(parseInt(b.getAttribute("data-o"),10) === i) b.classList.add("wrong");
+    }); }
+    beep("bad");
+    msg.className = "msg bad";
+    msg.textContent = (i === null ? "⏰ TEMPO ESGOTADO! " : "✗ O malware absorveu o ataque! ") + q.why;
+    $("#m5-combo").textContent = "";
+  }
+  $("#m5-score").textContent = m5State.score + " pts";
+  m5State.qi++;
+  updM5Bars();
+  if(m5State.bossHP <= 0){ setTimeout(function(){ endM5(true); }, 1200); return; }
+  if(m5State.player <= 0){ setTimeout(function(){ endM5(false); }, 1200); return; }
+  setTimeout(function(){ m5State.playing = true; nextM5Q(); }, 1700);
+}
+function endM5(win){
+  m5State.playing = false;
+  clearTimeout(m5State.timer);
+  var msg = $("#m5-msg");
+  if(win){
+    var xp = Math.max(80, 200 - m5State.wrongs*15);
+    state.done.m5 = xp; save();
+    grantAch("m5");
+    if(!state.done._m5xp || state.done._m5xp < xp){ addXP(xp, "Missão 5 — MALWARE.EXE ELIMINADO"); state.done._m5xp = xp; save(); }
+    msg.className = "msg ok";
+    msg.textContent = "🏆 MALWARE.EXE EXTERMINADO! O kernel do QUARTZ-9000 está íntegro. XP: " + xp + "/200.";
+    $("#m5-done").classList.remove("hidden");
+    beep("win");
+  } else {
+    msg.className = "msg bad";
+    msg.textContent = "💀 O MALWARE.EXE corrompeu sua estabilidade! Releia o CODEX e enfrente-o de novo.";
+    beep("boss");
+  }
+  $("#m5-restart").classList.remove("hidden");
+  $("#m5-start").classList.add("hidden");
+  $("#m5-q").textContent = win ? "SISTEMA ESTÁVEL — VITÓRIA DO KERNEL" : "KERNEL COMPROMETIDO — RETRY";
+  checkAllDone();
+}
+$("#m5-start").addEventListener("click", function(){ beep("click"); this.classList.add("hidden"); m5State.playing = true; nextM5Q(); });
+$("#m5-restart").addEventListener("click", function(){ beep("click"); startM5(); });
+$("#m5-done").addEventListener("click", function(){ beep("click"); show("hub"); });
+
+/* ================================================================
+   CERTIFICADO FINAL
+   ================================================================ */
+function renderCert(){
+  $("#cert-name").value = state.name;
+  $("#cert-xp").textContent = state.xp;
+  $("#cert-rank").textContent = rankFor(state.xp);
+  $("#cert-ach").textContent = state.ach.length + "/" + ACHS.length;
+  var d = new Date();
+  try{
+    $("#cert-date").textContent = "EMITIDO EM " + d.toLocaleDateString("pt-BR", {day:"2-digit", month:"long", year:"numeric"}).toUpperCase() + " — LAB QUARTZ-9000";
+  }catch(e){
+    $("#cert-date").textContent = "EMITIDO EM " + d.toDateString() + " — LAB QUARTZ-9000";
+  }
+}
+$("#cert-name").addEventListener("input", function(){
+  state.name = this.value; save();
+});
+$("#btn-print").addEventListener("click", function(){ beep("click"); window.print(); });
+
+/* ================================================================
+   INIT
+   ================================================================ */
+load();
+runBoot();
+
+
+
+</script>
+</body>
+</html>
